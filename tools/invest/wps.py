@@ -4,7 +4,7 @@ import inspect
 
 import re
 regex_blocks = "\n\n"
-regex_param = "args\[\'"
+regex_param = "args\[\'([a-z\_]+)\'\] \(([a-z]+)\): ([a-z ]+)"
 
 
 
@@ -41,12 +41,26 @@ for modname in modules:
     title = title.strip(".")
     abstract = abstract.replace("\n"," ").replace("  ", " ")
     
-    print title
-    print abstract
-    #print parameters
+    LOGGER.info("%s model name found." % title)
+    LOGGER.debug("%s model abstract found." % abstract)
     
-    s = re.split(regex_param,parameters)[1:]
-    for p in s:
-        print re.sub(" +"," ",p.replace("\n"," "))
-    
-
+    for p, t, d in re.findall(regex_param, parameters):
+        if t == "number":
+            LOGGER.debug("%s model parameter found." % p)
+            LOGGER.debug("%s model parameter type found." % t)
+        elif t == "string":
+            if "raster" or "lulc" in d:
+                LOGGER.debug("%s model parameter found." % p)
+                LOGGER.debug("%s model parameter type found." % "raster")
+            elif "table" in p:
+                LOGGER.debug("%s model parameter found." % p)
+                LOGGER.debug("%s model parameter type found." % "table")
+            elif "watershed" in p:
+                LOGGER.debug("%s model parameter found." % p)
+                LOGGER.debug("%s model parameter type found." % "vector")                    
+            else:
+                LOGGER.debug("%s model parameter found." % p)
+                LOGGER.debug("%s model parameter type found." % "UNKNOWN")                
+        else:
+            raise TypeError, "Unknown type %s" % t
+        #print re.sub(" +"," ",p.replace("\n"," "))

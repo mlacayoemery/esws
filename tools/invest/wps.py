@@ -3,10 +3,8 @@ import natcap.invest
 import inspect
 
 import re
-regex_blocks = "\n\n"
-regex_param = "args\[\'([a-z\_]+)\'\] \(([a-z]+)\): ([a-z ]+)"
-
-
+regex_blocks = "([A-Za-z ]+)[.\n]+(.*)Parameters:(.*)Returns"
+regex_param = "args\[\'([a-z\_]+)\'\] \(([a-z]+)\): ([a-z \n]+)"
 
 import logging
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
@@ -17,11 +15,18 @@ LOGGER.setLevel(logging.INFO)
 LOGGER.setLevel(logging.DEBUG)
 
 exclude = ["natcap.invest.iui"]
-include = ["natcap.invest.sdr"]
+include = ["natcap.invest.sdr",
+           "natcap.invest.carbon"]
 
 package = natcap.invest
 prefix = package.__name__ + "."
 
+version = natcap.invest.__version__
+if version == "3.3.3":
+    LOGGER.info("%s version of InVEST found." % version)
+else:
+    LOGGER.warn("%s version found insted of version 3.3.3.")
+    
 modules = []
 for importer, modname, ispkg in pkgutil.iter_modules(package.__path__, prefix):
     LOGGER.debug("%s submodule found." % modname)
@@ -35,32 +40,36 @@ for modname in modules:
     LOGGER.debug("%s imported." % modname)
 
     doc = inspect.getdoc(module.execute)
-    l = re.split(regex_blocks, doc)
-    title, abstract, parameters = l[:3]
+#    l = re.split(regex_blocks, doc)
+    title, abstract, parameters = re.search(regex_blocks, doc, re.DOTALL).groups()
 
-    title = title.strip(".")
-    abstract = abstract.replace("\n"," ").replace("  ", " ")
+    abstract = re.sub(' +',' ',re.sub("\n", " ", abstract))
     
     LOGGER.info("%s model name found." % title)
     LOGGER.debug("\"%s\" model abstract found." % abstract)
-    
+
     for p, t, d in re.findall(regex_param, parameters):
+        #remove newlines and repeated spaces from description
+        d = re.sub(' +',' ',re.sub("\n", " ", d))
         LOGGER.debug("%s model parameter found." % p)        
         if t == "number":
             LOGGER.debug("%s model parameter type found." % t)          
         elif t == "string":
             if "dir" in p:
                 LOGGER.debug("%s model parameter type found." % "dir")
+            elif "suffix" in p:
+                LOGGER.debug("%s model parameter type found." % "string")
             elif "watershed" in p:
                 LOGGER.debug("%s model parameter type found." % "vector")             
-            elif "table" in p:
+            elif "table" in p or "table" in d:
                 LOGGER.debug("%s model parameter type found." % "table")               
             elif "raster" or "lulc" in d:
                 LOGGER.debug("%s model parameter type found." % "raster")              
             else:
                 LOGGER.debug("%s model string parameter type found." % "UNKNOWN")
                 raise TypeError, "%s is an unknown string type" % p
-
+        elif t == "bool":
+            LOGGER.debug("%s model parameter type found." % "bool")              
         else:
             raise TypeError, "%s is an unknown parameter type" % t
 

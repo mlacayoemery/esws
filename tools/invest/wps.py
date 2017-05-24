@@ -15,8 +15,8 @@ LOGGER.setLevel(logging.INFO)
 LOGGER.setLevel(logging.DEBUG)
 
 exclude = ["natcap.invest.iui"]
-include = ["natcap.invest.sdr",
-           "natcap.invest.carbon"]
+include = ["natcap.invest.sdr"]#,
+##           "natcap.invest.carbon"]
 
 package = natcap.invest
 prefix = package.__name__ + "."

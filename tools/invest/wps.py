@@ -42,25 +42,28 @@ for modname in modules:
     abstract = abstract.replace("\n"," ").replace("  ", " ")
     
     LOGGER.info("%s model name found." % title)
-    LOGGER.debug("%s model abstract found." % abstract)
+    LOGGER.debug("\"%s\" model abstract found." % abstract)
     
     for p, t, d in re.findall(regex_param, parameters):
+        LOGGER.debug("%s model parameter found." % p)        
         if t == "number":
-            LOGGER.debug("%s model parameter found." % p)
-            LOGGER.debug("%s model parameter type found." % t)
+            LOGGER.debug("%s model parameter type found." % t)          
         elif t == "string":
-            if "raster" or "lulc" in d:
-                LOGGER.debug("%s model parameter found." % p)
-                LOGGER.debug("%s model parameter type found." % "raster")
-            elif "table" in p:
-                LOGGER.debug("%s model parameter found." % p)
-                LOGGER.debug("%s model parameter type found." % "table")
+            if "dir" in p:
+                LOGGER.debug("%s model parameter type found." % "dir")
             elif "watershed" in p:
-                LOGGER.debug("%s model parameter found." % p)
-                LOGGER.debug("%s model parameter type found." % "vector")                    
+                LOGGER.debug("%s model parameter type found." % "vector")             
+            elif "table" in p:
+                LOGGER.debug("%s model parameter type found." % "table")               
+            elif "raster" or "lulc" in d:
+                LOGGER.debug("%s model parameter type found." % "raster")              
             else:
-                LOGGER.debug("%s model parameter found." % p)
-                LOGGER.debug("%s model parameter type found." % "UNKNOWN")                
+                LOGGER.debug("%s model string parameter type found." % "UNKNOWN")
+                raise TypeError, "%s is an unknown string type" % p
+
         else:
-            raise TypeError, "Unknown type %s" % t
+            raise TypeError, "%s is an unknown parameter type" % t
+
+        LOGGER.debug("\"%s\" model parameter description found." % d)
+        
         #print re.sub(" +"," ",p.replace("\n"," "))

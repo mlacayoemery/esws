@@ -1,14 +1,19 @@
 import pkgutil
 import natcap.invest
 import inspect
+import os
+import pkg_resources
 
 import re
 regex_blocks = "([A-Za-z ]+)[.\n]+(.*)Parameters:(.*)Returns"
 regex_param = "args\[\'([a-z\_]+)\'\] \(([a-z]+)\): ([a-z \n]+)"
 
 import logging
-logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
-%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+logging_format = '%(asctime)s %(name)-20s %(levelname)-8s %(message)s'
+#logging_format = '%(levelname)-8s %(message)s'
+logging.basicConfig(format=logging_format,
+                    level=logging.DEBUG,
+                    datefmt='%m/%d/%Y %H:%M:%S ')
 LOGGER = logging.getLogger('esws.tools.invest')
 
 LOGGER.setLevel(logging.INFO)
@@ -76,3 +81,51 @@ for modname in modules:
         LOGGER.debug("\"%s\" model parameter description found." % d)
         
         #print re.sub(" +"," ",p.replace("\n"," "))
+
+    outputs_dict = natcap.invest.sdr._OUTPUT_BASE_FILES
+    for k in outputs_dict.keys():
+        ext = os.path.splitext(outputs_dict[k])[-1]
+        print k,
+        if ext == ".tif":
+            print "raster"
+        elif ext == ".shp":
+            print "shapefile"
+        elif ext == ".csv":
+            print "csv"
+        else:
+            print "ERROR"
+
+    print
+    outputs_dict = natcap.invest.sdr._INTERMEDIATE_BASE_FILES
+    for k in outputs_dict.keys():
+        ext = os.path.splitext(outputs_dict[k])[-1]
+        print k,
+        if ext == ".tif":
+            print "raster"
+        elif ext == ".shp":
+            print "shapefile"
+        elif ext == ".csv":
+            print "csv"
+        else:
+            print "ERROR"
+
+    print        
+    outputs_dict = natcap.invest.sdr._TMP_BASE_FILES
+    for k in outputs_dict.keys():
+        ext = os.path.splitext(outputs_dict[k])[-1]
+        print k,
+        if ext == ".tif":
+            print "raster"
+        elif ext == ".shp":
+            print "shapefile"
+        elif ext == ".csv":
+            print "csv"
+        else:
+            print "ERROR"
+
+resource_package = "natcap.invest" # Could be any module/package name
+resource_path = '/'.join(('iui', 'sdr.json'))  # Do not use os.path.join(), see below
+
+template = pkg_resources.resource_string(resource_package, resource_path)
+# or for a file-like stream:
+#template = pkg_resources.resource_stream(resource_package, resource_path)

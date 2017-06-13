@@ -135,14 +135,15 @@ import os
 import flask
 
 import pywps
-from pywps import Service
 
 import sayhello
 
 
 app = flask.Flask(__name__)
 
+#http://localhost:5000/wps?request=GetCapabilities&service=WPS
 #http://localhost:5000/wps?request=DescribeProcess&service=WPS&identifier=all&version=1.0.0
+#http://localhost:5000/wps?request=DescribeProcess&service=WPS&identifier=say_hello&version=1.0.0
 processes = [
     sayhello.SayHello()
 ]
@@ -156,7 +157,7 @@ for process in processes:
     process_descriptor[identifier] = abstract
 
 # This is, how you start PyWPS instance
-service = Service(processes, ['pywps.cfg'])
+service = pywps.Service(processes, ['pywps.cfg'])
 
 
 @app.route("/")

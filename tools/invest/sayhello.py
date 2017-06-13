@@ -1,12 +1,9 @@
+import pywps
 
-from pywps import Process, LiteralInput, LiteralOutput, UOM
-
-
-
-class SayHello(Process):
+class SayHello(pywps.Process):
     def __init__(self):
-        inputs = [LiteralInput('name', 'Input name', data_type='string')]
-        outputs = [LiteralOutput('response',
+        inputs = [pywps.LiteralInput('name', 'Input name', data_type='string')]
+        outputs = [pywps.LiteralOutput('response',
                                  'Output response', data_type='string')]
 
         super(SayHello, self).__init__(
@@ -25,5 +22,5 @@ class SayHello(Process):
     def _handler(self, request, response):
         response.outputs['response'].data = 'Hello ' + \
             request.inputs['name'][0].data
-        response.outputs['response'].uom = UOM('unity')
+        response.outputs['response'].uom = pywps.UOM('unity')
         return response

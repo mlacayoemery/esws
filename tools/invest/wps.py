@@ -40,6 +40,7 @@ def parse_tool():
             modules.append(modname)
             LOGGER.info("%s added to module list." % modname)
 
+    wps_processes = []
     for modname in modules:
         LOGGER.info("%s module processing." % modname)
         module = __import__(modname, fromlist="dummy")
@@ -130,6 +131,7 @@ def parse_tool():
     template = pkg_resources.resource_string(resource_package, resource_path)
     # or for a file-like stream:
     #template = pkg_resources.resource_stream(resource_package, resource_path)
+    return wps_processes
 
 import os
 import flask
@@ -163,14 +165,53 @@ class SayHello(pywps.Process):
 
 
 
+def handler(request, response):
+    response.outputs['response'].data = 'Hello ' + \
+        request.inputs['name'][0].data
+    response.outputs['response'].uom = pywps.UOM('unity')
+    return response
+
+def ProcessClassInstance(name = "SayHello",
+                         inputs = [pywps.LiteralInput('name', 'Input name', data_type='string')],
+                         outputs = [pywps.LiteralOutput('response', 'Output response', data_type='string')],
+                         handler = handler,
+                         identifier='say_hello',
+                         title='Process Say Hello',
+                         abstract='Returns a literal string output with Hello plus the inputed name',
+                         version='1.3.3.7',
+                         store_supported=True,
+                         status_supported=True):
+    def __init__(self):
+        self.inputs = inputs
+        self.outputs = outputs
+
+        self._handler = handler
+    
+        pywps.Process.__init__(self,
+            self._handler,
+            identifier=identifier,
+            title=title,
+            abstract=abstract,
+            version=version,
+            inputs=self.inputs,
+            outputs=self.outputs,
+            store_supported=store_supported,
+            status_supported=store_supported)
+    
+    process_class = type(name, (pywps.Process,),{"__init__": __init__})
+    return process_class()
+
+wps_process = [ProcessClassInstance()]
+
+
 app = flask.Flask(__name__)
 
 #http://localhost:5000/wps?request=GetCapabilities&service=WPS
 #http://localhost:5000/wps?request=DescribeProcess&service=WPS&identifier=all&version=1.0.0
 #http://localhost:5000/wps?request=DescribeProcess&service=WPS&identifier=say_hello&version=1.0.0
-processes = [
-    SayHello()
-]
+#http://localhost:5000/wps?request=Execute&datainputs=name=World!&service=WPS&identifier=say_hello&version=1.0.0
+processes = []
+processes.extend(wps_process)
 
 # For the process list on the home page
 
@@ -224,6 +265,9 @@ def staticfile(filename):
         return flask.Response(file_bytes, content_type=mime_type)
     else:
         flask.abort(404)
+
+if __name__ == "__mainmain__":
+    parse_tool()
 
 if __name__ == "__main__":
     import argparse

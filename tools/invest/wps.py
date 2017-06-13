@@ -137,29 +137,14 @@ import flask
 import pywps
 from pywps import Service
 
-from processes.sleep import Sleep
-from processes.ultimate_question import UltimateQuestion
-from processes.centroids import Centroids
-from processes.sayhello import SayHello
-from processes.feature_count import FeatureCount
-from processes.buffer import Buffer
-from processes.area import Area
-from processes.bboxinout import Box
-from processes.jsonprocess import TestJson
+import sayhello
 
 
 app = flask.Flask(__name__)
 
+#http://localhost:5000/wps?request=DescribeProcess&service=WPS&identifier=all&version=1.0.0
 processes = [
-    FeatureCount(),
-    SayHello(),
-    Centroids(),
-    UltimateQuestion(),
-    Sleep(),
-    Buffer(),
-    Area(),
-    Box(),
-    TestJson()
+    sayhello.SayHello()
 ]
 
 # For the process list on the home page
@@ -178,7 +163,7 @@ service = Service(processes, ['pywps.cfg'])
 def hello():
     server_url = pywps.configuration.get_config_value("server", "url")
     request_url = flask.request.url
-    return flask.render_template('home.html', request_url=request_url,
+    return flask.render_template('home.htm', request_url=request_url,
                                  server_url=server_url,
                                  process_descriptor=process_descriptor)
 

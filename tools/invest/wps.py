@@ -201,7 +201,20 @@ def ProcessClassInstance(name = "SayHello",
     process_class = type(name, (pywps.Process,),{"__init__": __init__})
     return process_class()
 
-wps_process = [ProcessClassInstance()]
+wps_process = []
+wps_process.append(ProcessClassInstance())
+
+
+def handler(request, response):
+    response.outputs['response'].data = 'Goodbye ' + \
+        request.inputs['name'][0].data
+    response.outputs['response'].uom = pywps.UOM('unity')
+    return response
+wps_process.append(ProcessClassInstance(name = "SayGoodbye",
+                                        handler=handler,
+                                        identifier='say_goodbye',
+                                        title="Process Say Goodbye",
+                                        abstract="What you would expect"))
 
 
 app = flask.Flask(__name__)

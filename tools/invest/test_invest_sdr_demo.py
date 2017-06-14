@@ -17,18 +17,18 @@ downloads = {
 }
 
 args = {
-        u'biophysical_table_path': u'D:\\InVEST_3.3.3_x86\\Base_Data\\Freshwater\\biophysical_table.csv',
-        u'dem_path': u'D:\\InVEST_3.3.3_x86\\Base_Data\\Freshwater\\dem',
+        u'biophysical_table_path': u'/home/mlacayo/workspace/data/Base_Data/Freshwater/biophysical_table.csv',
+        u'dem_path': u'/home/mlacayo/workspace/data/Base_Data/Freshwater/dem',
         u'drainage_path': u'',
-        u'erodibility_path': u'D:\\InVEST_3.3.3_x86\\Base_Data\\Freshwater\\erodibility',
-        u'erosivity_path': u'D:\\InVEST_3.3.3_x86\\Base_Data\\Freshwater\\erosivity',
+        u'erodibility_path': u'/home/mlacayo/workspace/data/Base_Data/Freshwater/erodibility',
+        u'erosivity_path': u'/home/mlacayo/workspace/data/Base_Data/Freshwater/erosivity',
         u'ic_0_param': u'0.5',
         u'k_param': u'2',
-        u'lulc_path': u'D:\\InVEST_3.3.3_x86\\Base_Data\\Freshwater\\landuse_90',
+        u'lulc_path': u'/home/mlacayo/workspace/data/Base_Data/Freshwater/landuse_90',
         u'sdr_max': u'0.8',
         u'threshold_flow_accumulation': u'1000',
-        u'watersheds_path': u'D:\\InVEST_3.3.3_x86\\Base_Data\\Freshwater\\watersheds.shp',
-        u'workspace_dir': u'C:\\Users\\lacayoem/Documents/sedimentation_workspace',
+        u'watersheds_path': u'/home/mlacayo/workspace/data/Base_Data/Freshwater/watersheds.shp',
+        u'workspace_dir': u'/tmp/sedimentation_workspace',
 }
 
 if __name__ == '__main__':

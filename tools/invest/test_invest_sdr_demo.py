@@ -4,6 +4,8 @@ import zipfile
 import os
 import glob
 
+import argparse
+
 import natcap.invest.sdr
 
 
@@ -32,26 +34,34 @@ args = {
 }
 
 if __name__ == '__main__':
-    for k in downloads.keys():
-        f = tempfile.NamedTemporaryFile(delete=False)
-        print "Downloading %s to %s" % (k, f.name)
-        
-        response = urllib2.urlopen(downloads[k])
-        f.write(response.read())
-        f.close()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--local", help="use local data", action="store_true")
+    cmd_args = parser.parse_args()    
 
-        if "outputFormat=SHAPE-ZIP" in downloads[k]:
-            shapefile = zipfile.ZipFile(f.name, 'r')
-            shapefolder = tempfile.mkdtemp()
-            print "Unzipping shapefile to %s" % shapefolder
-            shapefile.extractall(shapefolder)
-            shapefile.close()
-            os.chdir(shapefolder)
-            for shp in glob.glob("*.shp"):
-                args[k] = os.path.join(shapefolder,shp)
-        else:
-            args[k] = f.name
+    if not cmd_args.local:
+        print "Using remote data"
+        for k in downloads.keys():
+            f = tempfile.NamedTemporaryFile(delete=False)
+            print "Downloading %s to %s" % (k, f.name)
+            
+            response = urllib2.urlopen(downloads[k])
+            f.write(response.read())
+            f.close()
 
-    args[u'workspace_dir'] = tempfile.mkdtemp()
-    print args
+            if "outputFormat=SHAPE-ZIP" in downloads[k]:
+                shapefile = zipfile.ZipFile(f.name, 'r')
+                shapefolder = tempfile.mkdtemp()
+                print "Unzipping shapefile to %s" % shapefolder
+                shapefile.extractall(shapefolder)
+                shapefile.close()
+                os.chdir(shapefolder)
+                for shp in glob.glob("*.shp"):
+                    args[k] = os.path.join(shapefolder,shp)
+            else:
+                args[k] = f.name
+
+        args[u'workspace_dir'] = tempfile.mkdtemp()
+    else:
+        print "Using local data"
+
     natcap.invest.sdr.execute(args)

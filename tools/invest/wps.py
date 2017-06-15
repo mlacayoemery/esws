@@ -55,6 +55,8 @@ def parse_tool():
         LOGGER.info("%s model name found." % title)
         LOGGER.debug("\"%s\" model abstract found." % abstract)
 
+        #pywps.inout.literaltypes.LITERAL_DATA_TYPES
+        #pywps.inout.formats.FORMATS
         for p, t, d in re.findall(regex_param, parameters):
             #remove newlines and repeated spaces from description
             d = re.sub(' +',' ',re.sub("\n", " ", d))
@@ -217,12 +219,115 @@ wps_process.append(ProcessClassInstance(name = "SayGoodbye",
                                         abstract="What you would expect"))
 
 
+def handler(request, response):
+    response.outputs['response'].data = request.inputs['interjection'][0].data + " " + request.inputs['noun'][0].data
+    response.outputs['response'].uom = pywps.UOM('unity')
+    return response
+
+wps_process.append(ProcessClassInstance(name = "InterjectionNoun",
+                                        inputs = [pywps.LiteralInput('interjection', 'Input interjection', data_type='string'),
+                                                  pywps.LiteralInput('noun', 'Input noun', data_type='string')],
+                                        outputs = [pywps.LiteralOutput('response', 'Output response', data_type='string')],                                                                                
+                                        handler=handler,
+                                        identifier='interjection_noun',
+                                        title="Process Interjection Noun",
+                                        abstract="What you would expect"))
+
+def handler(request, response):
+    out = "/home/mlacayo/Downloads/outlets.gml"
+    response.outputs['gml_out'].output_format = pywps.FORMATS.GML
+    response.outputs['gml_out'].file = out
+    return response
+
+wps_process.append(ProcessClassInstance(name = "send_gml",
+                                        inputs = [],
+                                        outputs = [pywps.ComplexOutput('gml_out',
+                                                                       'GML file',
+                                                                       supported_formats=[pywps.Format('application/gml+xml')])],
+                                        handler = handler,
+                                        identifier='send_gml',
+                                        title='Process to send a GML file',
+                                        abstract='Returns a GML file'))
+                                       
+
+#http://localhost:5000/wps?request=Execute&service=WPS&identifier=send_shp&version=1.0.0&ResponseDocument=shp_out=@asReference=true
+def handler(request, response):
+    out = "/home/mlacayo/Downloads/watersheds.zip"
+    response.outputs['shp_out'].output_format = pywps.FORMATS.SHP
+    response.outputs['shp_out'].file = out
+    return response
+
+wps_process.append(ProcessClassInstance(name = "send_shp",
+                                        inputs = [],
+                                        outputs = [pywps.ComplexOutput('shp_out',
+                                                                       'SHP file',
+                                                                       supported_formats=[pywps.Format('application/x-zipped-shp')])],
+                                        handler = handler,
+                                        identifier='send_shp',
+                                        title='Process to send a SHP file',
+                                        abstract='Returns a SHP file'))
+
+#http://localhost:5000/wps?request=DescribeProcess&service=WPS&identifier=echo_shp&version=1.0.0
+#http://localhost:5000/wps?request=Execute&service=WPS&identifier=echo_shp&version=1.0.0&ResponseDocument=shp_out=@asReference=true&datainputs=shp_in=http://gala.unige.ch:8080/geoserver/wfs?typename=geonode%3Awatersheds&outputFormat=SHAPE-ZIP&version=1.0.0&service=WFS&request=GetFeature
+#http://localhost:5000/wps?request=Execute&service=WPS&identifier=echo_shp&version=1.0.0&datainputs=shp_in=Reference@xlink:href=
+def handler(request, response):
+    out = request.inputs['shp_in'][0].data
+    response.outputs['shp_out'].output_format = pywps.FORMATS.SHP
+    response.outputs['shp_out'].file = out
+    return response
+
+wps_process.append(ProcessClassInstance(name = "EchoSHP",
+                                        inputs = [pywps.ComplexInput('shp_in',
+                                                                      'SHP in',
+                                                                      supported_formats=[pywps.Format('application/x-zipped-shp')])],
+                                        outputs = [pywps.ComplexOutput('shp_out',
+                                                                       'SHP out',
+                                                                       supported_formats=[pywps.Format('application/x-zipped-shp')])],
+                                        handler = handler,
+                                        identifier='echo_shp',
+                                        title='Process to echo a SHP file',
+                                        abstract='Returns a the given SHP file'))
+
+
+##def handler(request, response):
+##    response.outputs['response'].data = 'Goodbye ' + \
+##        request.inputs['name'][0].data
+##    response.outputs['response'].uom = pywps.UOM('unity')
+##    return response
+##wps_process.append(ProcessClassInstance(name = "echowfs",
+##                                        inputs = [pywps.ComplexInput('inputwfs',
+##                                                                     'inputwfs',
+##                                                                     supported_formats = ["WFS"],
+##                                                                     data_format = "WFS",
+##                                                                     abstract="A WFS call",
+##                                                                     min_occurs=1,
+##                                                                     max_occurs=1],
+##                                        outputs = [pywps.ComplexOutput('outputwfs',
+##                                                                       'outputwfs',
+##                                                                       supported_formats = ["WFS"],
+##                                                                       abstract="A WFS call")],
+##                                        handler=handler,
+##                                        identifier='echowfs',
+##                                        title="Process to get a wfs resource",
+##                                        abstract="What you would expect"))
+
+
 app = flask.Flask(__name__)
 
 #http://localhost:5000/wps?request=GetCapabilities&service=WPS
 #http://localhost:5000/wps?request=DescribeProcess&service=WPS&identifier=all&version=1.0.0
 #http://localhost:5000/wps?request=DescribeProcess&service=WPS&identifier=say_hello&version=1.0.0
 #http://localhost:5000/wps?request=Execute&datainputs=name=World!&service=WPS&identifier=say_hello&version=1.0.0
+#http://localhost:5000/wps?request=Execute&datainputs=name=World!&service=WPS&identifier=say_goodbye&version=1.0.0
+#http://localhost:5000/wps?service=WPS&version=1.0.0&request=GetExecutionStatus&executionId=0b9ef4c4-51b2-11e7-af67-80e650054182
+#http://localhost:5000/wps?request=Execute&service=WPS&identifier=send_gml&version=1.0.0
+
+
+#http://localhost:5000/wps?request=Execute&datainputs=interjection=Hello;noun=World!&service=WPS&identifier=interjection_noun&version=1.0.0
+
+#http://apps.esdi-humboldt.cz/pywps/?service=WPS&version=1.0.0&request=Execute&identifier=literalprocess&datainputs=[int=1;float=3.2;zeroset=0;string=spam]&storeExecuteResponse=false
+
+
 processes = []
 processes.extend(wps_process)
 

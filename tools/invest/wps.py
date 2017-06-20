@@ -269,7 +269,7 @@ wps_process.append(ProcessClassInstance(name = "send_shp",
 
 #http://localhost:5000/wps?request=DescribeProcess&service=WPS&identifier=echo_shp&version=1.0.0
 #http://localhost:5000/wps?request=Execute&service=WPS&identifier=echo_shp&version=1.0.0&ResponseDocument=shp_out=@asReference=true&datainputs=shp_in=http://gala.unige.ch:8080/geoserver/wfs?typename=geonode%3Awatersheds&outputFormat=SHAPE-ZIP&version=1.0.0&service=WFS&request=GetFeature
-#http://localhost:5000/wps?request=Execute&service=WPS&identifier=echo_shp&version=1.0.0&datainputs=shp_in=Reference@xlink:href=
+#http://localhost:5000/wps?request=Execute&service=WPS&identifier=echo_shp&version=1.0.0&datainputs=shp_in=[Reference@xlink:href=http%3A%2F%2Fgala.unige.ch%3A8080%2Fgeoserver%2Fwfs%3Ftypename%3Dgeonode%253Awatersheds%26outputFormat%3DSHAPE-ZIP%26version%3D1.0.0%26service%3DWFS%26request%3DGetFeature]
 def handler(request, response):
     out = request.inputs['shp_in'][0].data
     response.outputs['shp_out'].output_format = pywps.FORMATS.SHP

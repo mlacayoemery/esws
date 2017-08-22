@@ -19,17 +19,17 @@ downloads = {
 }
 
 args = {
-        u'biophysical_table_path': u'/home/mlacayo/workspace/data/Base_Data/Freshwater/biophysical_table.csv',
-        u'dem_path': u'/home/mlacayo/workspace/data/Base_Data/Freshwater/dem',
+        u'biophysical_table_path': u'~/workspace/data/Base_Data/Freshwater/biophysical_table.csv',
+        u'dem_path': u'~/workspace/data/Base_Data/Freshwater/dem.tif',
         u'drainage_path': u'',
-        u'erodibility_path': u'/home/mlacayo/workspace/data/Base_Data/Freshwater/erodibility',
-        u'erosivity_path': u'/home/mlacayo/workspace/data/Base_Data/Freshwater/erosivity',
+        u'erodibility_path': u'~/workspace/data/Base_Data/Freshwater/erodibility.tif',
+        u'erosivity_path': u'~/workspace/data/Base_Data/Freshwater/erosivity.tif',
         u'ic_0_param': u'0.5',
         u'k_param': u'2',
-        u'lulc_path': u'/home/mlacayo/workspace/data/Base_Data/Freshwater/landuse_90',
+        u'lulc_path': u'~/workspace/data/Base_Data/Freshwater/landuse_90.tif',
         u'sdr_max': u'0.8',
         u'threshold_flow_accumulation': u'1000',
-        u'watersheds_path': u'/home/mlacayo/workspace/data/Base_Data/Freshwater/watersheds.shp',
+        u'watersheds_path': u'~/workspace/data/Base_Data/Freshwater/watersheds.shp',
         u'workspace_dir': u'/tmp/sedimentation_workspace',
 }
 
@@ -63,5 +63,7 @@ if __name__ == '__main__':
         args[u'workspace_dir'] = tempfile.mkdtemp()
     else:
         print "Using local data"
+        for k in args.keys():
+            args[k] = os.path.expanduser(args[k])
 
     natcap.invest.sdr.execute(args)

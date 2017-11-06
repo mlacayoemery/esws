@@ -5,12 +5,12 @@ InVEST version: 3.3.3
 """
 
 import natcap.invest.routing.routedem
-
+import os
 
 args = {
         u'calculate_downstream_distance': True,
         u'calculate_slope': True,
-        u'dem_uri': u'D:/Martin/Data/Base_Data/Freshwater/dem.tif',
+        u'dem_uri': u'~/workspace/data/Base_Data/Freshwater/dem.tif',
         u'downstream_distance_filename': u'downstream_distance.tif',
         u'flow_accumulation_filename': u'flow_accumulation.tif',
         u'flow_direction_filename': u'flow_direction.tif',
@@ -20,8 +20,15 @@ args = {
         u'threshold_flow_accumulation': u'1000',
         u'threshold_flow_accumulation_stepsize': u'100',
         u'threshold_flow_accumulation_upper': u'2000',
-        u'workspace_dir': u'C:\\Users\\lacayoem/Documents/routedem_workspace',
+        u'workspace_dir': u'/tmp/routedem_workspace',
 }
 
 if __name__ == '__main__':
+    for k in args.keys():
+        try:
+            args[k] = os.path.expanduser(args[k])
+
+        except AttributeError:
+            continue
+
     natcap.invest.routing.routedem.execute(args)

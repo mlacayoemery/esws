@@ -118,35 +118,36 @@ data_stores = [("scenario_override", os.path.join(data_path, "ScenarioGenerator/
                ("mwq_land", os.path.join(data_path, "MarineWaterQuality/input/3005_VI_landPolygon"))]
 
 
-coverage_store = [("base_data_freshwater_dem", os.path.join(data_path, "Base_Data/Freshwater/dem.tif"))]
+coverage_stores = [("base_data_freshwater_dem", os.path.join(data_path, "Base_Data/Freshwater/dem.tif"))]
 
-workspace = "invest"
+workspace_name = "invest"
 workspace_url = "http://esws.unige.ch"
 
 cat = geoserver.catalog.Catalog(rest_url, username, password)
 
-if workspace not in [ws.name for ws in cat.get_workspaces()]:
-    ws = cat.create_workspace(workspace, workspace_url)
+workspace = cat.get_workspace(workspace_name)
+if workspace is None:
+    workspace = cat.create_workspace(workspace_name, workspace_url)
 ##else:
 ##    raise NameError, "Existing workspace %s" % workspace
 
 
-for data_store_name, data_store_path in data_stores:
-    print "Processing store %s" % data_store_name
-
-    shapefile_plus_sidecars = {}
-    for key in ["shp", "shx", "prj", "dbf"]:
-        shapefile_plus_sidecars[key] = ".".join([data_store_path, key])
-
-    ft = cat.create_featurestore(data_store_name, workspace=workspace, data=shapefile_plus_sidecars)
+##
+##for data_store_name, data_store_path in data_stores:
+##    print "Processing store %s" % data_store_name
+##
+##    shapefile_plus_sidecars = {}
+##    for key in ["shp", "shx", "prj", "dbf"]:
+##        shapefile_plus_sidecars[key] = ".".join([data_store_path, key])
+##
+##    ft = cat.create_featurestore(data_store_name, workspace=workspace, data=shapefile_plus_sidecars)
     
-    #ds = cat.create_datastore(data_store_name, workspace)
+for coverage_store_name, coverage_store_path in coverage_stores:
+    print "Processing store %s" % coverage_store_name
 
-    #ds.connection_parameters.update(host='localhost', port='5432', database='postgis', user='postgres', passwd='password', dbtype='postgis', schema='postgis')
-    #cat.save(ds)
+    tiffdata = { 'tiff' : coverage_store_path }
 
-    #ft = cat.publish_featuretype('newLayerName', ds, 'EPSG:4326', srs='EPSG:4326')
-    #cat.save(ft)               
+    c = cat.create_coveragestore_external_geotiff(coverage_store_name, "file://" + coverage_store_path, workspace)
 
 #isinstance(resource, geoserver.resource.Coverage)
 #isinstance(resource, geoserver.resource.FeatureType)

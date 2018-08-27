@@ -18,11 +18,11 @@ def make_named_workspace(gs_cat = get_cat(),
                          prefix="user"):
 
     workspace_name = "-".join([prefix,
-                               uuid.uuid1()])
+                               str(uuid.uuid1())])
 
     workspace_url = workspace_name
 
-    return cat.create_workspace(workspace_name, workspace_url).name
+    return gs_cat.create_workspace(workspace_name, workspace_url).name
     
 def publish_shp(shp_path,
                 shp_name = None,
@@ -179,16 +179,20 @@ if __name__ == '__main__':
 
 
     ###run the proximity base scenario generator
+    print "Generate scenario rasters"
 
     #generate the forest scenario LULC
+    print "Generate forest scenario raster"
     natcap.invest.scenario_gen_proximity.execute(gen_forest_args)
 
     #generate the residential scenario LULC
+    print "Generate residential scenario raster"
     natcap.invest.scenario_gen_proximity.execute(gen_residential_args)
 
 
 
     ###run SDR for the scenarios
+    print "Calculate SDR for scenarios"
 
     #create the SDR forest scenario dictionary
     sdr_forest_args = copy.copy(sdr_base_args)
@@ -200,6 +204,7 @@ if __name__ == '__main__':
     sdr_forest_args[u'lulc_path'] = u'/home/mlacayo/workspace/cas/data/output/output/scenario_forest/nearest_to_edge.tif'
 
     #run the SDR forest scenario
+    print "Calculate SDR for forest scenario"
     natcap.invest.sdr.execute(sdr_forest_args)
 
     #create the SDR residential scenario dictionary
@@ -212,6 +217,7 @@ if __name__ == '__main__':
     sdr_residential_args[u'lulc_path'] = u'/home/mlacayo/workspace/cas/data/output/output/scenario_residential/nearest_to_edge.tif'
 
     #run the SDR residential scenario
+    print "Calculate SDR for residential scenario"
     natcap.invest.sdr.execute(sdr_residential_args)
 
     

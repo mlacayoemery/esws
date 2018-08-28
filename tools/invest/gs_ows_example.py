@@ -9,6 +9,8 @@ import os
 import geoserver.catalog
 import uuid
 
+import csv
+
 def get_cat(rest_url = "http://localhost:8080/geoserver/rest",
             username = "admin",
             password = "geoserver"):
@@ -40,6 +42,40 @@ def publish_shp(shp_path,
     return cat.create_featurestore(shp_name,
                                    workspace = gs_workspace,
                                    data = shapefile_plus_sidecars)
+
+def extract_wrapper(args):
+    extract_shapefile_value_csv(**args)
+
+def extract_shapefile_value_csv(shapefile_path, key, csv_path, id_field="ws_id", id_value=1, value_field="sed_retent"):
+    #open the output results
+    data_source = driver.Open(shapefile_path, 0)
+
+    #get the actual data from the results
+    layer = data_source.GetLayer()
+
+    #loop over each feature in the data
+    for feature in layer:
+
+        #check if watershed 1 found
+        if feature.GetField(id_field) == 1:
+
+            #save retention
+            with open(csv_path, 'ab') as csvfile:
+                datawriter = csv.writer(csvfile)
+                datawriter.writerow([key, feature.GetField(value_field)])
+
+            data_source = None
+
+            return None
+
+
+def local_parameters(args):
+    for key, value in args.iteritems():
+        if type(value) == str:
+            if value[:4].lower() == "http":
+                return False
+
+        return True
    
 data_path = "/home/mlacayo/workspace/cas/data"
 
@@ -92,7 +128,9 @@ gen_residential_args = {
     }
 
 if __name__ == '__main__':
-    job_queue = []
+    csv_path = "/home/mlacayo/workspace/cas/data/output/sed_retent.csv"
+    
+    job_queue = [] #(count, process, args, msg)
     
     ###run the SDR baseline with 3 differnt threshold flow accumulations
 
@@ -120,40 +158,39 @@ if __name__ == '__main__':
 
         #set the flow value
         args[u'threshold_flow_accumulation'] = flow
-        print "Runing SDR with flow", flow
+        #print "Runing SDR with flow", flow
 
         #run SDR with the current parameters
-        natcap.invest.sdr.execute(args)
+        #natcap.invest.sdr.execute(args)
+        job_queue.append((0,
+                          natcap.invest.sdr.execute,
+                          args,
+                          "Runing SDR with flow %i" % flow))
 
+        job_queue.append((0,
+                          extract_wrapper,
+                          {"shapefile_path" : os.path.join(args[u'workspace_dir'],
+                                                           u'watershed_results_sdr.shp'),
+                           "key" : flow,
+                           "csv_path" : csv_path},
+                          "Reading SDR results for flow %i" % flow))
 
-
-        ###read the results from the SDR runs
-
-        #set the path for the output results
-        shapefile_path = args[u'workspace_dir']
-        shapefile_path = os.path.join(shapefile_path, u'watershed_results_sdr.shp')
-
-        #open the output results
-        data_source = driver.Open(shapefile_path, 0)
-
-        #get the actual data from the results
-        layer = data_source.GetLayer()
-
-        #loop over each feature in the data
-        for feature in layer:
-
-            #check if watershed 1 found
-            if feature.GetField(id_field) == 1:
-
-                #save retention
-                retention_dict[flow] = feature.GetField(retention_field)
-
-        #close the results
-        dataSource = None
-
+    while len(job_queue) != 0:
+        job = job_queue.pop()
+        _, p, args, msg = job
+        if local_parameters(args):
+            print msg
+            apply(p, [args])
+        else:
+            job_queue.append(job)
 
 
     ###select the retention closest to 9,000,000
+    retention_dict = {}
+    with open(csv_path, 'rb') as f:
+        cf = csv.reader(f)
+        for key, value in cf:
+            retention_dict[int(key)] = float(value)
 
     #set constant for comparison
     target_retention = 9000000

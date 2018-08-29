@@ -15,6 +15,9 @@ import urllib
 import tempfile
 import zipfile
 
+class MissingResource(Exception):
+    pass
+
 def get_cat(rest_url = "http://localhost:8080/geoserver/rest",
             username = "admin",
             password = "geoserver"):
@@ -85,21 +88,37 @@ def get_remote_parameters(args):
     for key, value in args.iteritems():
         if type(value) == str:
             if value[:4].lower() == "http":
-                _, tmp_path = tempfile.mkstemp()
-                urllib.URLopener().retrieve(value, tmp_path)
+                print value
+                if "service=WFS" in value:
+                    try:
+                        _, tmp_path = tempfile.mkstemp(suffix=".zip", prefix="esws-")
+                        urllib.URLopener().retrieve(value, tmp_path)
 
-                print tmp_path
-                tmp_dir = tempfile.mkdtemp()
-                zipfile.ZipFile(tmp_path, 'r').extractall(tmp_dir)
+                        tmp_dir = tempfile.mkdtemp(prefix="esws-")
+                        zipfile.ZipFile(tmp_path, 'r').extractall(tmp_dir)
 
-                for wfs_file in os.listdir(tmp_dir):
-                    if wfs_file.endswith(".shp"):
-                        args[key] = os.path.join(tmp_dir,wfs_file)
-                        print args[key]
-                        break
+                        for wfs_file in os.listdir(tmp_dir):
+                            if wfs_file.endswith(".shp"):
+                                args[key] = os.path.join(tmp_dir,wfs_file)
+                                print "Assigned %s %s" % (key, args[key])
+                    except zipfile.BadZipfile:
+                        raise MissingResource, "Missing resource"
+
+                elif "service=WCS" in value:
+                    _, tmp_path = tempfile.mkstemp(suffix=".tif", prefix="esws-")
+                    urllib.URLopener().retrieve(value, tmp_path)
+                    args[key] = tmp_path
+
+                else:
+                    raise ValueError, "Unknown protocol for %s" % value
                
 def layer_url(layer_name):
     template = "http://127.0.0.1:8080/geoserver/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=%s&outputFormat=SHAPE-ZIP"
+
+    return template % layer_name
+
+def cover_url(layer_name):
+    template = "http://127.0.0.1:8080/geoserver/cas/wcs?service=WCS&version=2.0.0&request=GetCoverage&coverageId=%s&format=image%%2Fgeotiff"
 
     return template % layer_name
     
@@ -108,6 +127,9 @@ data_path = "/home/mlacayo/workspace/cas/data"
 
 #http://127.0.0.1:8080/geoserver/cas/wms?service=WMS&version=1.1.0&request=GetMap&layers=cas:eto&styles=&bbox=444900.9029974863,4900407.170489954,485070.9029974863,4956627.170489954&width=548&height=768&srs=EPSG:26910&format=image%2Fgeotiff
 #http://127.0.0.1:8080/geoserver/cas/wcs?service=WCS&version=1.0.0&request=GetCoverage&coverage=cas:eto&bbox=444900.9029974863,4900407.170489954,485070.9029974863,4956627.170489954&width=548&height=768&crs=EPSG:26910&format=image%2Fgeotiff
+#http://127.0.0.1:8080/geoserver/ows?service=WCS&version=1.0.0&request=DescribeCoverage&coverage=cas:eto
+
+#http://127.0.0.1:8080/geoserver/cas/wcs?service=WCS&version=2.0.0&request=GetCoverage&coverageId=cas:eto&&format=image%2Fgeotiff
 
 sdr_base_args = {
     u'biophysical_table_path': u'/home/mlacayo/workspace/cas/data/biophysical_table.csv',
@@ -179,7 +201,8 @@ if __name__ == '__main__':
 
         #copy SDR parameters template
         args = copy.copy(sdr_base_args)
-
+        args[u'erosivity_path'] = cover_url("cas:erosivity")
+        
         #set unique output directory based on flow value
         args[u'workspace_dir'] = args[u'workspace_dir'] + "_" + str(flow)
 
@@ -233,7 +256,12 @@ if __name__ == '__main__':
             if job[0] < 4:
                 job[0] += 1
                 print "Attempting to download inputs"
-                get_remote_parameters(job[2])
+                try:
+                    get_remote_parameters(job[2])
+
+                except MissingResource:
+                    print "Resource(s) unavailable"
+                    
                 job_queue.append(job)
 
 

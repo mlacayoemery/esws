@@ -39,9 +39,9 @@ def publish_shp(shp_path,
     for key in ["shp", "shx", "prj", "dbf"]:
         shapefile_plus_sidecars[key] = ".".join([data_store_path, key])
 
-    return cat.create_featurestore(shp_name,
-                                   workspace = gs_workspace,
-                                   data = shapefile_plus_sidecars)
+    return gs_cat.create_featurestore(shp_name,
+                                      workspace = gs_workspace,
+                                      data = shapefile_plus_sidecars)
 
 def extract_wrapper(args):
     extract_shapefile_value_csv(**args)
@@ -130,7 +130,7 @@ gen_residential_args = {
 if __name__ == '__main__':
     csv_path = "/home/mlacayo/workspace/cas/data/output/sed_retent.csv"
     
-    job_queue = [] #(count, process, args, msg)
+    job_queue = [] #(priority, process, args, uploads, msg)
     
     ###run the SDR baseline with 3 differnt threshold flow accumulations
 
@@ -162,9 +162,15 @@ if __name__ == '__main__':
 
         #run SDR with the current parameters
         #natcap.invest.sdr.execute(args)
+
+        ws = make_named_workspace()
+        
         job_queue.append((0,
                           natcap.invest.sdr.execute,
                           args,
+                          {
+                              ":".join([ws, "sdr"]) : os.path.join(args[u'workspace_dir'], u'watershed_results_sdr.shp')
+                          },
                           "Runing SDR with flow %i" % flow))
 
         job_queue.append((0,
@@ -173,14 +179,19 @@ if __name__ == '__main__':
                                                            u'watershed_results_sdr.shp'),
                            "key" : flow,
                            "csv_path" : csv_path},
+                          {},
                           "Reading SDR results for flow %i" % flow))
 
     while len(job_queue) != 0:
         job = job_queue.pop()
-        _, p, args, msg = job
+        _, p, args, uploads, msg = job
         if local_parameters(args):
             print msg
             apply(p, [args])
+            for layer_name, layer_path in uploads.iteritems():
+                print "Publishing %s" % layer_name
+                ws, layer_name = layer_name.split(":")
+                publish_shp(layer_path, layer_name, ws)
         else:
             job_queue.append(job)
 

@@ -11,6 +11,10 @@ import uuid
 
 import csv
 
+import urllib
+import tempfile
+import zipfile
+
 def get_cat(rest_url = "http://localhost:8080/geoserver/rest",
             username = "admin",
             password = "geoserver"):
@@ -75,7 +79,30 @@ def local_parameters(args):
             if value[:4].lower() == "http":
                 return False
 
-        return True
+    return True
+
+def get_remote_parameters(args):
+    for key, value in args.iteritems():
+        if type(value) == str:
+            if value[:4].lower() == "http":
+                _, tmp_path = tempfile.mkstemp()
+                urllib.URLopener().retrieve(value, tmp_path)
+
+                print tmp_path
+                tmp_dir = tempfile.mkdtemp()
+                zipfile.ZipFile(tmp_path, 'r').extractall(tmp_dir)
+
+                for wfs_file in os.listdir(tmp_dir):
+                    if wfs_file.endswith(".shp"):
+                        args[key] = os.path.join(tmp_dir,wfs_file)
+                        print args[key]
+                        break
+               
+def layer_url(layer_name):
+    template = "http://127.0.0.1:8080/geoserver/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=%s&outputFormat=SHAPE-ZIP"
+
+    return template % layer_name
+    
    
 data_path = "/home/mlacayo/workspace/cas/data"
 
@@ -164,26 +191,35 @@ if __name__ == '__main__':
         #natcap.invest.sdr.execute(args)
 
         ws = make_named_workspace()
+
+        layer_name = ":".join([ws, "sdr"])
+
+        uploads = {
+            layer_name : os.path.join(args[u'workspace_dir'], u'watershed_results_sdr.shp')
+        }
         
-        job_queue.append((0,
+        job_queue.append([0,
                           natcap.invest.sdr.execute,
                           args,
-                          {
-                              ":".join([ws, "sdr"]) : os.path.join(args[u'workspace_dir'], u'watershed_results_sdr.shp')
-                          },
-                          "Runing SDR with flow %i" % flow))
+                          uploads,
+                          "Runing SDR with flow %i" % flow])
 
-        job_queue.append((0,
+
+        args = {
+            "shapefile_path" : layer_url(layer_name),
+            "key" : flow,
+            "csv_path" : csv_path}
+
+        uploads = {}
+
+        job_queue.append([0,
                           extract_wrapper,
-                          {"shapefile_path" : os.path.join(args[u'workspace_dir'],
-                                                           u'watershed_results_sdr.shp'),
-                           "key" : flow,
-                           "csv_path" : csv_path},
-                          {},
-                          "Reading SDR results for flow %i" % flow))
+                          args,
+                          uploads,
+                          "Reading SDR results for flow %i" % flow])
 
     while len(job_queue) != 0:
-        job = job_queue.pop()
+        job = job_queue.pop(0)
         _, p, args, uploads, msg = job
         if local_parameters(args):
             print msg
@@ -193,7 +229,12 @@ if __name__ == '__main__':
                 ws, layer_name = layer_name.split(":")
                 publish_shp(layer_path, layer_name, ws)
         else:
-            job_queue.append(job)
+            print "Unavailable inputs for: %s" % msg
+            if job[0] < 4:
+                job[0] += 1
+                print "Attempting to download inputs"
+                get_remote_parameters(job[2])
+                job_queue.append(job)
 
 
     ###select the retention closest to 9,000,000

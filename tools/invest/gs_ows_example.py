@@ -50,6 +50,23 @@ def publish_shp(shp_path,
                                       workspace = gs_workspace,
                                       data = shapefile_plus_sidecars)
 
+
+def publish_tif(tif_path,
+                tif_name = None,
+                gs_workspace = make_named_workspace(),
+                gs_cat = get_cat()):
+
+    data_store_path, _ = os.path.splitext(tif_path)
+    if tif_name is None:
+        tif_name = os.path.basename(data_store_path)
+
+    tiffdata = { 'tiff' : tif_path }
+
+    return gs_cat.create_coveragestore_external_geotiff(tif_name,
+                                                        "file://" + tif_path,
+                                                        gs_cat.get_workspace(gs_workspace)) 
+
+
 def extract_wrapper(args):
     extract_shapefile_value_csv(**args)
 
@@ -139,6 +156,34 @@ def cover_url(layer_name):
 
     return template % layer_name
     
+def run_job(job):
+    job[0] += 1
+    _, p, args, uploads, msg = job
+    print "Trying %s" % msg
+    if local_parameters(args):
+        apply(p, [args])
+        for layer_name, layer_path in uploads.iteritems():
+            print "\tUploading %s" % layer_name
+            ws, layer_name = layer_name.split(":")
+            if layer_path.lower().endswith(".shp"):
+                publish_shp(layer_path, layer_name, ws)
+
+            elif layer_path.lower().endswith(".tif"):
+                publish_tif(layer_path, layer_name, ws)
+
+            else:
+                raise ValueError, layer_path
+        return True
+
+    else:
+        print "\tDownloading remote inputs"
+        try:
+            get_remote_parameters(job[2])
+
+        except MissingResource:
+            pass
+
+    return False
    
 data_path = "/home/mlacayo/workspace/cas/data"
 
@@ -150,16 +195,16 @@ data_path = "/home/mlacayo/workspace/cas/data"
 
 sdr_base_args = {
     u'biophysical_table_path': u'/home/mlacayo/workspace/cas/data/biophysical_table.csv',
-    u'dem_path': u'/home/mlacayo/workspace/cas/data/dem.tif',
+    u'dem_path': cover_url("cas:dem"),
     u'drainage_path': u'',
-    u'erodibility_path': u'/home/mlacayo/workspace/cas/data/erodibility.tif',
-    u'erosivity_path': u'/home/mlacayo/workspace/cas/data/erosivity.tif',
+    u'erodibility_path': cover_url("cas:erodibility"),
+    u'erosivity_path': cover_url("cas:erosivity"),
     u'ic_0_param': u'0.5',
     u'k_param': u'2',
-    u'lulc_path': u'/home/mlacayo/workspace/cas/data/landuse_90.tif',
+    u'lulc_path': cover_url("cas:landuse_90"),
     u'sdr_max': u'0.8',
     u'threshold_flow_accumulation': u'1000',
-    u'watersheds_path': u'/home/mlacayo/workspace/cas/data/watersheds.shp',
+    u'watersheds_path': layer_url("cas:watersheds"),
     u'workspace_dir': u'/home/mlacayo/workspace/cas/data/output/output/sdr_base',
     }
 
@@ -168,7 +213,7 @@ sdr_base_args = {
 gen_forest_args = {
     u'aoi_path': u'',
     u'area_to_convert': u'50000',
-    u'base_lulc_path': u'/home/mlacayo/workspace/cas/data/landuse_90.tif',
+    u'base_lulc_path': cover_url("cas:landuse_90"),
     u'convert_farthest_from_edge': False,
     u'convert_nearest_to_edge': True,
     u'convertible_landcover_codes': u'80',
@@ -183,7 +228,7 @@ gen_forest_args = {
 gen_residential_args = {
     u'aoi_path': u'',
     u'area_to_convert': u'50000',
-    u'base_lulc_path': u'/home/mlacayo/workspace/cas/data/landuse_90.tif',
+    u'base_lulc_path': cover_url("cas:landuse_90"),
     u'convert_farthest_from_edge': False,
     u'convert_nearest_to_edge': True,
     u'convertible_landcover_codes': u'80',
@@ -224,7 +269,6 @@ if __name__ == '__main__':
 
         #copy SDR parameters template
         args = copy.copy(sdr_base_args)
-        args[u'erosivity_path'] = cover_url("cas:erosivity")
         
         #set unique output directory based on flow value
         args[u'workspace_dir'] = args[u'workspace_dir'] + "_" + str(flow)
@@ -266,31 +310,11 @@ if __name__ == '__main__':
 
     while len(job_queue) != 0:
         job = job_queue.pop(0)
-        count, p, args, uploads, msg = job
-        print "Trying %s" % msg
-        if local_parameters(args):
-            apply(p, [args])
-            for layer_name, layer_path in uploads.iteritems():
-                print "\tUploading %s" % layer_name
-                ws, layer_name = layer_name.split(":")
-                publish_shp(layer_path, layer_name, ws)
-        else:
-            if count < 4:
-                count += 1
-                job[0] = count
-                
-                print "\tDownloading remote inputs"
-                try:
-                    get_remote_parameters(job[2])
-
-                except MissingResource:
-                    pass
-
-                if job[0] < 2:
-                    job_queue.insert(0,job)
-                else:
-                    job_queue.append(job)
-
+        if not run_job(job):
+            if job[0] < 2:
+                job_queue.insert(0, job)
+            else:
+                job.append(job)
 
     ###select the retention closest to 9,000,000
     retention_dict = {}
@@ -326,14 +350,20 @@ if __name__ == '__main__':
     print "Generate scenario rasters"
 
     #generate the forest scenario LULC
-    print "Generate forest scenario raster"
-    natcap.invest.scenario_gen_proximity.execute(gen_forest_args)
+    ws = make_named_workspace()
+
+    layer_name = ":".join([ws, "scenario"])
+
+    uploads = {
+        layer_name : os.path.join(gen_forest_args[u'workspace_dir'], u'nearest_to_edge.tif')
+    }
+    
+    job = [0, natcap.invest.scenario_gen_proximity.execute, gen_forest_args, uploads, "Generate forest scenario raster"]    
+    job_queue.append(job)
 
     #generate the residential scenario LULC
-    print "Generate residential scenario raster"
-    natcap.invest.scenario_gen_proximity.execute(gen_residential_args)
-
-
+    job = [0, natcap.invest.scenario_gen_proximity.execute, gen_residential_args, {}, "Generate residential scenario raster"]
+    job_queue.append(job)
 
     ###run SDR for the scenarios
     print "Calculate SDR for scenarios"
@@ -345,11 +375,11 @@ if __name__ == '__main__':
     sdr_forest_args[u'workspace_dir'] = u'/home/mlacayo/workspace/cas/data/output/output/sdr_scenario_forest'
 
     #set the LULC to the scenario
-    sdr_forest_args[u'lulc_path'] = u'/home/mlacayo/workspace/cas/data/output/output/scenario_forest/nearest_to_edge.tif'
+    sdr_forest_args[u'lulc_path'] = cover_url(layer_name)
 
     #run the SDR forest scenario
-    print "Calculate SDR for forest scenario"
-    natcap.invest.sdr.execute(sdr_forest_args)
+    job = [0, natcap.invest.sdr.execute, sdr_forest_args, {}, "Calculate SDR for forest scenario"]
+    job_queue.append(job)
 
     #create the SDR residential scenario dictionary
     sdr_residential_args = copy.copy(sdr_base_args)
@@ -361,7 +391,13 @@ if __name__ == '__main__':
     sdr_residential_args[u'lulc_path'] = u'/home/mlacayo/workspace/cas/data/output/output/scenario_residential/nearest_to_edge.tif'
 
     #run the SDR residential scenario
-    print "Calculate SDR for residential scenario"
-    natcap.invest.sdr.execute(sdr_residential_args)
+    job = [0, natcap.invest.sdr.execute, sdr_residential_args, {}, "Calculate SDR for residential scenario"]
+    job_queue.append(job)
 
-    
+    while len(job_queue) != 0:
+        job = job_queue.pop(0)
+        if not run_job(job):
+            if job[0] < 2:
+                job_queue.insert(0, job)
+            else:
+                job.append(job)

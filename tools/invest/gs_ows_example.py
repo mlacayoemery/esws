@@ -88,7 +88,7 @@ def get_remote_parameters(args):
     for key, value in args.iteritems():
         if type(value) == str:
             if value[:4].lower() == "http":
-                print value
+                #print value
                 if "service=WFS" in value:
                     try:
                         _, tmp_path = tempfile.mkstemp(suffix=".zip", prefix="esws-")
@@ -100,14 +100,16 @@ def get_remote_parameters(args):
                         for wfs_file in os.listdir(tmp_dir):
                             if wfs_file.endswith(".shp"):
                                 args[key] = os.path.join(tmp_dir,wfs_file)
-                                print "Assigned %s %s" % (key, args[key])
+                                print "\t\tAssigned %s %s" % (key, args[key])
                     except zipfile.BadZipfile:
+                        print "\t\tMissing %s" % value
                         raise MissingResource, "Missing resource"
 
                 elif "service=WCS" in value:
                     _, tmp_path = tempfile.mkstemp(suffix=".tif", prefix="esws-")
                     urllib.URLopener().retrieve(value, tmp_path)
                     args[key] = tmp_path
+                    print "\t\tAssigned %s %s" % (key, args[key])
 
                 else:
                     raise ValueError, "Unknown protocol for %s" % value
@@ -177,6 +179,12 @@ gen_residential_args = {
     }
 
 if __name__ == '__main__':
+    cat = get_cat()
+    for ws in cat.get_workspaces():
+        if ws.name[:5] == "user-":
+            print "Removing workspace %s" % ws.name                
+            cat.delete(ws, recurse=True)
+        
     csv_path = "/home/mlacayo/workspace/cas/data/output/sed_retent.csv"
     
     job_queue = [] #(priority, process, args, uploads, msg)
@@ -243,26 +251,30 @@ if __name__ == '__main__':
 
     while len(job_queue) != 0:
         job = job_queue.pop(0)
-        _, p, args, uploads, msg = job
+        count, p, args, uploads, msg = job
+        print "Trying %s" % msg
         if local_parameters(args):
-            print msg
             apply(p, [args])
             for layer_name, layer_path in uploads.iteritems():
-                print "Publishing %s" % layer_name
+                print "\tUploading %s" % layer_name
                 ws, layer_name = layer_name.split(":")
                 publish_shp(layer_path, layer_name, ws)
         else:
-            print "Unavailable inputs for: %s" % msg
-            if job[0] < 4:
-                job[0] += 1
-                print "Attempting to download inputs"
+            if count < 4:
+                count += 1
+                job[0] = count
+                
+                print "\tDownloading remote inputs"
                 try:
                     get_remote_parameters(job[2])
 
                 except MissingResource:
-                    print "Resource(s) unavailable"
-                    
-                job_queue.append(job)
+                    pass
+
+                if job[0] < 2:
+                    job_queue.insert(0,job)
+                else:
+                    job_queue.append(job)
 
 
     ###select the retention closest to 9,000,000

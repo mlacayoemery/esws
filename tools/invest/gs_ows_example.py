@@ -84,32 +84,47 @@ def local_parameters(args):
 
     return True
 
+ows_cache = {}
+
 def get_remote_parameters(args):
     for key, value in args.iteritems():
         if type(value) == str:
             if value[:4].lower() == "http":
                 #print value
                 if "service=WFS" in value:
-                    try:
-                        _, tmp_path = tempfile.mkstemp(suffix=".zip", prefix="esws-")
-                        urllib.URLopener().retrieve(value, tmp_path)
+                    if value in ows_cache:
+                        args[key] = ows_cache[value]
+                        print "\t\tAssigned %s cached %s" % (key, args[key])
 
-                        tmp_dir = tempfile.mkdtemp(prefix="esws-")
-                        zipfile.ZipFile(tmp_path, 'r').extractall(tmp_dir)
+                    else:
+                        try:
+                            _, tmp_path = tempfile.mkstemp(suffix=".zip", prefix="esws-")
+                            urllib.URLopener().retrieve(value, tmp_path)
 
-                        for wfs_file in os.listdir(tmp_dir):
-                            if wfs_file.endswith(".shp"):
-                                args[key] = os.path.join(tmp_dir,wfs_file)
-                                print "\t\tAssigned %s %s" % (key, args[key])
-                    except zipfile.BadZipfile:
-                        print "\t\tMissing %s" % value
-                        raise MissingResource, "Missing resource"
+                            tmp_dir = tempfile.mkdtemp(prefix="esws-")
+                            zipfile.ZipFile(tmp_path, 'r').extractall(tmp_dir)
+
+                            for wfs_file in os.listdir(tmp_dir):
+                                if wfs_file.endswith(".shp"):
+                                    args[key] = os.path.join(tmp_dir,wfs_file)
+                                    print "\t\tAssigned %s %s" % (key, args[key])
+                                    ows_cache[value] = args[key]
+                                    
+                        except zipfile.BadZipfile:
+                            print "\t\tMissing %s" % value
+                            raise MissingResource, "Missing resource"
 
                 elif "service=WCS" in value:
-                    _, tmp_path = tempfile.mkstemp(suffix=".tif", prefix="esws-")
-                    urllib.URLopener().retrieve(value, tmp_path)
-                    args[key] = tmp_path
-                    print "\t\tAssigned %s %s" % (key, args[key])
+                    if value in ows_cache:
+                        args[key] = ows_cache[value]
+                        print "\t\tAssigned %s cached %s" % (key, args[key])
+
+                    else:
+                        _, tmp_path = tempfile.mkstemp(suffix=".tif", prefix="esws-")
+                        urllib.URLopener().retrieve(value, tmp_path)
+                        args[key] = tmp_path
+                        print "\t\tAssigned %s %s" % (key, args[key])
+                        ows_cache[value] = args[key]
 
                 else:
                     raise ValueError, "Unknown protocol for %s" % value

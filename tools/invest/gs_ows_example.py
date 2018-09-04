@@ -152,7 +152,7 @@ def layer_url(layer_name):
     return template % layer_name
 
 def cover_url(layer_name):
-    template = "http://127.0.0.1:8080/geoserver/cas/wcs?service=WCS&version=2.0.0&request=GetCoverage&coverageId=%s&format=image%%2Fgeotiff"
+    template = "http://127.0.0.1:8080/geoserver/ows?service=WCS&version=2.0.0&request=GetCoverage&coverageId=%s&format=image%%2Fgeotiff"
 
     return template % layer_name
     

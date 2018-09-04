@@ -240,9 +240,10 @@ gen_residential_args = {
 
 if __name__ == '__main__':
     cat = get_cat()
+    print "Removing workspace(s)" 
     for ws in cat.get_workspaces():
         if ws.name[:5] == "user-":
-            print "Removing workspace %s" % ws.name                
+            print "\t%s" % ws.name                
             cat.delete(ws, recurse=True)
         
     csv_path = "/home/mlacayo/workspace/cas/data/output/sed_retent.csv"
@@ -352,17 +353,25 @@ if __name__ == '__main__':
     #generate the forest scenario LULC
     ws = make_named_workspace()
 
-    layer_name = ":".join([ws, "scenario"])
+    forest_layer_name = ":".join([ws, "scenario"])
 
     uploads = {
-        layer_name : os.path.join(gen_forest_args[u'workspace_dir'], u'nearest_to_edge.tif')
+        forest_layer_name : os.path.join(gen_forest_args[u'workspace_dir'], u'nearest_to_edge.tif')
     }
     
     job = [0, natcap.invest.scenario_gen_proximity.execute, gen_forest_args, uploads, "Generate forest scenario raster"]    
     job_queue.append(job)
 
     #generate the residential scenario LULC
-    job = [0, natcap.invest.scenario_gen_proximity.execute, gen_residential_args, {}, "Generate residential scenario raster"]
+    ws = make_named_workspace()
+
+    residential_layer_name = ":".join([ws, "scenario"])
+
+    uploads = {
+        residential_layer_name : os.path.join(gen_residential_args[u'workspace_dir'], u'nearest_to_edge.tif')
+    }
+    
+    job = [0, natcap.invest.scenario_gen_proximity.execute, gen_residential_args, uploads, "Generate residential scenario raster"]
     job_queue.append(job)
 
     ###run SDR for the scenarios
@@ -375,10 +384,18 @@ if __name__ == '__main__':
     sdr_forest_args[u'workspace_dir'] = u'/home/mlacayo/workspace/cas/data/output/output/sdr_scenario_forest'
 
     #set the LULC to the scenario
-    sdr_forest_args[u'lulc_path'] = cover_url(layer_name)
+    sdr_forest_args[u'lulc_path'] = cover_url(forest_layer_name)
 
     #run the SDR forest scenario
-    job = [0, natcap.invest.sdr.execute, sdr_forest_args, {}, "Calculate SDR for forest scenario"]
+    ws = make_named_workspace()
+
+    layer_name = ":".join([ws, "sdr"])
+
+    uploads = {
+        layer_name : os.path.join(sdr_forest_args[u'workspace_dir'], u'watershed_results_sdr.shp')
+    }
+    
+    job = [0, natcap.invest.sdr.execute, sdr_forest_args, uploads, "Calculate SDR for forest scenario"]
     job_queue.append(job)
 
     #create the SDR residential scenario dictionary
@@ -388,10 +405,19 @@ if __name__ == '__main__':
     sdr_residential_args[u'workspace_dir'] = u'/home/mlacayo/workspace/cas/data/output/output/sdr_scenario_residential'
 
     #set the LULC to the scenario
-    sdr_residential_args[u'lulc_path'] = u'/home/mlacayo/workspace/cas/data/output/output/scenario_residential/nearest_to_edge.tif'
+    sdr_residential_args[u'lulc_path'] = cover_url(residential_layer_name)
 
     #run the SDR residential scenario
-    job = [0, natcap.invest.sdr.execute, sdr_residential_args, {}, "Calculate SDR for residential scenario"]
+    ws = make_named_workspace()
+
+    layer_name = ":".join([ws, "sdr"])
+
+    uploads = {
+        layer_name : os.path.join(sdr_residential_args[u'workspace_dir'], u'watershed_results_sdr.shp')
+    }
+
+    
+    job = [0, natcap.invest.sdr.execute, sdr_residential_args, uploads, "Calculate SDR for residential scenario"]
     job_queue.append(job)
 
     while len(job_queue) != 0:

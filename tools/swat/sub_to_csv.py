@@ -17,7 +17,7 @@ skip_lines = 8
 for i in range(skip_lines):
     next(sub)
 
-line = sub.readline().rstrip()
+line = next(sub).rstrip()
 cols = (len(line) - 24) / 10
 
 fieldwidths = [6, -1, 3, -6, 3, -2, 3, 10] + [-1, 9] * (cols - 1)

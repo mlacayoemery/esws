@@ -15,7 +15,7 @@ sub = open(in_path, 'r')
 
 skip_lines = 8
 for i in range(skip_lines):
-    sub.readline()
+    next(sub)
 
 line = sub.readline().rstrip()
 cols = (len(line) - 24) / 10

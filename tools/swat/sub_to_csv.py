@@ -1,5 +1,6 @@
 import struct
 import csv
+import os
 
 def f(widths):
     return ' '.join('{}{}'.format(abs(fw), 'x' if fw < 0 else 's')
@@ -8,8 +9,10 @@ def f(widths):
 def p(pattern):
     return struct.Struct(fmtstring).unpack_from
 
-in_path = "/home/mlacayo/Downloads/swat_sample/output.sub"
-out_path = "/home/mlacayo/Downloads/swat_sample/output.csv"
+esws_path = os.sep.join(os.path.realpath(__file__).split(os.sep)[:-3])
+
+in_path = os.path.join(esws_path, "data/sample.sub")
+out_path = os.path.join(esws_path, "data/sample.csv")
 
 sub = open(in_path, 'r')
 

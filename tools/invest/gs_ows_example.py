@@ -282,7 +282,7 @@ if __name__ == '__main__':
 
         #set the flow value
         args[u'threshold_flow_accumulation'] = flow
-        #print "Runing SDR with flow", flow
+        #print "Running SDR with flow", flow
 
         #run SDR with the current parameters
         #natcap.invest.sdr.execute(args)
@@ -299,7 +299,7 @@ if __name__ == '__main__':
                           natcap.invest.sdr.execute,
                           args,
                           uploads,
-                          "Runing SDR with flow %i" % flow])
+                          "Running SDR with flow %i" % flow])
 
 
         args = {

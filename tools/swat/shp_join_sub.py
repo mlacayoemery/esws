@@ -2,6 +2,9 @@ import struct
 import csv
 import os
 
+def convert(shp, sub):
+    pass
+
 def f(widths):
     return ' '.join('{}{}'.format(abs(fw), 'x' if fw < 0 else 's')
                     for fw in fieldwidths)

@@ -2,7 +2,7 @@ import struct
 import csv
 import os
 
-def convert(shp, sub):
+def join(shp, sub):
     pass
 
 def f(widths):

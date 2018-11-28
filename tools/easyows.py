@@ -5,12 +5,13 @@ import urllib
 import tempfile
 import zipfile
 
+gs_url = "http://localhost:8080/gs213"
 ows_cache = {}
 
 class MissingResource(Exception):
     pass
 
-def get_cat(rest_url = "http://localhost:8080/geoserver/rest",
+def get_cat(rest_url = gs_url + "/rest",
             username = "admin",
             password = "geoserver"):
     return geoserver.catalog.Catalog(rest_url, username, password)
@@ -137,12 +138,12 @@ def get_remote_parameters(args):
                     raise ValueError, "Unknown protocol for %s" % value
                
 def layer_url(layer_name):
-    template = "http://127.0.0.1:8080/geoserver/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=%s&outputFormat=SHAPE-ZIP"
+    template = gs_url + "/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=%s&outputFormat=SHAPE-ZIP"
 
     return template % layer_name
 
 def cover_url(layer_name):
-    template = "http://127.0.0.1:8080/geoserver/ows?service=WCS&version=2.0.0&request=GetCoverage&coverageId=%s&format=image%%2Fgeotiff"
+    template = gs_url + "/ows?service=WCS&version=2.0.0&request=GetCoverage&coverageId=%s&format=image%%2Fgeotiff"
 
     return template % layer_name
     

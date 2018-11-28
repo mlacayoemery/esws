@@ -22,6 +22,12 @@ workspace_url = "http://www.unige.ch"
 
 cat = geoserver.catalog.Catalog(rest_url, username, password)
 
+print "Removing workspace(s)" 
+for ws in cat.get_workspaces():
+    if ws.name[:3] == "cas":
+        print "\t%s" % ws.name                
+        cat.delete(ws, recurse=True)
+
 workspace = cat.get_workspace(workspace_name)
 if workspace is None:
     workspace = cat.create_workspace(workspace_name, workspace_url)

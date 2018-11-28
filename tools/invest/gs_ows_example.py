@@ -24,7 +24,7 @@ import zipfile
 class MissingResource(Exception):
     pass
 
-def get_cat(rest_url = "http://localhost:8080/geoserver/rest",
+def get_cat(rest_url = "http://localhost:8080/gs213/rest",
             username = "admin",
             password = "geoserver"):
     return geoserver.catalog.Catalog(rest_url, username, password)

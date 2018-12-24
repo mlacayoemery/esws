@@ -19,4 +19,4 @@ pygeoprocessing>=1.2.3
 taskgraph[niced_processes]>=0.6.1
 chardet>=3.0.4
 matplotlib
-natcap.invest==3.5.0
+natcap.invest==3.5.0.post688+h2215ed1485cb

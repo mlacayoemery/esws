@@ -5,7 +5,12 @@
 	{% if user.is_authenticated %}
         <a class="btn btn-default" href="{% url 'server_edit' server_pk=server.pk %}"><span class="glyphicon glyphicon-pencil"></span></a>
 	{% endif %}
-        <h1>{{ server.title }}</h1>
-        <p>{{ server.url|linebreaksbr }}</p>
+<h2>Source</h2>
+<a href="{% url 'server_edit' server_pk=server.pk %}">Edit</a>
+<p>
+<table border=1 frame=void rules=all>
+<tr><td><b>Name</b></td><td>{{ server.title }}</td></tr>
+<tr><td><b>URL</b></td><td>{{ server.url|linebreaksbr }}</td></tr>
+</table>
     </div>
 {% endblock %}

@@ -20,6 +20,7 @@
 </tr>
 {% endfor %}
 </table>
+Total: {{ servers.count }}<p>
 <a href="{% url 'server_new'%}">Add Source</a>
 <a href="{% url 'job_list'%}">Combined Instances</a>
 
@@ -43,6 +44,7 @@
 </tr>
 {% endfor %}
 </table>
+Total: {{ servers.count }}<p>
 <a href="{% url 'server_new'%}">Add Source</a>
 <a href="{% url 'job_list'%}">Combined Instances</a>
 
@@ -66,6 +68,7 @@
 </tr>
 {% endfor %}
 </table>
+Total: {{ servers.count }}<p>
 <a href="{% url 'server_new'%}">Add Source</a>
 <a href="{% url 'job_list'%}">Combined Instances</a>
 
@@ -89,6 +92,26 @@
 </tr>
 {% endfor %}
 </table>
+Total: {{ servers.count }}<p>
 <a href="{% url 'server_new'%}">Add Source</a>
 <a href="{% url 'job_list'%}">Combined Instances</a>
+
+<p>
+<h3>Jobs</h3>
+<table border=1 frame=void rules=all>
+<tr><td><center>Job Id</center></td>
+<td><center>Process Id</center></td>
+<td><center>Server Id</center></td>
+<td><center>Server Title</center></td>
+<td width=50%><center>JSON Parameters</center></td></tr>
+{% for p in process_list  %}
+<tr><td><center><a href="{% url 'job_detail' process_pk=p.pk %}">{{ p.pk }}</a></center></td>
+<td><a href="{% url 'server_describe_process' server_pk=p.server.pk process_id=p.identifier %}">{{ p.identifier }}</a></td>
+<td><center><a href="{% url 'server_capabilities' server_pk=p.server.pk %}">{{ p.server.pk }}</a><center></td>
+<td>{{ p.server.title }}</td>
+<td width=50%>{{ p.args }}</td></tr>
+{% endfor %}
+</table>
+Total: {{ process_list.count }}<p>
+
 {% endblock %}

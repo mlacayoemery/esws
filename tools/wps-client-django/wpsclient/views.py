@@ -25,7 +25,10 @@ import collections
 # Create your views here.
 def dashboard(request):
     servers = WPS_Server.objects.order_by('title')
-    return render(request, 'wpsclient/dashboard.html', {'servers' : servers})
+    process_jobs = WPS_Process.objects.order_by('pk')
+    
+    return render(request, 'wpsclient/dashboard.html', {'servers' : servers,
+                                                        'process_list' : process_jobs})
 
 def server_list(request):
     servers = WPS_Server.objects.order_by('title')

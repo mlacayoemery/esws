@@ -11,6 +11,24 @@
 <table border=1 frame=void rules=all>
 <tr><td><b>Name</b></td><td>{{ server.title }}</td></tr>
 <tr><td><b>URL</b></td><td>{{ server.url|linebreaksbr }}</td></tr>
+<tr><td><b>Instances</b></td><td>{{ process_list.count }}</td></tr>
 </table>
     </div>
+
+<table border=1 frame=void rules=all>
+<tr><td><center>Job Id</center></td>
+<td><center>Process Id</center></td>
+<td><center>Server Id</center></td>
+<td><center>Server Title</center></td>
+<td width=50%><center>JSON Parameters</center></td></tr>
+{% for p in process_list  %}
+<tr><td><center><a href="{% url 'job_detail' process_pk=p.pk %}">{{ p.pk }}</a></center></td>
+<td><a href="{% url 'server_describe_process' server_pk=p.server.pk process_id=p.identifier %}">{{ p.identifier }}</a></td>
+<td><center><a href="{% url 'server_capabilities' server_pk=p.server.pk %}">{{ p.server.pk }}</a><center></td>
+<td>{{ p.server.title }}</td>
+<td width=50%>{{ p.args }}</td></tr>
+{% endfor %}
+</table>
+
+
 {% endblock %}

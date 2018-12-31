@@ -33,7 +33,11 @@ def server_list(request):
 
 def server_detail(request, server_pk):
     server = get_object_or_404(WPS_Server, pk=server_pk)
-    return render(request, 'wpsclient/server_detail.html', {'server': server})
+
+    process_jobs = WPS_Process.objects.filter(server__pk=server_pk).order_by('pk')
+
+    return render(request, 'wpsclient/server_detail.html', {'server': server,
+                                                            'process_list' : process_jobs})
 
 def server_new(request):
     if request.method == "POST":

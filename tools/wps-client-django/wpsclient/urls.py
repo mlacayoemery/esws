@@ -3,7 +3,8 @@ from . import views
 
 urlpatterns = [
     ##server specific urls
-    url(r'^$', views.server_list, name='server_list'),
+    url(r'^$', views.dashboard, name='dashboard'),    
+    url(r'^server/$', views.server_list, name='server_list'),
     url(r'^server/(?P<server_pk>\d+)/$', views.server_detail, name='server_detail'),
     url(r'^server/new/$', views.server_new, name='server_new'),
     url(r'^server/(?P<server_pk>\d+)/edit/$', views.server_edit, name='server_edit'),

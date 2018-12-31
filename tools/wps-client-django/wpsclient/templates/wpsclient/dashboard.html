@@ -1,0 +1,94 @@
+{% extends 'wpsclient/base.html' %}
+
+{% block content %}
+<h3>CSV</h3>
+<table border=1 frame=void rules=all>
+<tr>
+<td>Id</td>
+<td>Name</td>
+<td>URL</td>
+<td></td>
+<td></td>
+</tr>
+{% for server in servers %}
+<tr>
+<td>{{ server.pk }}</td>
+<td>{{ server.title }}</td>
+<td>{{ server.url}}</td>
+<td><a href="{% url 'server_capabilities' server_pk=server.pk %}">List</a></td>
+<td><a href="{% url 'server_job_list' server_pk=server.pk%}">Instances</a></td>
+</tr>
+{% endfor %}
+</table>
+<a href="{% url 'server_new'%}">Add Source</a>
+<a href="{% url 'job_list'%}">Combined Instances</a>
+
+<p>
+<h3>WCS</h3>
+<table border=1 frame=void rules=all>
+<tr>
+<td>Id</td>
+<td>Name</td>
+<td>URL</td>
+<td></td>
+<td></td>
+</tr>
+{% for server in servers %}
+<tr>
+<td>{{ server.pk }}</td>
+<td>{{ server.title }}</td>
+<td>{{ server.url}}</td>
+<td><a href="{% url 'server_capabilities' server_pk=server.pk %}">List</a></td>
+<td><a href="{% url 'server_job_list' server_pk=server.pk%}">Instances</a></td>
+</tr>
+{% endfor %}
+</table>
+<a href="{% url 'server_new'%}">Add Source</a>
+<a href="{% url 'job_list'%}">Combined Instances</a>
+
+<p>
+<h3>WFS</h3>
+<table border=1 frame=void rules=all>
+<tr>
+<td>Id</td>
+<td>Name</td>
+<td>URL</td>
+<td></td>
+<td></td>
+</tr>
+{% for server in servers %}
+<tr>
+<td>{{ server.pk }}</td>
+<td>{{ server.title }}</td>
+<td>{{ server.url}}</td>
+<td><a href="{% url 'server_capabilities' server_pk=server.pk %}">List</a></td>
+<td><a href="{% url 'server_job_list' server_pk=server.pk%}">Instances</a></td>
+</tr>
+{% endfor %}
+</table>
+<a href="{% url 'server_new'%}">Add Source</a>
+<a href="{% url 'job_list'%}">Combined Instances</a>
+
+<p>
+<h3>WPS</h3>
+<table border=1 frame=void rules=all>
+<tr>
+<td>Id</td>
+<td>Name</td>
+<td>URL</td>
+<td></td>
+<td></td>
+</tr>
+{% for server in servers %}
+<tr>
+<td>{{ server.pk }}</td>
+<td>{{ server.title }}</td>
+<td>{{ server.url}}</td>
+<td><a href="{% url 'server_capabilities' server_pk=server.pk %}">List</a></td>
+<td><a href="{% url 'server_job_list' server_pk=server.pk%}">Instances</a></td>
+</tr>
+{% endfor %}
+</table>
+<a href="{% url 'server_new'%}">Add Source</a>
+<a href="{% url 'job_list'%}">Combined Instances</a>
+{% endblock %}

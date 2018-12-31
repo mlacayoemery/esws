@@ -23,6 +23,9 @@ from .forms import testForm
 import collections
 
 # Create your views here.
+def dashboard(request):
+    servers = WPS_Server.objects.order_by('title')
+    return render(request, 'wpsclient/dashboard.html', {'servers' : servers})
 
 def server_list(request):
     servers = WPS_Server.objects.order_by('title')

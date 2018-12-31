@@ -1,0 +1,20 @@
+{% load staticfiles %}
+<html>
+<head><title>Django WPS Client</title></head>
+<body>
+        <div class="page-header">
+	{% if user.is_authenticated %}	
+            <a href="{% url 'server_new' %}" class="top-menu"><span class="glyphicon glyphicon-plus"></span></a>
+	{% endif %}    
+            <h1><a href="/">Django WPS Client</a></h1>
+        </div>
+        <div class="content container">
+            <div class="row">
+                <div class="col-md-8">
+                    {% block content %}
+                    {% endblock %}
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

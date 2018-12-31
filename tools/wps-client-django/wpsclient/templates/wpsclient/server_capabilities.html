@@ -1,0 +1,14 @@
+{% extends 'wpsclient/base.html' %}
+
+{% block content %}
+    <div class="server">
+	{% if user.is_authenticated %}
+        <a class="btn btn-default" href="{% url 'server_edit' server_pk=server.pk %}"><span class="glyphicon glyphicon-pencil"></span></a>
+	{% endif %}
+        <h2>{{ server.title }}</h2>
+        <p>{{ server.url|linebreaksbr }}</p>
+{% for process in processes %}
+<p><a href="{% url 'server_describe_process' server_pk=server.pk process_id=process %}">{{process}}</a></p>
+{% endfor %}
+    </div>
+{% endblock %}

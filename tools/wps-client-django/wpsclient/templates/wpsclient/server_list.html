@@ -1,0 +1,23 @@
+{% extends 'wpsclient/base.html' %}
+
+{% block content %}
+<table border=1 frame=void rules=all>
+<tr>
+<td>Id</td>
+<td>Title</td>
+<td>URL</td>
+<td></td>
+<td></td>
+</tr>
+{% for server in servers %}
+<tr>
+<td>{{ server.pk }}</td>
+<td>{{ server.title }}</td>
+<td>{{ server.url}}</td>
+<td><a href="{% url 'server_capabilities' server_pk=server.pk %}">Processes</a></td>
+<td><a href="{% url 'server_job_list' server_pk=server.pk%}">Jobs</a></td>
+</tr>
+{% endfor %}
+</table>
+<a href="{% url 'job_list'%}">All Jobs</a>
+{% endblock %}

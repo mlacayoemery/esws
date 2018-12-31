@@ -1,0 +1,22 @@
+{% extends 'wpsclient/base.html' %}
+
+{% block content %}
+    <div class="server">
+	{% if user.is_authenticated %}
+        <a class="btn btn-default" href="{% url 'process_edit' process_pk=process.pk %}"><span class="glyphicon glyphicon-pencil"></span></a>
+	{% endif %}
+        <p><b>Server: </b><a href="{% url 'server_capabilities' server_pk=process.server.pk %}">{{ process.server.title }}</a></p>
+        <p><b>Process: </b><a href="{% url 'server_describe_process' server_pk=process.server.pk process_id=process.identifier %}">{{ process.identifier }}</a></p>        
+        <p><b>Job Id: </b>{{process.pk}}<p/>
+        <p><b><a href="{% url 'job_edit' process_pk=process.pk %}">Edit Job</a></b></p>
+        <table border=1 frame=void rules=all>
+        <tr><td><b>key</b></td><td><b>value</b></td></tr>
+        {% for k, v in process.args.items  %}
+        <tr><td>{{k}}</td><td>{{v}}</td></tr>
+        {% endfor %}
+        </table>
+        <p><b>Job Queue: </b></p>
+        <p><a href="{% url 'server_job_list' server_pk=process.server.pk%}">Server</a></p>
+        <p><a href="{% url 'job_list' %}">All</a></p>
+    </div>
+{% endblock %}

@@ -2,10 +2,23 @@ import logging
 import inspect
 
 from django.shortcuts import render, get_object_or_404, redirect
-from .models import WPS_Server
-from .models import WPS_Process
-from .forms import ServerForm
-from .forms import ProcessForm
+
+from .models import ServerCSV
+from .models import ServerWCS
+from .models import ServerWFS
+from .models import ServerWPS
+
+from .models import ProcessWPS
+
+from .forms import ServerFormCSV
+from .forms import ServerFormWCS
+from .forms import ServerFormWFS
+from .forms import ServerFormWPS
+
+from .forms import ProcessWPSForm
+
+from .models import ServerWCS
+from .forms import ServerFormWCS
 import requests
 
 import xml.etree.ElementTree as ET
@@ -24,49 +37,155 @@ import collections
 
 # Create your views here.
 def dashboard(request):
-    servers = WPS_Server.objects.order_by('title')
-    process_jobs = WPS_Process.objects.order_by('pk')
+    servers_csv = ServerCSV.objects.order_by('title')
+    servers_wcs = ServerWCS.objects.order_by('title')
+    servers_wfs = ServerWFS.objects.order_by('title')
+    servers_wps = ServerWPS.objects.order_by('title')
+
+    process_jobs = ProcessWPS.objects.order_by('pk')
     
-    return render(request, 'wpsclient/dashboard.html', {'servers' : servers,
+    return render(request, 'wpsclient/dashboard.html', {'servers_csv' : servers_csv,
+                                                        'servers_wcs' : servers_wcs,
+                                                        'servers_wfs' : servers_wfs,
+                                                        'servers_wps' : servers_wps,                                                        
                                                         'process_list' : process_jobs})
 
-def server_list(request):
-    servers = WPS_Server.objects.order_by('title')
+def server_list(request, server_type):
+    server_dict = {
+        "CSV" : ServerCSV,
+        "WCS" : ServerWCS,
+        "WFS" : ServerWFS,
+        "WPS" : ServerWPS
+        }
+
+    ServerClass = server_dict[server_type]    
+    servers = ServerClass.objects.order_by('title')
     return render(request, 'wpsclient/server_list.html', {'servers' : servers})
 
-def server_detail(request, server_pk):
-    server = get_object_or_404(WPS_Server, pk=server_pk)
+def server_detail(request, server_pk, server_type):
+    server_dict = {
+        "CSV" : ServerCSV,
+        "WCS" : ServerWCS,
+        "WFS" : ServerWFS,
+        "WPS" : ServerWPS
+        }
 
-    process_jobs = WPS_Process.objects.filter(server__pk=server_pk).order_by('pk')
+    ServerClass = server_dict[server_type]
+    
+    server = get_object_or_404(ServerClass, pk=server_pk)
+
+    process_jobs = ProcessWPS.objects.filter(server__pk=server_pk).order_by('pk')
 
     return render(request, 'wpsclient/server_detail.html', {'server': server,
                                                             'process_list' : process_jobs})
 
-def server_new(request):
+##def server_new(request, ows):
+##    print(request.method, ows)
+##    if request.method == "POST":
+##        form = ServerForm(request.POST)
+##        if form.is_valid():
+##            server = form.save()
+##            #server.save()
+##            return redirect('server_detail', server_pk=server.pk)
+##            
+##    else: #elif request.method == "GET"
+##        form = ServerForm()
+##
+##    return render(request, 'wpsclient/server_edit.html', {'form': form,
+##                                                          'ows' : ows})
+
+def server_new(request, server_type):
+    server_dict = {
+        "CSV" : ServerFormCSV,
+        "WCS" : ServerFormWCS,
+        "WFS" : ServerFormWFS,
+        "WPS" : ServerFormWPS
+        }
+
+    FormClass = server_dict[server_type]
+    
     if request.method == "POST":
-        form = ServerForm(request.POST)
+        form = FormClass(request.POST)
         if form.is_valid():
             server = form.save()
             #server.save()
-            return redirect('server_detail', server_pk=server.pk)
-    else:
-        form = ServerForm()
+            return redirect('server_detail', server_pk=server.pk, server_type=server.server_type)
+            
+    else: #elif request.method == "GET"
+        form = FormClass()
 
-    return render(request, 'wpsclient/server_edit.html', {'form': form})
+    return render(request, 'wpsclient/server_edit.html', {'form': form,
+                                                          'server_type' : server_type})
 
-def server_edit(request, server_pk):
-    server = get_object_or_404(WPS_Server, pk=server_pk)
+def server_csv_new(request):
+    server_type = "CSV"
+    server_new(request, server_type)
+
+def server_wcs_new(request):
+    server_type = "WCS"
+    server_new(request, server_type)
+
+def server_wfs_new(request):
+    server_type = "WFS"
+    server_new(request, server_type)
+
+def server_wps_new(request):
+    server_type = "WPS"
+    server_new(request, server_type)
+
+
+##def server_edit(request, server_pk):
+##    server = get_object_or_404(ServerWPS, pk=server_pk)
+##    if request.method == "POST":
+##        form = ServerForm(request.POST, instance=server)
+##        if form.is_valid():
+##            server = form.save()
+##            return redirect('server_detail', server_pk=server.pk)
+##    else:
+##        form = ServerForm(instance=server)
+##    return render(request, 'wpsclient/server_edit.html', {'server' : server,
+##                                                          'form': form})
+
+def server_edit(request, server_pk, server_type):
+    server_dict = {
+        "CSV" : (ServerCSV, ServerFormCSV),
+        "WCS" : (ServerWCS, ServerFormWCS),
+        "WFS" : (ServerWFS, ServerFormWFS),
+        "WPS" : (ServerWPS, ServerFormWPS)
+        }
+
+    ServerClass, FormClass = server_dict[server_type]
+    
+    server = get_object_or_404(ServerClass, pk=server_pk)
     if request.method == "POST":
-        form = ServerForm(request.POST, instance=server)
+        form = FormClass(request.POST, instance=server)
         if form.is_valid():
             server = form.save()
-            return redirect('server_detail', server_pk=server.pk)
+            return redirect('server_detail', server_pk=server.pk, server_type=server.server_type)
     else:
-        form = ServerForm(instance=server)
-    return render(request, 'wpsclient/server_edit.html', {'form': form})
+        form = FormClass(instance=server)
+    return render(request, 'wpsclient/server_edit.html', {'server' : server,
+                                                          'form': form})
 
-def server_capabilities(request, server_pk):
-    server = get_object_or_404(WPS_Server, pk=server_pk)
+def server_csv_edit(request, server_pk):
+    server_type = "CSV"
+    server_edit(request, server_pk, server_type)
+
+def server_wcs_edit(request, server_pk):
+    server_type = "WCS"
+    server_edit(request, server_pk, server_type)
+
+def server_wfs_edit(request, server_pk):
+    server_type = "WFS"
+    server_edit(request, server_pk, server_type)
+
+def server_wps_edit(request, server_pk):
+    server_type = "WPS"
+    server_edit(request, server_pk, server_type)
+
+
+def server_wps_capabilities(request, server_type, server_pk):
+    server = get_object_or_404(ServerWPS, pk=server_pk)
     link = server.url + "?service=wps&version=1.0.0&request=GetCapabilities"
     capabilities = requests.get(link)
 
@@ -75,19 +194,19 @@ def server_capabilities(request, server_pk):
     for elem in tree.iter('{http://www.opengis.net/wps/1.0.0}Process'):
         processes.append(elem.find('{http://www.opengis.net/ows/1.1}Identifier').text)
     
-    return render(request, 'wpsclient/server_capabilities.html', {'server': server,
+    return render(request, 'wpsclient/server_wps_capabilities.html', {'server': server,
                                                                   'processes': processes})    
 
-def server_describe_process(request, server_pk, process_id):
-    server = get_object_or_404(WPS_Server, pk=server_pk)
+def server_wps_describe_process(request, server_type, server_pk, process_id):
+    server = get_object_or_404(ServerWPS, pk=server_pk)
     link = server.url + "?service=wps&version=1.0.0&request=DescribeProcess&IDENTIFIER=" + process_id
     description = parseString(requests.get(link).text).toprettyxml()
 
     wps = owslib.wps.WebProcessingService(server.url, verbose=False, skip_caps=True)
-    wps_process = wps.describeprocess(process_id)
+    process = wps.describeprocess(process_id)
 
     process_input = []
-    for parameter in wps_process.dataInputs:
+    for parameter in process.dataInputs:
 
         parameter_details = [parameter.identifier,
                              parameter.title,
@@ -100,7 +219,7 @@ def server_describe_process(request, server_pk, process_id):
         process_input.append(parameter_details)
 
     process_output = []
-    for parameter in wps_process.processOutputs:
+    for parameter in process.processOutputs:
 
         parameter_details = [parameter.identifier,
                              parameter.title,
@@ -111,21 +230,21 @@ def server_describe_process(request, server_pk, process_id):
         process_output.append(parameter_details)
     
     
-    return render(request, 'wpsclient/server_describe_process.html', {'server': server,
+    return render(request, 'wpsclient/server_wps_describe_process.html', {'server': server,
                                                                       'process_id': process_id,
-                                                                      'process_title' : wps_process.title,
-                                                                      'process_abstract' : wps_process.abstract,
+                                                                      'process_title' : process.title,
+                                                                      'process_abstract' : process.abstract,
                                                                       'process_input' : process_input,
                                                                       'process_output' : process_output,
                                                                       'xml': description})    
 
 def server_job_list(request, server_pk):
-    process_jobs = WPS_Process.objects.filter(server__pk=server_pk).order_by('pk')
+    process_jobs = ProcessWPS.objects.filter(server__pk=server_pk).order_by('pk')
     return render(request, 'wpsclient/job_list.html', {'process_list' : process_jobs})
 
 
 def job_list(request):
-    process_jobs = WPS_Process.objects.order_by('pk')
+    process_jobs = ProcessWPS.objects.order_by('pk')
     return render(request, 'wpsclient/job_list.html', {'process_list' : process_jobs})
 
 
@@ -133,11 +252,11 @@ def job_detail(request, process_pk):
     l = logging.getLogger('django.request')
     l.warning(inspect.stack()[0][3])    
     #detail of an existing process with parameters
-    process = get_object_or_404(WPS_Process, pk=process_pk)
+    process = get_object_or_404(ProcessWPS, pk=process_pk)
     return render(request, 'wpsclient/job_detail.html', {'process': process})
 
 ##def job_new(request, server_pk, process_id):
-##    server = get_object_or_404(WPS_Server, pk=server_pk)
+##    server = get_object_or_404(ServerWPS, pk=server_pk)
 ##    link = server.url + "?service=wps&version=1.0.0&request=DescribeProcess&IDENTIFIER=" + process_id
 ##    description = requests.get(link)
 ##
@@ -159,7 +278,7 @@ def job_detail(request, process_pk):
 ##
 ##
 ##def job_edit(request, process_pk):
-##    process = get_object_or_404(WPS_Process, pk=process_pk)
+##    process = get_object_or_404(ProcessWPS, pk=process_pk)
 ##    if request.method == "POST":
 ##        form = ProcessForm(request.POST, instance=process)
 ##        if form.is_valid():
@@ -176,16 +295,16 @@ def job_new(request, server_pk, process_id):
     l = logging.getLogger('django.request')
     l.warning(inspect.stack()[0][3])
     
-    server = get_object_or_404(WPS_Server, pk=server_pk)
+    server = get_object_or_404(ServerWPS, pk=server_pk)
     #link = server.url + "?service=wps&version=1.0.0&request=DescribeProcess&IDENTIFIER=" + process_id
     #description = requests.get(link)
 
     args = collections.OrderedDict()
 
     wps = owslib.wps.WebProcessingService(server.url, verbose=False, skip_caps=True)
-    wps_process = wps.describeprocess(process_id)
+    process = wps.describeprocess(process_id)
 
-    for parameter in wps_process.dataInputs:            
+    for parameter in process.dataInputs:            
         if parameter.dataType == "double":
             args[parameter.identifier] = float(0)
         elif parameter.dataType == "int":
@@ -216,7 +335,7 @@ def job_new(request, server_pk, process_id):
         #form.data["csrfmiddlewaretoken"].delete()
             
         args= collections.OrderedDict(key_values)
-        process = WPS_Process(server=server,identifier=process_id,args=args)
+        process = ProcessWPS(server=server,identifier=process_id,args=args)
         process.save()
         
         return redirect('job_detail', process_pk=process.pk)
@@ -229,7 +348,7 @@ def job_edit(request, process_pk):
     l = logging.getLogger('django.request')
     l.warning(inspect.stack()[0][3])
     
-    process = get_object_or_404(WPS_Process, pk=process_pk)
+    process = get_object_or_404(ProcessWPS, pk=process_pk)
 
     if request.method == "POST":
         form = testForm(request.POST)        

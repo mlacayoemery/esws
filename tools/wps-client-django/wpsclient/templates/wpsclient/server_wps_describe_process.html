@@ -5,7 +5,7 @@
 	{% if user.is_authenticated %}
         <a class="btn btn-default" href="{% url 'server_edit' server_pk=server.pk %}"><span class="glyphicon glyphicon-pencil"></span></a>
 	{% endif %}
-        <h2><a href="{% url 'server_capabilities' server_pk=server.pk %}">{{ server.title }}</a></h2>
+        <h2><a href="{% url 'server_wps_capabilities' server_type='WPS' server_pk=server.pk %}">{{ server.title }}</a></h2>
         <p><b>URL</b></p><p>{{ server.url}}</p>
         <p><b>Id</b></p><p>{{ process_id}}</p>
         <p><b>Title</b></p><p>{{ process_title}}</p>

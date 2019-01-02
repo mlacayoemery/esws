@@ -1,20 +1,49 @@
 from django import forms
 
-from .models import WPS_Server
-from .models import WPS_Process
+from .models import ServerCSV
+from .models import ServerWCS
+from .models import ServerWFS
+from .models import ServerWPS
+
+from .models import ProcessWPS
 
 from splitjson.widgets import SplitJSONWidget
 
-class ServerForm(forms.ModelForm):
+##class ServerForm(forms.ModelForm):
+##
+##    class Meta:
+##        model = WPS_Server
+##        fields = ('title', 'url',)
+
+class ServerFormCSV(forms.ModelForm):
 
     class Meta:
-        model = WPS_Server
+        model = ServerCSV
         fields = ('title', 'url',)
 
-class ProcessForm(forms.ModelForm):
+class ServerFormWCS(forms.ModelForm):
 
     class Meta:
-        model = WPS_Process
+        model = ServerWCS
+        fields = ('title', 'url',)
+
+class ServerFormWFS(forms.ModelForm):
+
+    class Meta:
+        model = ServerWFS
+        fields = ('title', 'url',)
+
+class ServerFormWPS(forms.ModelForm):
+
+    class Meta:
+        model = ServerWPS
+        fields = ('title', 'url',)
+
+
+class ProcessWPSForm(forms.ModelForm):
+
+    class Meta:
+        model = ProcessWPS
         fields = ('args',)
 
     def __init__(self, *args, **kwargs):
@@ -23,7 +52,7 @@ class ProcessForm(forms.ModelForm):
         except KeyError:
             default = "{}"
 
-        super(ProcessForm, self).__init__(*args, **kwargs)
+        super(ProcessWPSForm, self).__init__(*args, **kwargs)
 
         self.fields["args"].initial = default
         #self.fields['poll'].queryset = Poll.objects.filter(owner=user)

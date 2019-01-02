@@ -3,7 +3,31 @@ from jsonfield import JSONField
 
 # Create your models here.
 
-class WPS_Server(models.Model):
+##class WPS_Server(models.Model):
+##    ows = models.CharField(max_length=3)
+##    title = models.CharField(max_length=200)
+##    url = models.URLField(max_length=200)
+##
+##    def publish(self):
+##        self.save()
+##
+##    def __str__(self):
+##        return self.title
+
+##class WPS_Process(models.Model):
+##    server = models.ForeignKey(WPS_Server, on_delete=models.CASCADE)   
+##    identifier = models.CharField(max_length=200)
+##
+##    args = JSONField()
+##
+##    def publish(self):
+##        self.save()
+##
+##    def __str__(self):
+##        return "-".join([self.server,
+##                         self.process])
+
+class Server(models.Model):
     title = models.CharField(max_length=200)
     url = models.URLField(max_length=200)
 
@@ -13,8 +37,21 @@ class WPS_Server(models.Model):
     def __str__(self):
         return self.title
 
-class WPS_Process(models.Model):
-    server = models.ForeignKey(WPS_Server, on_delete=models.CASCADE)   
+class ServerCSV(Server):
+    server_type = models.CharField(max_length=3, default='CSV', editable=False)
+
+class ServerWCS(Server):
+    server_type = models.CharField(max_length=3, default='WCS', editable=False)
+
+class ServerWFS(Server):
+    server_type = models.CharField(max_length=3, default='WFS', editable=False)
+
+class ServerWPS(Server):
+    server_type = models.CharField(max_length=3, default='WPS', editable=False)
+
+
+class ProcessWPS(models.Model):
+    server = models.ForeignKey(ServerWPS, on_delete=models.CASCADE)   
     identifier = models.CharField(max_length=200)
 
     args = JSONField()
@@ -26,6 +63,17 @@ class WPS_Process(models.Model):
         return "-".join([self.server,
                          self.process])
 
+##class WCS_Instance(models.Model):
+##    server = models.ForeignKey(WCS_Server, on_delete=models.CASCADE)   
+##    identifier = models.CharField(max_length=200)
+##
+##    def publish(self):
+##        self.save()
+##
+##    def __str__(self):
+##        return "-".join([self.server,
+##                         self.process])
+##
 
 ##class ModelGenerator(models.Model):
 ##    def __init__(self, *args, **kwargs):

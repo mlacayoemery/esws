@@ -8,7 +8,7 @@
         <h2>{{ server.title }}</h2>
         <p>{{ server.url|linebreaksbr }}</p>
 {% for process in processes %}
-<p><a href="{% url 'server_describe_process' server_pk=server.pk process_id=process %}">{{process}}</a></p>
+<p><a href="{% url 'server_wps_describe_process' server_type='WPS' server_pk=server.pk process_id=process %}">{{process}}</a></p>
 {% endfor %}
     </div>
 {% endblock %}

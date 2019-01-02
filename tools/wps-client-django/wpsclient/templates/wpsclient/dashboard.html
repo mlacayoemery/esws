@@ -10,19 +10,19 @@
 <td></td>
 <td></td>
 </tr>
-{% for server in servers %}
+{% for server in servers_csv %}
 <tr>
 <td>{{ server.pk }}</td>
 <td><a href="{% url 'server_detail' server_pk=server.pk %}">{{ server.title }}</a></td>
 <td>{{ server.url}}</td>
-<td><a href="{% url 'server_capabilities' server_pk=server.pk %}">List</a></td>
-<td><a href="{% url 'server_job_list' server_pk=server.pk%}">Instances</a></td>
+<td><a href="{% url 'server_wps_capabilities' server_type='WPS' server_pk=server.pk %}">List</a></td>
+<td><a href="{% url 'server_job_list' server_pk=server.pk%}">Items</a></td>
 </tr>
 {% endfor %}
 </table>
-Total: {{ servers.count }}<p>
-<a href="{% url 'server_new'%}">Add</a>
-<a href="{% url 'job_list'%}">Instances</a>
+Total: {{ servers_csv.count }}<p>
+<a href="{% url 'server_new' server_type='CSV' %}">Add</a>
+<a href="{% url 'job_list'%}">Items</a>
 
 <p>
 <h3>WCS</h3>
@@ -34,19 +34,19 @@ Total: {{ servers.count }}<p>
 <td></td>
 <td></td>
 </tr>
-{% for server in servers %}
+{% for server in servers_wcs %}
 <tr>
 <td>{{ server.pk }}</td>
 <td>{{ server.title }}</td>
 <td>{{ server.url}}</td>
-<td><a href="{% url 'server_capabilities' server_pk=server.pk %}">List</a></td>
-<td><a href="{% url 'server_job_list' server_pk=server.pk%}">Instances</a></td>
+<td><a href="{% url 'server_wps_capabilities' server_type='WPS' server_pk=server.pk %}">List</a></td>
+<td><a href="{% url 'server_job_list' server_pk=server.pk%}">Items</a></td>
 </tr>
 {% endfor %}
 </table>
-Total: {{ servers.count }}<p>
-<a href="{% url 'server_new'%}">Add</a>
-<a href="{% url 'job_list'%}">Instances</a>
+Total: {{ servers_wcs.count }}<p>
+<a href="{% url 'server_new' server_type='WCS' %}">Add</a>
+<a href="{% url 'job_list'%}">Items</a>
 
 <p>
 <h3>WFS</h3>
@@ -58,19 +58,19 @@ Total: {{ servers.count }}<p>
 <td></td>
 <td></td>
 </tr>
-{% for server in servers %}
+{% for server in servers_wfs %}
 <tr>
 <td>{{ server.pk }}</td>
 <td>{{ server.title }}</td>
 <td>{{ server.url}}</td>
-<td><a href="{% url 'server_capabilities' server_pk=server.pk %}">List</a></td>
-<td><a href="{% url 'server_job_list' server_pk=server.pk%}">Instances</a></td>
+<td><a href="{% url 'server_wps_capabilities' server_type='WPS' server_pk=server.pk %}">List</a></td>
+<td><a href="{% url 'server_job_list' server_pk=server.pk%}">Items</a></td>
 </tr>
 {% endfor %}
 </table>
-Total: {{ servers.count }}<p>
-<a href="{% url 'server_new'%}">Add</a>
-<a href="{% url 'job_list'%}">Instances</a>
+Total: {{ servers_wfs.count }}<p>
+<a href="{% url 'server_new' server_type='WFS' %}">Add</a>
+<a href="{% url 'job_list'%}">Items</a>
 
 <p>
 <h3>WPS</h3>
@@ -82,19 +82,19 @@ Total: {{ servers.count }}<p>
 <td></td>
 <td></td>
 </tr>
-{% for server in servers %}
+{% for server in servers_wps %}
 <tr>
 <td>{{ server.pk }}</td>
-<td>{{ server.title }}</td>
+<td><a href="{% url 'server_edit' server_type='WPS' server_pk=server.pk %}">{{ server.title }}</a></td>
 <td>{{ server.url}}</td>
-<td><a href="{% url 'server_capabilities' server_pk=server.pk %}">List</a></td>
-<td><a href="{% url 'server_job_list' server_pk=server.pk%}">Instances</a></td>
+<td><a href="{% url 'server_wps_capabilities' server_type='WPS' server_pk=server.pk %}">List</a></td>
+<td><a href="{% url 'server_job_list' server_pk=server.pk%}">Items</a></td>
 </tr>
 {% endfor %}
 </table>
-Total: {{ servers.count }}<p>
-<a href="{% url 'server_new'%}">Add</a>
-<a href="{% url 'job_list'%}">Instances</a>
+Total: {{ servers_wps.count }}<p>
+<a href="{% url 'server_new' server_type='WPS' %}">Add</a>
+<a href="{% url 'job_list'%}">Items</a>
 
 <p>
 <h3>Jobs</h3>
@@ -109,7 +109,7 @@ Total: {{ servers.count }}<p>
 <tr>
 <td><center>{{ p.server.pk }}<center></td>
 <td><a href="{% url 'server_detail' server_pk=p.server.pk %}">{{ p.server.title }}</a></td>
-<td><a href="{% url 'server_describe_process' server_pk=p.server.pk process_id=p.identifier %}">{{ p.identifier }}</a></td>
+<td><a href="{% url 'server_wps_describe_process' server_pk=p.server.pk process_id=p.identifier %}">{{ p.identifier }}</a></td>
 <td><center><a href="{% url 'job_detail' process_pk=p.pk %}">{{ p.pk }}</a></center></td>
 <td width=50%>{{ p.args }}</td></tr>
 {% endfor %}

@@ -5,7 +5,7 @@ from .models import ServerWCS
 from .models import ServerWFS
 from .models import ServerWPS
 
-from .models import ProcessWPS
+from .models import Job
 
 from splitjson.widgets import SplitJSONWidget
 
@@ -40,10 +40,10 @@ class ServerFormWPS(forms.ModelForm):
         fields = ('title', 'url',)
 
 
-class ProcessWPSForm(forms.ModelForm):
+class JobForm(forms.ModelForm):
 
     class Meta:
-        model = ProcessWPS
+        model = Job
         fields = ('args',)
 
     def __init__(self, *args, **kwargs):
@@ -52,7 +52,7 @@ class ProcessWPSForm(forms.ModelForm):
         except KeyError:
             default = "{}"
 
-        super(ProcessWPSForm, self).__init__(*args, **kwargs)
+        super(JobForm, self).__init__(*args, **kwargs)
 
         self.fields["args"].initial = default
         #self.fields['poll'].queryset = Poll.objects.filter(owner=user)

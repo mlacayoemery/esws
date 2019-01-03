@@ -16,13 +16,13 @@
 <td><a href="{% url 'server_detail' server_pk=server.pk %}">{{ server.title }}</a></td>
 <td>{{ server.url}}</td>
 <td><a href="{% url 'server_wps_capabilities' server_type='WPS' server_pk=server.pk %}">List</a></td>
-<td><a href="{% url 'server_job_list' server_pk=server.pk%}">Items</a></td>
+<td><a href="{% url 'server_job_list' server_pk=server.pk%}">Jobs</a></td>
 </tr>
 {% endfor %}
 </table>
-Total: {{ servers_csv.count }}<p>
+Servers: {{ servers_csv.count }}<p>
 <a href="{% url 'server_new' server_type='CSV' %}">Add</a>
-<a href="{% url 'job_list'%}">Items</a>
+<a href="{% url 'job_list'%}">Jobs</a>
 
 <p>
 <h3>WCS</h3>
@@ -40,13 +40,13 @@ Total: {{ servers_csv.count }}<p>
 <td>{{ server.title }}</td>
 <td>{{ server.url}}</td>
 <td><a href="{% url 'server_wps_capabilities' server_type='WPS' server_pk=server.pk %}">List</a></td>
-<td><a href="{% url 'server_job_list' server_pk=server.pk%}">Items</a></td>
+<td><a href="{% url 'server_job_list' server_pk=server.pk%}">Jobs</a></td>
 </tr>
 {% endfor %}
 </table>
-Total: {{ servers_wcs.count }}<p>
+Servers: {{ servers_wcs.count }}<p>
 <a href="{% url 'server_new' server_type='WCS' %}">Add</a>
-<a href="{% url 'job_list'%}">Items</a>
+<a href="{% url 'job_list'%}">Jobs</a>
 
 <p>
 <h3>WFS</h3>
@@ -64,37 +64,39 @@ Total: {{ servers_wcs.count }}<p>
 <td>{{ server.title }}</td>
 <td>{{ server.url}}</td>
 <td><a href="{% url 'server_wps_capabilities' server_type='WPS' server_pk=server.pk %}">List</a></td>
-<td><a href="{% url 'server_job_list' server_pk=server.pk%}">Items</a></td>
+<td><a href="{% url 'server_job_list' server_pk=server.pk%}">Jobs</a></td>
 </tr>
 {% endfor %}
 </table>
-Total: {{ servers_wfs.count }}<p>
+Servers: {{ servers_wfs.count }}<p>
 <a href="{% url 'server_new' server_type='WFS' %}">Add</a>
-<a href="{% url 'job_list'%}">Items</a>
+<a href="{% url 'job_list'%}">Jobs</a>
 
 <p>
 <h3>WPS</h3>
 <table border=1 frame=void rules=all>
 <tr>
 <td>Id</td>
+<td>Updated</td>
 <td>Name</td>
+<td>Registrations</td>
+<td>Jobs</td>
 <td>URL</td>
-<td></td>
-<td></td>
 </tr>
 {% for server in servers_wps %}
 <tr>
-<td>{{ server.pk }}</td>
-<td><a href="{% url 'server_edit' server_type='WPS' server_pk=server.pk %}">{{ server.title }}</a></td>
+<td><a href="{% url 'server_edit' server_type='WPS' server_pk=server.pk %}">{{ server.pk }}</a></td>
+<td>{{ server.updated_at|date:'y-m-d H:i' }}</td>
+<td><a href="{% url 'server_wps_capabilities' server_type='WPS' server_pk=server.pk %}">{{ server.title }}</a></td>
+<td align=right><a href="{% url 'server_wps_elements' server_type='WPS'  server_pk=server.pk%}">{{ server.registrations }}</a></td>
+<td align=right><a href="{% url 'server_job_list' server_pk=server.pk%}">{{ server.jobs }}</a></td>
 <td>{{ server.url}}</td>
-<td><a href="{% url 'server_wps_capabilities' server_type='WPS' server_pk=server.pk %}">List</a></td>
-<td><a href="{% url 'server_job_list' server_pk=server.pk%}">Items</a></td>
 </tr>
 {% endfor %}
 </table>
-Total: {{ servers_wps.count }}<p>
+Servers: {{ servers_wps.count }}<p>
 <a href="{% url 'server_new' server_type='WPS' %}">Add</a>
-<a href="{% url 'job_list'%}">Items</a>
+<a href="{% url 'job_list'%}">Jobs</a>
 
 <p>
 <h3>Jobs</h3>
@@ -108,12 +110,12 @@ Total: {{ servers_wps.count }}<p>
 {% for p in process_list  %}
 <tr>
 <td><center>{{ p.server.pk }}<center></td>
-<td><a href="{% url 'server_detail' server_pk=p.server.pk %}">{{ p.server.title }}</a></td>
-<td><a href="{% url 'server_wps_describe_process' server_pk=p.server.pk process_id=p.identifier %}">{{ p.identifier }}</a></td>
+<td><a href="{% url 'server_wps_capabilities' server_type='WPS' server_pk=p.server.pk %}">{{ p.server.title }}</a></td>
+<td><a href="{% url 'server_wps_describe_process' server_type='WPS' server_pk=p.server.pk process_id=p.identifier %}">{{ p.identifier }}</a></td>
 <td><center><a href="{% url 'job_detail' process_pk=p.pk %}">{{ p.pk }}</a></center></td>
 <td width=50%>{{ p.args }}</td></tr>
 {% endfor %}
 </table>
-Total: {{ process_list.count }}<p>
+Servers: {{ process_list.count }}<p>
 
 {% endblock %}

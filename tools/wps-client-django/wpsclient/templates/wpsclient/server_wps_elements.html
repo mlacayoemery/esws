@@ -9,17 +9,13 @@
         <p>{{ server.url|linebreaksbr }}</p>
 <table border=1 frame=void rules=all>
 <tr>
-<td>Action</td>
+<td>Job</td>
 <td>Id</td>
 </tr>
 {% for process in processes %}
 <tr>
-{% if process.0 %}
-<td>Unregister</td>
-{% else %}
-<td><a href="{% url 'server_wps_register_element' server_type='WPS' server_pk=server.pk process_id=process.1 %}">Register</a></td>
-{% endif %}
-<td><a href="{% url 'server_wps_describe_process' server_type='WPS' server_pk=server.pk process_id=process.1 %}">{{process.1}}</a></td>
+<td><a href="{% url 'job_new' server_pk=server.pk process_id=process %}">New</a></td>
+<td><a href="{% url 'server_wps_describe_process' server_type='WPS' server_pk=server.pk process_id=process %}">{{process}}</a></td>
 </tr>
 {% endfor %}
 </table>

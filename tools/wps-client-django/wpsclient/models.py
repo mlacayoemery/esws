@@ -31,6 +31,12 @@ class Server(models.Model):
     title = models.CharField(max_length=200)
     url = models.URLField(max_length=200)
 
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)    
+
+    registrations = models.IntegerField(default=0)
+    jobs = models.IntegerField(default=0)
+
     def publish(self):
         self.save()
 
@@ -49,8 +55,19 @@ class ServerWFS(Server):
 class ServerWPS(Server):
     server_type = models.CharField(max_length=3, default='WPS', editable=False)
 
+class ServerElement(models.Model):
+    server = models.ForeignKey(Server, on_delete=models.CASCADE)   
+    identifier = models.CharField(max_length=200)
 
-class ProcessWPS(models.Model):
+    def publish(self):
+        self.save()
+
+    def __str__(self):
+        return "-".join([self.server,
+                         self.identifier])
+
+
+class Job(models.Model):
     server = models.ForeignKey(ServerWPS, on_delete=models.CASCADE)   
     identifier = models.CharField(max_length=200)
 

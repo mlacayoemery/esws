@@ -8,17 +8,16 @@ from .models import ServerWCS
 from .models import ServerWFS
 from .models import ServerWPS
 
-from .models import ProcessWPS
+from .models import ServerElement
+from .models import Job
 
 from .forms import ServerFormCSV
 from .forms import ServerFormWCS
 from .forms import ServerFormWFS
 from .forms import ServerFormWPS
 
-from .forms import ProcessWPSForm
+from .forms import JobForm
 
-from .models import ServerWCS
-from .forms import ServerFormWCS
 import requests
 
 import xml.etree.ElementTree as ET
@@ -33,6 +32,7 @@ from django.shortcuts import render_to_response
 from django.template import RequestContext
 from .forms import testForm
 
+import copy
 import collections
 
 # Create your views here.
@@ -42,7 +42,7 @@ def dashboard(request):
     servers_wfs = ServerWFS.objects.order_by('title')
     servers_wps = ServerWPS.objects.order_by('title')
 
-    process_jobs = ProcessWPS.objects.order_by('pk')
+    process_jobs = Job.objects.order_by('pk')
     
     return render(request, 'wpsclient/dashboard.html', {'servers_csv' : servers_csv,
                                                         'servers_wcs' : servers_wcs,
@@ -74,7 +74,7 @@ def server_detail(request, server_pk, server_type):
     
     server = get_object_or_404(ServerClass, pk=server_pk)
 
-    process_jobs = ProcessWPS.objects.filter(server__pk=server_pk).order_by('pk')
+    process_jobs = Job.objects.filter(server__pk=server_pk).order_by('pk')
 
     return render(request, 'wpsclient/server_detail.html', {'server': server,
                                                             'process_list' : process_jobs})
@@ -169,19 +169,19 @@ def server_edit(request, server_pk, server_type):
 
 def server_csv_edit(request, server_pk):
     server_type = "CSV"
-    server_edit(request, server_pk, server_type)
+    return server_edit(request, server_pk, server_type)
 
 def server_wcs_edit(request, server_pk):
     server_type = "WCS"
-    server_edit(request, server_pk, server_type)
+    return server_edit(request, server_pk, server_type)
 
 def server_wfs_edit(request, server_pk):
     server_type = "WFS"
-    server_edit(request, server_pk, server_type)
+    return server_edit(request, server_pk, server_type)
 
 def server_wps_edit(request, server_pk):
     server_type = "WPS"
-    server_edit(request, server_pk, server_type)
+    return server_edit(request, server_pk, server_type)
 
 
 def server_wps_capabilities(request, server_type, server_pk):
@@ -191,11 +191,38 @@ def server_wps_capabilities(request, server_type, server_pk):
 
     tree = ET.fromstring(capabilities.text)
     processes = []
+    server_elements = ServerElement.objects.filter(server__pk=server_pk)
     for elem in tree.iter('{http://www.opengis.net/wps/1.0.0}Process'):
-        processes.append(elem.find('{http://www.opengis.net/ows/1.1}Identifier').text)
+        identifier = elem.find('{http://www.opengis.net/ows/1.1}Identifier').text
+        if server_elements.filter(identifier=identifier).exists():
+            processes.append((True, identifier))
+        else:
+            processes.append((False, identifier))
     
     return render(request, 'wpsclient/server_wps_capabilities.html', {'server': server,
-                                                                  'processes': processes})    
+                                                                  'processes': processes}) 
+
+def server_wps_elements(request, server_type, server_pk):
+    server = get_object_or_404(ServerWPS, pk=server_pk)
+    server_elements = ServerElement.objects.filter(server__pk=server_pk)
+    processes = []
+    for elem in server_elements:
+        processes.append(elem.identifier)
+    
+    return render(request, 'wpsclient/server_wps_elements.html', {'server': server,
+                                                                  'processes': processes}) 
+
+
+def server_wps_register_element(request, server_type, server_pk, process_id):
+    server = get_object_or_404(ServerWPS, pk=server_pk)
+
+    element = ServerElement(server=server,identifier=process_id)
+    element.save()
+
+    server.registrations = server.registrations + 1
+    server.save()
+
+    return server_wps_capabilities(request, server_type, server_pk)
 
 def server_wps_describe_process(request, server_type, server_pk, process_id):
     server = get_object_or_404(ServerWPS, pk=server_pk)
@@ -239,12 +266,12 @@ def server_wps_describe_process(request, server_type, server_pk, process_id):
                                                                       'xml': description})    
 
 def server_job_list(request, server_pk):
-    process_jobs = ProcessWPS.objects.filter(server__pk=server_pk).order_by('pk')
+    process_jobs = Job.objects.filter(server__pk=server_pk).order_by('pk')
     return render(request, 'wpsclient/job_list.html', {'process_list' : process_jobs})
 
 
 def job_list(request):
-    process_jobs = ProcessWPS.objects.order_by('pk')
+    process_jobs = Job.objects.order_by('pk')
     return render(request, 'wpsclient/job_list.html', {'process_list' : process_jobs})
 
 
@@ -252,7 +279,7 @@ def job_detail(request, process_pk):
     l = logging.getLogger('django.request')
     l.warning(inspect.stack()[0][3])    
     #detail of an existing process with parameters
-    process = get_object_or_404(ProcessWPS, pk=process_pk)
+    process = get_object_or_404(Job, pk=process_pk)
     return render(request, 'wpsclient/job_detail.html', {'process': process})
 
 ##def job_new(request, server_pk, process_id):
@@ -278,7 +305,7 @@ def job_detail(request, process_pk):
 ##
 ##
 ##def job_edit(request, process_pk):
-##    process = get_object_or_404(ProcessWPS, pk=process_pk)
+##    process = get_object_or_404(Job, pk=process_pk)
 ##    if request.method == "POST":
 ##        form = ProcessForm(request.POST, instance=process)
 ##        if form.is_valid():
@@ -317,11 +344,12 @@ def job_new(request, server_pk, process_id):
 
 ##        l.warning(str(dir(form)))
 ##        l.warning(str(form.data))
-        keys=list(form.data.keys())
-        keys.pop(0)
+        data = copy.copy(form.data)
+        del data["csrfmiddlewaretoken"]
+        keys=list(data.keys())
         key_values = []
         for k in keys:
-            key_values.append((k[6:], type(args[k[6:]])(form.data[k])))
+            key_values.append((k.lstrip("data__"), type(args[k.lstrip("data__")])(data[k])))
         
         #form.data.pop('QueryDict')
 
@@ -335,8 +363,11 @@ def job_new(request, server_pk, process_id):
         #form.data["csrfmiddlewaretoken"].delete()
             
         args= collections.OrderedDict(key_values)
-        process = ProcessWPS(server=server,identifier=process_id,args=args)
+        process = Job(server=server,identifier=process_id,args=args)
         process.save()
+
+        server.jobs = server.jobs + 1
+        server.save()
         
         return redirect('job_detail', process_pk=process.pk)
     else:        
@@ -348,7 +379,7 @@ def job_edit(request, process_pk):
     l = logging.getLogger('django.request')
     l.warning(inspect.stack()[0][3])
     
-    process = get_object_or_404(ProcessWPS, pk=process_pk)
+    process = get_object_or_404(Job, pk=process_pk)
 
     if request.method == "POST":
         form = testForm(request.POST)        

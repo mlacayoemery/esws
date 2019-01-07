@@ -6,24 +6,31 @@
         <a class="btn btn-default" href="{% url 'server_edit' server_pk=server.pk %}"><span class="glyphicon glyphicon-pencil"></span></a>
 	{% endif %}
 <h2>{{ server.server_type }} Source</h2>
-<a href="{% url 'server_edit' server_type=server.server_type server_pk=server.pk %}">Edit</a>
+
 <p>
 <table border=1 frame=void rules=all>
-<tr><td><b>OWS</b></td><td>{{ server.ows }}</td></tr>
+<tr><td><b>Service</b></td><td>{{ server.server_type }}</td></tr>
 <tr><td><b>Name</b></td><td>{{ server.title }}</td></tr>
+<tr><td><b>Registrations</b></td><td>{{ server.registrations }}</td></tr>
+<tr><td><b>Jobs</b></td><td>{{ server.jobs }}</td></tr>
 <tr><td><b>URL</b></td><td>{{ server.url|linebreaksbr }}</td></tr>
-<tr><td><b>Instances</b></td><td>{{ process_list.count }}</td></tr>
+<tr><td><b>Created</b></td><td>{{ server.created_at|date:'y-m-d H:i' }}</td></tr>
+<tr><td><b>Updated</b></td><td>{{ server.updated_at|date:'y-m-d H:i' }}</td></tr>
+
 </table>
+<a href="{% url 'server_edit' server_type=server.server_type server_pk=server.pk %}">Edit</a>
     </div>
 
 <table border=1 frame=void rules=all>
 <tr><td><center>Job Id</center></td>
+<td><center>Status</center></td>
 <td><center>Process Id</center></td>
 <td><center>Server Id</center></td>
 <td><center>Server Title</center></td>
 <td width=50%><center>JSON Parameters</center></td></tr>
 {% for p in process_list  %}
 <tr><td><center><a href="{% url 'job_detail' process_pk=p.pk %}">{{ p.pk }}</a></center></td>
+<td>{{ p.status }}</td>
 <td><a href="{% url 'server_describe_process' server_pk=p.server.pk process_id=p.identifier %}">{{ p.identifier }}</a></td>
 <td><center><a href="{% url 'server_capabilities' server_pk=p.server.pk %}">{{ p.server.pk }}</a><center></td>
 <td>{{ p.server.title }}</td>

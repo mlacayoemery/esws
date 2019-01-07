@@ -70,6 +70,7 @@ class ServerElement(models.Model):
 class Job(models.Model):
     server = models.ForeignKey(ServerWPS, on_delete=models.CASCADE)   
     identifier = models.CharField(max_length=200)
+    status = models.CharField(max_length=12, default='Pending')
 
     args = JSONField()
 

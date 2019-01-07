@@ -5,18 +5,18 @@
 <table border=1 frame=void rules=all>
 <tr>
 <td>Id</td>
+<td>Updated</td>
 <td>Name</td>
-<td>URL</td>
-<td></td>
-<td></td>
+<td>Registrations</td>
+<td>Jobs</td>
 </tr>
 {% for server in servers_csv %}
 <tr>
 <td>{{ server.pk }}</td>
-<td><a href="{% url 'server_detail' server_pk=server.pk %}">{{ server.title }}</a></td>
-<td>{{ server.url}}</td>
-<td><a href="{% url 'server_wps_capabilities' server_type='WPS' server_pk=server.pk %}">List</a></td>
-<td><a href="{% url 'server_job_list' server_pk=server.pk%}">Jobs</a></td>
+<td>{{ server.updated_at|date:'y-m-d H:i' }}</td>
+<td><a href="{% url 'server_element_list' server_type='CSV' server_pk=server.pk %}">{{ server.title }}</a></td>
+<td>{{ server.registrations }}</td>
+<td>{{ server.jobs }}</td>
 </tr>
 {% endfor %}
 </table>
@@ -29,18 +29,18 @@ Servers: {{ servers_csv.count }}<p>
 <table border=1 frame=void rules=all>
 <tr>
 <td>Id</td>
+<td>Updated</td>
 <td>Name</td>
-<td>URL</td>
-<td></td>
-<td></td>
+<td>Registrations</td>
+<td>Jobs</td>
 </tr>
 {% for server in servers_wcs %}
 <tr>
 <td>{{ server.pk }}</td>
-<td>{{ server.title }}</td>
-<td>{{ server.url}}</td>
-<td><a href="{% url 'server_wps_capabilities' server_type='WPS' server_pk=server.pk %}">List</a></td>
-<td><a href="{% url 'server_job_list' server_pk=server.pk%}">Jobs</a></td>
+<td>{{ server.updated_at|date:'y-m-d H:i' }}</td>
+<td><a href="{% url 'server_element_list' server_type='WCS' server_pk=server.pk %}">{{ server.title }}</a></td>
+<td>{{ server.registrations }}</td>
+<td>{{ server.jobs }}</a></td>
 </tr>
 {% endfor %}
 </table>
@@ -53,18 +53,18 @@ Servers: {{ servers_wcs.count }}<p>
 <table border=1 frame=void rules=all>
 <tr>
 <td>Id</td>
+<td>Updated</td>
 <td>Name</td>
-<td>URL</td>
-<td></td>
-<td></td>
+<td>Registrations</td>
+<td>Jobs</td>
 </tr>
 {% for server in servers_wfs %}
 <tr>
 <td>{{ server.pk }}</td>
-<td>{{ server.title }}</td>
-<td>{{ server.url}}</td>
-<td><a href="{% url 'server_wps_capabilities' server_type='WPS' server_pk=server.pk %}">List</a></td>
-<td><a href="{% url 'server_job_list' server_pk=server.pk%}">Jobs</a></td>
+<td>{{ server.updated_at|date:'y-m-d H:i' }}</td>
+<td><a href="{% url 'server_element_list' server_type='WFS' server_pk=server.pk %}">{{ server.title }}</a></td>
+<td>{{ server.registrations }}</td>
+<td>{{ server.jobs }}</td>
 </tr>
 {% endfor %}
 </table>
@@ -81,16 +81,14 @@ Servers: {{ servers_wfs.count }}<p>
 <td>Name</td>
 <td>Registrations</td>
 <td>Jobs</td>
-<td>URL</td>
 </tr>
 {% for server in servers_wps %}
 <tr>
 <td><a href="{% url 'server_edit' server_type='WPS' server_pk=server.pk %}">{{ server.pk }}</a></td>
 <td>{{ server.updated_at|date:'y-m-d H:i' }}</td>
-<td><a href="{% url 'server_wps_capabilities' server_type='WPS' server_pk=server.pk %}">{{ server.title }}</a></td>
-<td align=right><a href="{% url 'server_wps_elements' server_type='WPS'  server_pk=server.pk%}">{{ server.registrations }}</a></td>
+<td><a href="{% url 'server_element_list' server_type='WPS' server_pk=server.pk %}">{{ server.title }}</a></td>
+<td align=right>{{ server.registrations }}</td>
 <td align=right><a href="{% url 'server_job_list' server_pk=server.pk%}">{{ server.jobs }}</a></td>
-<td>{{ server.url}}</td>
 </tr>
 {% endfor %}
 </table>
@@ -106,13 +104,15 @@ Servers: {{ servers_wps.count }}<p>
 <td><center>Server Title</center></td>
 <td><center>Process Id</center></td>
 <td><center>Job Id</center></td>
+<td><center>Status</center></td>
 <td width=50%><center>JSON Parameters</center></td></tr>
 {% for p in process_list  %}
 <tr>
 <td><center>{{ p.server.pk }}<center></td>
-<td><a href="{% url 'server_wps_capabilities' server_type='WPS' server_pk=p.server.pk %}">{{ p.server.title }}</a></td>
+<td><a href="{% url 'server_element_list' server_type='WPS' server_pk=p.server.pk %}">{{ p.server.title }}</a></td>
 <td><a href="{% url 'server_wps_describe_process' server_type='WPS' server_pk=p.server.pk process_id=p.identifier %}">{{ p.identifier }}</a></td>
 <td><center><a href="{% url 'job_detail' process_pk=p.pk %}">{{ p.pk }}</a></center></td>
+<td>{{p.status}}</td>
 <td width=50%>{{ p.args }}</td></tr>
 {% endfor %}
 </table>

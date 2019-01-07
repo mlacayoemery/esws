@@ -35,6 +35,9 @@ from .forms import testForm
 import copy
 import collections
 
+import bs4
+import re
+ 
 # Create your views here.
 def dashboard(request):
     servers_csv = ServerCSV.objects.order_by('title')
@@ -183,38 +186,84 @@ def server_wps_edit(request, server_pk):
     server_type = "WPS"
     return server_edit(request, server_pk, server_type)
 
+def get_csv_identifiers(server_url):
+    html_page =requests.get(server_url).text
+    soup = bs4.BeautifulSoup(html_page, features="html.parser")
 
-def server_wps_capabilities(request, server_type, server_pk):
-    server = get_object_or_404(ServerWPS, pk=server_pk)
-    link = server.url + "?service=wps&version=1.0.0&request=GetCapabilities"
+    links = []
+ 
+    for link in soup.findAll('a', attrs={'href': re.compile(".csv|.CSV$")}):
+        links.append(link.get('href'))
+ 
+    return links
+
+def get_wcs_identifiers(server_url):
+    link = server_url + "?service=wcs&version=1.0.0&request=GetCapabilities"
     capabilities = requests.get(link)
 
     tree = ET.fromstring(capabilities.text)
-    processes = []
-    server_elements = ServerElement.objects.filter(server__pk=server_pk)
+    identifiers = []
+    for elem in tree.iter('{http://www.opengis.net/wcs}CoverageOfferingBrief'):
+        identifiers.append(elem.find('{http://www.opengis.net/wcs}name').text)
+
+    return identifiers
+
+def get_wfs_identifiers(server_url):
+    link = server_url + "?service=wfs&version=1.0.0&request=GetCapabilities"
+    capabilities = requests.get(link)
+
+    tree = ET.fromstring(capabilities.text)
+    identifiers = []
+    for elem in tree.iter('{http://www.opengis.net/wfs}FeatureType'):
+        identifiers.append(elem.find('{http://www.opengis.net/wfs}Name').text)
+
+    return identifiers
+
+def get_wps_identifiers(server_url):
+    link = server_url + "?service=wps&version=1.0.0&request=GetCapabilities"
+    capabilities = requests.get(link)
+
+    tree = ET.fromstring(capabilities.text)
+    identifiers = []
     for elem in tree.iter('{http://www.opengis.net/wps/1.0.0}Process'):
-        identifier = elem.find('{http://www.opengis.net/ows/1.1}Identifier').text
-        if server_elements.filter(identifier=identifier).exists():
-            processes.append((True, identifier))
-        else:
-            processes.append((False, identifier))
-    
-    return render(request, 'wpsclient/server_wps_capabilities.html', {'server': server,
-                                                                  'processes': processes}) 
+        identifiers.append(elem.find('{http://www.opengis.net/ows/1.1}Identifier').text)
 
-def server_wps_elements(request, server_type, server_pk):
-    server = get_object_or_404(ServerWPS, pk=server_pk)
+    return identifiers
+
+def server_element_list(request, server_type, server_pk):
+    server_dict = {
+        "CSV" : (ServerCSV, get_csv_identifiers),
+        "WCS" : (ServerWCS, get_wcs_identifiers),
+        "WFS" : (ServerWFS, get_wfs_identifiers),        
+        "WPS" : (ServerWPS, get_wps_identifiers)
+        }
+
+    ServerClass, get_list = server_dict[server_type]
+    
+    server = get_object_or_404(ServerClass, pk=server_pk)
     server_elements = ServerElement.objects.filter(server__pk=server_pk)
-    processes = []
-    for elem in server_elements:
-        processes.append(elem.identifier)
+
+    element_list = []
+    for identifier in get_list(server.url):    
+        if server_elements.filter(identifier=identifier).exists():
+            element_list.append((True, identifier))
+        else:
+            element_list.append((False, identifier))
     
-    return render(request, 'wpsclient/server_wps_elements.html', {'server': server,
-                                                                  'processes': processes}) 
+    return render(request, 'wpsclient/server_elements.html', {'server': server,
+                                                              'element_list': element_list})
 
+def server_element_register(request, server_type, server_pk, process_id):
+    server_dict = {
+        "CSV" : ServerCSV,
+        "WCS" : ServerWCS,
+        "WFS" : ServerWFS,
+        "WPS" : ServerWPS
+        }
 
-def server_wps_register_element(request, server_type, server_pk, process_id):
-    server = get_object_or_404(ServerWPS, pk=server_pk)
+    ServerClass = server_dict[server_type]
+    
+    server = get_object_or_404(ServerClass, pk=server_pk)
 
     element = ServerElement(server=server,identifier=process_id)
     element.save()
@@ -222,7 +271,7 @@ def server_wps_register_element(request, server_type, server_pk, process_id):
     server.registrations = server.registrations + 1
     server.save()
 
-    return server_wps_capabilities(request, server_type, server_pk)
+    return server_element_list(request, server_type, server_pk)
 
 def server_wps_describe_process(request, server_type, server_pk, process_id):
     server = get_object_or_404(ServerWPS, pk=server_pk)

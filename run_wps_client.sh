@@ -1,1 +1,1 @@
-python3 tools/wps-client-django/manage.py runserver
+python3 tools/wpsclient/manage.py runserver

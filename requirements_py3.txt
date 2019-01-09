@@ -1,1 +1,1 @@
-e git+https://github.com/mlacayoemery/django-SplitJSONWidget-form.git#egg=django-SplitJSONWidget-form
+-e git+https://github.com/mlacayoemery/django-SplitJSONWidget-form.git#egg=django-SplitJSONWidget-form

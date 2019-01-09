@@ -97,6 +97,22 @@ def server_detail(request, server_pk, server_type):
 ##    return render(request, 'wpsclient/server_edit.html', {'form': form,
 ##                                                          'ows' : ows})
 
+def server_register(request, server_type, title, url):
+    server_dict = {
+        "CSV" : ServerCSV,
+        "WCS" : ServerWCS,
+        "WFS" : ServerWFS,
+        "WPS" : ServerWPS
+        }
+
+    ServerClass = server_dict[server_type]
+
+    server = ServerClass(title=title, url=url)
+    server.save()
+
+    return server_detail(request, server.pk, server_type)
+
+
 def server_new(request, server_type):
     server_dict = {
         "CSV" : ServerFormCSV,
@@ -230,6 +246,10 @@ def get_wps_identifiers(server_url):
 
     return identifiers
 
+def get_server_element_register_list(server_pk):
+    return [element.identifier for element in ServerElement.objects.filter(server__pk=server_pk)]
+    
+
 def server_element_list(request, server_type, server_pk):
     server_dict = {
         "CSV" : (ServerCSV, get_csv_identifiers),
@@ -243,17 +263,19 @@ def server_element_list(request, server_type, server_pk):
     server = get_object_or_404(ServerClass, pk=server_pk)
     server_elements = ServerElement.objects.filter(server__pk=server_pk)
 
-    element_list = []
-    for identifier in get_list(server.url):    
-        if server_elements.filter(identifier=identifier).exists():
-            element_list.append((True, identifier))
-        else:
-            element_list.append((False, identifier))
+    registered_element_list = get_server_element_register_list(server_pk)
+    registered_element_list.sort()
     
-    return render(request, 'wpsclient/server_elements.html', {'server': server,
-                                                              'element_list': element_list})
+    unregistered_element_list = []
+    for identifier in get_list(server.url):
+        if not (identifier in registered_element_list):
+            unregistered_element_list.append(identifier)
+    
+    return render(request, 'wpsclient/server_element_list.html', {'server': server,
+                                                                  'registered_element_list' : registered_element_list,
+                                                                  'unregistered_element_list': unregistered_element_list})
 
-def server_element_register(request, server_type, server_pk, process_id):
+def server_element_register(request, server_type, server_pk, element_id):
     server_dict = {
         "CSV" : ServerCSV,
         "WCS" : ServerWCS,
@@ -265,7 +287,7 @@ def server_element_register(request, server_type, server_pk, process_id):
     
     server = get_object_or_404(ServerClass, pk=server_pk)
 
-    element = ServerElement(server=server,identifier=process_id)
+    element = ServerElement(server=server,identifier=element_id)
     element.save()
 
     server.registrations = server.registrations + 1
@@ -273,13 +295,69 @@ def server_element_register(request, server_type, server_pk, process_id):
 
     return server_element_list(request, server_type, server_pk)
 
-def server_wps_describe_process(request, server_type, server_pk, process_id):
+def server_element_unregister(request, server_type, server_pk, element_id):
+    server_dict = {
+        "CSV" : ServerCSV,
+        "WCS" : ServerWCS,
+        "WFS" : ServerWFS,
+        "WPS" : ServerWPS
+        }
+
+    ServerClass = server_dict[server_type]
+    
+    server = get_object_or_404(ServerClass, pk=server_pk)
+
+    element = ServerElement.objects.filter(server__pk=server_pk).filter(identifier=element_id).delete()
+
+    server.registrations = server.registrations - 1
+    server.save()
+
+    return server_element_list(request, server_type, server_pk)
+
+def server_element_detail(request, server_type, server_pk, element_id):
+    server_dict = {
+        "CSV" : server_csv_element_detail,        
+        "WCS" : server_wcs_element_detail,
+        "WFS" : server_wfs_element_detail,
+        "WPS" : server_wps_element_detail
+        }
+
+    print(server_type)
+
+    return server_dict[server_type](request, server_pk, element_id)
+
+def server_csv_element_detail(request, server_pk, element_id):
+    server = get_object_or_404(ServerCSV, pk=server_pk)
+
+    link = server.url + '/' + element_id
+
+    description = "No detail available."
+
+    return render(request, 'wpsclient/text.html', {'text' : description})
+
+def server_wcs_element_detail(request, server_pk, element_id):
+    server = get_object_or_404(ServerWCS, pk=server_pk)
+    link = server.url + "?service=WCS&version=1.0.0&request=DescribeCoverage&Coverage=" + element_id
+
+    description = parseString(requests.get(link).text).toprettyxml()
+
+    return render(request, 'wpsclient/text.html', {'text' : description})
+
+def server_wfs_element_detail(request, server_pk, element_id):
+    server = get_object_or_404(ServerWFS, pk=server_pk)
+    link = server.url + "?service=WFS&version=1.0.0&request=DescribeFeatureType&typeName=" + element_id
+
+    description = parseString(requests.get(link).text).toprettyxml()
+
+    return render(request, 'wpsclient/text.html', {'text' : description})
+
+def server_wps_element_detail(request, server_pk, element_id):
     server = get_object_or_404(ServerWPS, pk=server_pk)
-    link = server.url + "?service=wps&version=1.0.0&request=DescribeProcess&IDENTIFIER=" + process_id
+    link = server.url + "?service=wps&version=1.0.0&request=DescribeProcess&IDENTIFIER=" + element_id
     description = parseString(requests.get(link).text).toprettyxml()
 
     wps = owslib.wps.WebProcessingService(server.url, verbose=False, skip_caps=True)
-    process = wps.describeprocess(process_id)
+    process = wps.describeprocess(element_id)
 
     process_input = []
     for parameter in process.dataInputs:
@@ -307,7 +385,7 @@ def server_wps_describe_process(request, server_type, server_pk, process_id):
     
     
     return render(request, 'wpsclient/server_wps_describe_process.html', {'server': server,
-                                                                      'process_id': process_id,
+                                                                      'process_id': element_id,
                                                                       'process_title' : process.title,
                                                                       'process_abstract' : process.abstract,
                                                                       'process_input' : process_input,

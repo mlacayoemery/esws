@@ -14,13 +14,13 @@
 <tr>
 <td>{{ server.pk }}</td>
 <td>{{ server.updated_at|date:'y-m-d H:i' }}</td>
-<td><a href="{% url 'server_element_list' server_type='CSV' server_pk=server.pk %}">{{ server.title }}</a></td>
-<td>{{ server.registrations }}</td>
-<td>{{ server.jobs }}</td>
+<td><a href="{% url 'server_element_list' server_type=server.server_type server_pk=server.pk %}">{{ server.title }}</a></td>
+<td align=right>{{ server.registrations }}</td>
+<td align=right>{{ server.jobs }}</td>
 </tr>
 {% endfor %}
 </table>
-Servers: {{ servers_csv.count }}<p>
+Total: {{ servers_csv.count }}<p>
 <a href="{% url 'server_new' server_type='CSV' %}">Add</a>
 <a href="{% url 'job_list'%}">Jobs</a>
 
@@ -38,13 +38,13 @@ Servers: {{ servers_csv.count }}<p>
 <tr>
 <td>{{ server.pk }}</td>
 <td>{{ server.updated_at|date:'y-m-d H:i' }}</td>
-<td><a href="{% url 'server_element_list' server_type='WCS' server_pk=server.pk %}">{{ server.title }}</a></td>
-<td>{{ server.registrations }}</td>
-<td>{{ server.jobs }}</a></td>
+<td><a href="{% url 'server_element_list' server_type=server.server_type server_pk=server.pk %}">{{ server.title }}</a></td>
+<td align=right>{{ server.registrations }}</td>
+<td align=right>{{ server.jobs }}</a></td>
 </tr>
 {% endfor %}
 </table>
-Servers: {{ servers_wcs.count }}<p>
+Total: {{ servers_wcs.count }}<p>
 <a href="{% url 'server_new' server_type='WCS' %}">Add</a>
 <a href="{% url 'job_list'%}">Jobs</a>
 
@@ -62,13 +62,13 @@ Servers: {{ servers_wcs.count }}<p>
 <tr>
 <td>{{ server.pk }}</td>
 <td>{{ server.updated_at|date:'y-m-d H:i' }}</td>
-<td><a href="{% url 'server_element_list' server_type='WFS' server_pk=server.pk %}">{{ server.title }}</a></td>
-<td>{{ server.registrations }}</td>
-<td>{{ server.jobs }}</td>
+<td><a href="{% url 'server_element_list' server_type=server.server_type server_pk=server.pk %}">{{ server.title }}</a></td>
+<td align=right>{{ server.registrations }}</td>
+<td align=right>{{ server.jobs }}</td>
 </tr>
 {% endfor %}
 </table>
-Servers: {{ servers_wfs.count }}<p>
+Total: {{ servers_wfs.count }}<p>
 <a href="{% url 'server_new' server_type='WFS' %}">Add</a>
 <a href="{% url 'job_list'%}">Jobs</a>
 
@@ -84,15 +84,15 @@ Servers: {{ servers_wfs.count }}<p>
 </tr>
 {% for server in servers_wps %}
 <tr>
-<td><a href="{% url 'server_edit' server_type='WPS' server_pk=server.pk %}">{{ server.pk }}</a></td>
+<td><a href="{% url 'server_edit' server_type=server.server_type server_pk=server.pk %}">{{ server.pk }}</a></td>
 <td>{{ server.updated_at|date:'y-m-d H:i' }}</td>
-<td><a href="{% url 'server_element_list' server_type='WPS' server_pk=server.pk %}">{{ server.title }}</a></td>
+<td><a href="{% url 'server_element_list' server_type=server.server_type server_pk=server.pk %}">{{ server.title }}</a></td>
 <td align=right>{{ server.registrations }}</td>
 <td align=right><a href="{% url 'server_job_list' server_pk=server.pk%}">{{ server.jobs }}</a></td>
 </tr>
 {% endfor %}
 </table>
-Servers: {{ servers_wps.count }}<p>
+Total: {{ servers_wps.count }}<p>
 <a href="{% url 'server_new' server_type='WPS' %}">Add</a>
 <a href="{% url 'job_list'%}">Jobs</a>
 
@@ -110,12 +110,12 @@ Servers: {{ servers_wps.count }}<p>
 <tr>
 <td><center>{{ p.server.pk }}<center></td>
 <td><a href="{% url 'server_element_list' server_type='WPS' server_pk=p.server.pk %}">{{ p.server.title }}</a></td>
-<td><a href="{% url 'server_wps_describe_process' server_type='WPS' server_pk=p.server.pk process_id=p.identifier %}">{{ p.identifier }}</a></td>
+<td><a href="{% url 'server_element_detail' server_type='WPS' server_pk=p.server.pk element_id=p.identifier %}">{{ p.identifier }}</a></td>
 <td><center><a href="{% url 'job_detail' process_pk=p.pk %}">{{ p.pk }}</a></center></td>
 <td>{{p.status}}</td>
 <td width=50%>{{ p.args }}</td></tr>
 {% endfor %}
 </table>
-Servers: {{ process_list.count }}<p>
+Total: {{ process_list.count }}<p>
 
 {% endblock %}

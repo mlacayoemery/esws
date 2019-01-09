@@ -1,0 +1,24 @@
+{% extends 'wpsclient/base.html' %}
+
+{% block content %}
+    <div class="server">
+	<h2>{{ server.title }}</h2>
+        <p>{{ server.url|linebreaksbr }}</p>
+<table border=1 frame=void rules=all>
+<tr>
+<td>Action</td>
+<td>Id</td>
+</tr>
+{% for element in element_list %}
+<tr>
+{% if element.0 %}
+<td>Unregister</td>
+{% else %}
+<td><a href="{% url 'server_element_register' server_type=server.server_type server_pk=server.pk process_id=element.1 %}">Register</a></td>
+{% endif %}
+<td>{{element.1}}</td>
+</tr>
+{% endfor %}
+</table>
+    </div>
+{% endblock %}

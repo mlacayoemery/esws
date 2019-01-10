@@ -20,12 +20,12 @@ coverage_stores = [(None, os.path.join(data_path, "dem.tif")),
 workspace_name = "cas"
 workspace_url = "http://www.unige.ch"
 
-cat = geoserver.catalog.Catalog(rest_url, username, password)
+cat = geoserver.catalog.Catalog(rest_url, username=username, password=password)
 
-print "Removing workspace(s)" 
+print("Removing workspace(s)")
 for ws in cat.get_workspaces():
     if ws.name[:3] == "cas":
-        print "\t%s" % ws.name                
+        print("\t%s" % ws.name)
         cat.delete(ws, recurse=True)
 
 workspace = cat.get_workspace(workspace_name)
@@ -33,7 +33,7 @@ if workspace is None:
     workspace = cat.create_workspace(workspace_name, workspace_url)
 
 for data_store_name, data_store_path in data_stores:
-    print "Processing store %s" % data_store_name
+    print("Processing store %s" % data_store_name)
 
     shapefile_plus_sidecars = {}
     for key in ["shp", "shx", "prj", "dbf"]:
@@ -44,8 +44,11 @@ for data_store_name, data_store_path in data_stores:
 for coverage_store_name, coverage_store_path in coverage_stores:
     if coverage_store_name is None:
         coverage_store_name, _ = os.path.splitext(os.path.basename(coverage_store_path))
-    print "Processing store %s" % coverage_store_name
+    print("Processing store %s" % coverage_store_name)
 
     tiffdata = { 'tiff' : coverage_store_path }
 
-    c = cat.create_coveragestore_external_geotiff(coverage_store_name, "file://" + coverage_store_path, workspace)
+    c = cat.create_coveragestore(coverage_store_name,
+                                 workspace = workspace,
+                                 path = "file://" + coverage_store_path,
+                                 layer_name = coverage_store_name)

@@ -115,11 +115,11 @@ def get_remote_parameters(args):
     for key, value in args.iteritems():
         if type(value) == str:
             if value[:4].lower() == "http":
-                #print value
+                #print(value)
                 if "service=WFS" in value:
                     if value in ows_cache:
                         args[key] = ows_cache[value]
-                        print "\t\tAssigned %s cached %s" % (key, args[key])
+                        print("\t\tAssigned %s cached %s" % (key, args[key]))
 
                     else:
                         try:
@@ -132,27 +132,27 @@ def get_remote_parameters(args):
                             for wfs_file in os.listdir(tmp_dir):
                                 if wfs_file.endswith(".shp"):
                                     args[key] = os.path.join(tmp_dir,wfs_file)
-                                    print "\t\tAssigned %s %s" % (key, args[key])
+                                    print("\t\tAssigned %s %s" % (key, args[key]))
                                     ows_cache[value] = args[key]
                                     
                         except zipfile.BadZipfile:
-                            print "\t\tMissing %s" % value
-                            raise MissingResource, "Missing resource"
+                            print("\t\tMissing %s" % value)
+                            raise MissingResource("Missing resource")
 
                 elif "service=WCS" in value:
                     if value in ows_cache:
                         args[key] = ows_cache[value]
-                        print "\t\tAssigned %s cached %s" % (key, args[key])
+                        print("\t\tAssigned %s cached %s" % (key, args[key]))
 
                     else:
                         _, tmp_path = tempfile.mkstemp(suffix=".tif", prefix="esws-")
                         urllib.URLopener().retrieve(value, tmp_path)
                         args[key] = tmp_path
-                        print "\t\tAssigned %s %s" % (key, args[key])
+                        print("\t\tAssigned %s %s" % (key, args[key]))
                         ows_cache[value] = args[key]
 
                 else:
-                    raise ValueError, "Unknown protocol for %s" % value
+                    raise ValueError("Unknown protocol for %s" % value)
                
 def layer_url(layer_name):
     template = gs_url + "/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=%s&outputFormat=SHAPE-ZIP"
@@ -167,11 +167,11 @@ def cover_url(layer_name):
 def run_job(job):
     job[0] += 1
     _, p, args, uploads, msg = job
-    print "Trying %s" % msg
+    print("Trying %s" % msg)
     if local_parameters(args):
         apply(p, [args])
         for layer_name, layer_path in uploads.iteritems():
-            print "\tUploading %s" % layer_name
+            print("\tUploading %s" % layer_name)
             ws, layer_name = layer_name.split(":")
             if layer_path.lower().endswith(".shp"):
                 publish_shp(layer_path, layer_name, ws)
@@ -180,11 +180,11 @@ def run_job(job):
                 publish_tif(layer_path, layer_name, ws)
 
             else:
-                raise ValueError, layer_path
+                raise ValueError(layer_path)
         return True
 
     else:
-        print "\tDownloading remote inputs"
+        print("\tDownloading remote inputs")
         try:
             get_remote_parameters(job[2])
 
@@ -248,10 +248,10 @@ gen_residential_args = {
 
 if __name__ == '__main__':
     cat = get_cat()
-    print "Removing workspace(s)" 
+    print("Removing workspace(s)")
     for ws in cat.get_workspaces():
         if ws.name[:5] == "user-":
-            print "\t%s" % ws.name                
+            print("\t%s" % ws.name)
             cat.delete(ws, recurse=True)
         
     csv_path = "/home/mlacayo/workspace/cas/data/output/sed_retent.csv"
@@ -284,7 +284,7 @@ if __name__ == '__main__':
 
         #set the flow value
         args[u'threshold_flow_accumulation'] = flow
-        #print "Running SDR with flow", flow
+        #print("Running SDR with flow", flow)
 
         #run SDR with the current parameters
         #natcap.invest.sdr.execute(args)
@@ -348,7 +348,7 @@ if __name__ == '__main__':
     difference, target_flow = min(comparison)
 
     #print the result
-    print "The closest result is achieved with flow", target_flow
+    print("The closest result is achieved with flow", target_flow)
 
     #modify the SDR template to have the ideal flow
     sdr_base_args[u'threshold_flow_accumulation'] = target_flow    
@@ -356,7 +356,7 @@ if __name__ == '__main__':
 
 
     ###run the proximity base scenario generator
-    print "Generate scenario rasters"
+    print("Generate scenario rasters")
 
     #generate the forest scenario LULC
     ws = make_named_workspace()
@@ -383,7 +383,7 @@ if __name__ == '__main__':
     job_queue.append(job)
 
     ###run SDR for the scenarios
-    print "Calculate SDR for scenarios"
+    print("Calculate SDR for scenarios")
 
     #create the SDR forest scenario dictionary
     sdr_forest_args = copy.copy(sdr_base_args)

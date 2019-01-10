@@ -14,7 +14,7 @@ class MissingResource(Exception):
 def get_cat(rest_url = gs_url + "/rest",
             username = "admin",
             password = "geoserver"):
-    return geoserver.catalog.Catalog(rest_url, username, password)
+    return geoserver.catalog.Catalog(rest_url, username = username, password = password)
 
 def make_named_workspace(gs_cat = get_cat(),
                          prefix="user"):
@@ -102,7 +102,7 @@ def get_remote_parameters(args):
                 if "service=WFS" in value:
                     if value in ows_cache:
                         args[key] = ows_cache[value]
-                        print "\t\tAssigned %s cached %s" % (key, args[key])
+                        print ("\t\tAssigned %s cached %s" % (key, args[key]))
 
                     else:
                         try:
@@ -115,27 +115,27 @@ def get_remote_parameters(args):
                             for wfs_file in os.listdir(tmp_dir):
                                 if wfs_file.endswith(".shp"):
                                     args[key] = os.path.join(tmp_dir,wfs_file)
-                                    print "\t\tAssigned %s %s" % (key, args[key])
+                                    print ("\t\tAssigned %s %s" % (key, args[key]))
                                     ows_cache[value] = args[key]
                                     
                         except zipfile.BadZipfile:
-                            print "\t\tMissing %s" % value
-                            raise MissingResource, "Missing resource"
+                            print ("\t\tMissing %s" % value)
+                            raise MissingResource("Missing resource")
 
                 elif "service=WCS" in value:
                     if value in ows_cache:
                         args[key] = ows_cache[value]
-                        print "\t\tAssigned %s cached %s" % (key, args[key])
+                        print ("\t\tAssigned %s cached %s" % (key, args[key]))
 
                     else:
                         _, tmp_path = tempfile.mkstemp(suffix=".tif", prefix="esws-")
                         urllib.URLopener().retrieve(value, tmp_path)
                         args[key] = tmp_path
-                        print "\t\tAssigned %s %s" % (key, args[key])
+                        print ("\t\tAssigned %s %s" % (key, args[key]))
                         ows_cache[value] = args[key]
 
                 else:
-                    raise ValueError, "Unknown protocol for %s" % value
+                    raise ValueError("Unknown protocol for %s" % value)
                
 def layer_url(layer_name):
     template = gs_url + "/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=%s&outputFormat=SHAPE-ZIP"
@@ -150,11 +150,11 @@ def cover_url(layer_name):
 def run_job(job):
     job[0] += 1
     _, p, args, uploads, msg = job
-    print "Trying %s" % msg
+    print ("Trying %s" % msg)
     if local_parameters(args):
         apply(p, [args])
         for layer_name, layer_path in uploads.iteritems():
-            print "\tUploading %s" % layer_name
+            print ("\tUploading %s" % layer_name)
             ws, layer_name = layer_name.split(":")
             if layer_path.lower().endswith(".shp"):
                 publish_shp(layer_path, layer_name, ws)
@@ -163,11 +163,11 @@ def run_job(job):
                 publish_tif(layer_path, layer_name, ws)
 
             else:
-                raise ValueError, layer_path
+                raise ValueError(layer_path)
         return True
 
     else:
-        print "\tDownloading remote inputs"
+        print ("\tDownloading remote inputs")
         try:
             get_remote_parameters(job[2])
 

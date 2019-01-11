@@ -1,10 +1,14 @@
 if __name__ == '__main__' and __package__ is None:
     from os import sys, path
-    sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
+    p = path.dirname(path.dirname(path.abspath(__file__)))
+    print(p)
+    sys.path.append(p)
 
 import easyows
 
 import copy
+
+sys.path.append("/home/mlacayo/workspace/invest/src/natcap/invest/pygeoprocessing_0_3_3")
 
 import natcap.invest.scenario_gen_proximity
 import natcap.invest.sdr
@@ -102,7 +106,7 @@ def extract_shapefile_value_csv(shapefile_path, key, csv_path, id_field="ws_id",
 
 
 def local_parameters(args):
-    for key, value in args.iteritems():
+    for key, value in args.items():
         if type(value) == str:
             if value[:4].lower() == "http":
                 return False
@@ -112,7 +116,7 @@ def local_parameters(args):
 ows_cache = {}
 
 def get_remote_parameters(args):
-    for key, value in args.iteritems():
+    for key, value in args.items():
         if type(value) == str:
             if value[:4].lower() == "http":
                 #print(value)
@@ -124,7 +128,7 @@ def get_remote_parameters(args):
                     else:
                         try:
                             _, tmp_path = tempfile.mkstemp(suffix=".zip", prefix="esws-")
-                            urllib.URLopener().retrieve(value, tmp_path)
+                            urllib.request.urlretrieve(value, tmp_path)
 
                             tmp_dir = tempfile.mkdtemp(prefix="esws-")
                             zipfile.ZipFile(tmp_path, 'r').extractall(tmp_dir)
@@ -146,7 +150,7 @@ def get_remote_parameters(args):
 
                     else:
                         _, tmp_path = tempfile.mkstemp(suffix=".tif", prefix="esws-")
-                        urllib.URLopener().retrieve(value, tmp_path)
+                        urllib.request.urlretrieve(value, tmp_path)
                         args[key] = tmp_path
                         print("\t\tAssigned %s %s" % (key, args[key]))
                         ows_cache[value] = args[key]
@@ -166,11 +170,11 @@ def cover_url(layer_name):
     
 def run_job(job):
     job[0] += 1
-    _, p, args, uploads, msg = job
+    _, process, args, uploads, msg = job
     print("Trying %s" % msg)
     if local_parameters(args):
-        apply(p, [args])
-        for layer_name, layer_path in uploads.iteritems():
+        process(args)
+        for layer_name, layer_path in uploads.items():
             print("\tUploading %s" % layer_name)
             ws, layer_name = layer_name.split(":")
             if layer_path.lower().endswith(".shp"):

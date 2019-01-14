@@ -21,7 +21,16 @@ import uuid
 
 import csv
 
-import urllib
+try:
+    #Python2
+    import urllib
+    urlretrieve = urllib.URLopener().retrieve
+    
+except ImportError:
+    #Python
+    from urllib.request import urlretrieve
+
+
 import tempfile
 import zipfile
 
@@ -128,7 +137,7 @@ def get_remote_parameters(args):
                     else:
                         try:
                             _, tmp_path = tempfile.mkstemp(suffix=".zip", prefix="esws-")
-                            urllib.request.urlretrieve(value, tmp_path)
+                            urlretrieve(value, tmp_path)
 
                             tmp_dir = tempfile.mkdtemp(prefix="esws-")
                             zipfile.ZipFile(tmp_path, 'r').extractall(tmp_dir)
@@ -150,7 +159,7 @@ def get_remote_parameters(args):
 
                     else:
                         _, tmp_path = tempfile.mkstemp(suffix=".tif", prefix="esws-")
-                        urllib.request.urlretrieve(value, tmp_path)
+                        urlretrieve(value, tmp_path)
                         args[key] = tmp_path
                         print("\t\tAssigned %s %s" % (key, args[key]))
                         ows_cache[value] = args[key]

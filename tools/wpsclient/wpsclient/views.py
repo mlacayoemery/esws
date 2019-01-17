@@ -362,10 +362,14 @@ def server_wps_element_detail(request, server_pk, element_id):
     process_input = []
     for parameter in process.dataInputs:
 
+        data_type = parameter.dataType
+        if data_type == "ComplexData":
+            data_type = ",".join([m.mimeType for m in parameter.supportedValues])
+
         parameter_details = [parameter.identifier,
                              parameter.title,
                              parameter.abstract,
-                             parameter.dataType,
+                             data_type,
                              parameter.minOccurs,
                              parameter.maxOccurs]
 
@@ -375,10 +379,14 @@ def server_wps_element_detail(request, server_pk, element_id):
     process_output = []
     for parameter in process.processOutputs:
 
+        data_type = parameter.dataType
+        if data_type == "ComplexData":
+            data_type = ",".join([m.mimeType for m in parameter.supportedValues])
+
         parameter_details = [parameter.identifier,
                              parameter.title,
                              parameter.abstract,
-                             parameter.dataType]
+                             data_type]
 
         parameter_details = [v if v != None else "" for v in parameter_details]
         process_output.append(parameter_details)

@@ -1,0 +1,12 @@
+{% extends 'wpsclient/base.html' %}
+
+{% block content %}
+    <table>
+    <tr><td>Server:</td><td>{{server_title}}</td></tr>
+    <tr><td>Process:</td><td>{{process_id}}</td></tr>
+    </table>
+    <form method="POST" class="post-form">{% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="save btn btn-default">Save</button>
+    </form>
+{% endblock %}

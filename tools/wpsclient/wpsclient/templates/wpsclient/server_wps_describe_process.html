@@ -14,14 +14,14 @@
         <table border=1 frame=void rules=all>
         <tr><td>Id</td><td>Title<td width="50%">Abstract</td><td>Data Type</td><td>Min Occurs</td><td>Max Occurs</td></tr>
         {% for i,t,a,d,n,x in process_input  %}
-        <tr><td>{{i}}</td><td>{{t}}</td><td width="50%">{{a}}</td><td>{{d}}</td><td align="right">{{n}}</td><td align="right">{{x}}</td></tr>        
+        <tr><td>{{i}}</td><td>{{t}}</td><td width="50%">{{a}}</td><td style="white-space:pre-wrap">{{d}}</td><td align="right">{{n}}</td><td align="right">{{x}}</td></tr>        
         {% endfor %}
         </table>
         <p><b>Outputs</b></p>
         <table border=1 frame=void rules=all>
         <tr><td>Id</td><td>Title<td width="50%">Abstract</td><td>Data Type</td></tr>
         {% for i,t,a,d in process_output  %}
-        <tr><td>{{i}}</td><td>{{t}}</td><td width="50%">{{a}}</td><td>{{d}}</td></tr>        
+        <tr><td>{{i}}</td><td>{{t}}</td><td width="50%">{{a}}</td><td style="white-space:pre-wrap">{{d}}</td></tr>        
         {% endfor %}
         </table>
         

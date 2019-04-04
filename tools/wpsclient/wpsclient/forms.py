@@ -77,3 +77,21 @@ class testForm(forms.Form):
 ##    def __init__(self, *args, **kwargs):
 ##        super(ProcessForm, self).__init__(*args, **kwargs)
 ##
+
+
+class JobDynamic(forms.ModelForm):
+    class Meta:
+        model = Job
+        fields = ()
+        
+    def __init__(self, *args, **kwargs):
+        wps_input_fields = kwargs.pop("wps_input_fields")
+        super(JobDynamic, self).__init__(*args, **kwargs)
+
+        for i, f in enumerate(wps_input_fields):
+            self.fields[f[0]] = forms.CharField(label=f[1])
+
+    def wps_input_data(self):
+        for name, value in self.cleaned_data.items():
+            yield (self.fields[name].label, value)
+        

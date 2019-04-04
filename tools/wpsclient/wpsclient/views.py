@@ -18,6 +18,8 @@ from .forms import ServerFormWPS
 
 from .forms import JobForm
 
+from .forms import JobDynamic
+
 import requests
 
 import xml.etree.ElementTree as ET
@@ -364,7 +366,7 @@ def server_wps_element_detail(request, server_pk, element_id):
 
         data_type = parameter.dataType
         if data_type == "ComplexData":
-            data_type = ",".join([m.mimeType for m in parameter.supportedValues])
+            data_type = "\n".join([m.mimeType for m in parameter.supportedValues])
 
         parameter_details = [parameter.identifier,
                              parameter.title,
@@ -381,7 +383,7 @@ def server_wps_element_detail(request, server_pk, element_id):
 
         data_type = parameter.dataType
         if data_type == "ComplexData":
-            data_type = ",".join([m.mimeType for m in parameter.supportedValues])
+            data_type = "\n".join([m.mimeType for m in parameter.supportedValues])
 
         parameter_details = [parameter.identifier,
                              parameter.title,
@@ -452,6 +454,107 @@ def job_detail(request, process_pk):
 ##                                                       'server_title' : process.server.title,
 ##                                                       'process_id' : process.identifier})
 
+def get_wps_input_fields(server_pk, process_id):
+    server = get_object_or_404(ServerWPS, pk=server_pk)
+
+    wps = owslib.wps.WebProcessingService(server.url, verbose=False, skip_caps=True)
+    process = wps.describeprocess(process_id)
+
+    process_input = []
+    for parameter in process.dataInputs:
+
+        data_type = parameter.dataType
+        if data_type == "ComplexData":
+            data_type = "\n".join([m.mimeType for m in parameter.supportedValues])
+
+        parameter_details = [parameter.identifier,
+                             parameter.title,
+                             parameter.abstract,
+                             data_type,
+                             parameter.minOccurs,
+                             parameter.maxOccurs]
+
+        parameter_details = [v if v != None else "" for v in parameter_details]
+        process_input.append(parameter_details)
+
+        return process_input
+
+##def job_new_dynamic(request, server_pk, process_id):
+##    l = logging.getLogger('django.request')
+##    l.warning(inspect.stack()[0][3])
+##    
+##    server = get_object_or_404(ServerWPS, pk=server_pk)
+##   
+##    wps_input_fields = get_wps_input_fields(server_pk, process_id)
+##    print([parameter[0] for parameter in wps_input_fields])
+##
+##    if request.method == "POST":
+##        
+##        form = JobDynamic(request.POST, wps_input_fields=wps_input_fields)      
+##
+##        args = collections.OrderedDict()
+##        for (f, d) in form.wps_input_data():
+##            print(f)
+##            args[f] = d
+##
+##        process = Job(server=server,identifier=process_id,args=args)
+##        process.save()
+##
+##        server.jobs = server.jobs + 1
+##        server.save()
+##            
+##        return redirect('job_detail', process_pk=process.pk)
+##
+##    else:
+##        form = JobDynamic(request.POST or None, wps_input_fields=wps_input_fields) 
+##
+##    return render_to_response("wpsclient/job_edit.html", {"form" : form})
+
+def job_new_dynamic(request, server_pk, process_id):
+    l = logging.getLogger('django.request')
+    l.warning(inspect.stack()[0][3])
+    
+    server = get_object_or_404(ServerWPS, pk=server_pk)
+
+    args = collections.OrderedDict()
+
+    wps = owslib.wps.WebProcessingService(server.url, verbose=False, skip_caps=True)
+    process = wps.describeprocess(process_id)
+
+    for parameter in process.dataInputs:            
+        if parameter.dataType == "double":
+            args[parameter.identifier] = float(0)
+        elif parameter.dataType == "int":
+            args[parameter.identifier] = int(0)                
+        else:
+            print(parameter.dataType)
+            args[parameter.identifier] = ""
+
+    if request.method == "POST":
+        form = testForm(request.POST)
+
+        data = copy.copy(form.data)
+        del data["csrfmiddlewaretoken"]
+        keys=list(data.keys())
+        key_values = []
+        strip_index=len("data__")
+        for k in keys:
+            print(k)
+            key_values.append((k[strip_index:], type(args[k[strip_index:]])(data[k])))
+                   
+        args= collections.OrderedDict(key_values)
+        process = Job(server=server,identifier=process_id,args=args)
+        process.save()
+
+        server.jobs = server.jobs + 1
+        server.save()
+        
+        return redirect('job_detail', process_pk=process.pk)
+    else:        
+        form = testForm(request.POST or None, initial={'data': args})
+        
+    return render(request, 'wpsclient/job_dynamic.html', {'form': form})
+
   
 def job_new(request, server_pk, process_id):
     l = logging.getLogger('django.request')
@@ -483,8 +586,9 @@ def job_new(request, server_pk, process_id):
         del data["csrfmiddlewaretoken"]
         keys=list(data.keys())
         key_values = []
+        strip_index=len("data__")
         for k in keys:
-            key_values.append((k.lstrip("data__"), type(args[k.lstrip("data__")])(data[k])))
+            key_values.append((k[strip_index:], type(args[k[strip_index:]])(data[k])))
         
         #form.data.pop('QueryDict')
 

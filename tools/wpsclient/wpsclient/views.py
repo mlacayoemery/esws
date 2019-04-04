@@ -8,6 +8,13 @@ from .models import ServerWCS
 from .models import ServerWFS
 from .models import ServerWPS
 
+from .models import ElementCSV
+from .models import ElementWCS
+from .models import ElementWFS
+from .models import ElementWPS
+
+from .models import WaterYieldModel
+
 from .models import ServerElement
 from .models import Job
 
@@ -15,6 +22,8 @@ from .forms import ServerFormCSV
 from .forms import ServerFormWCS
 from .forms import ServerFormWFS
 from .forms import ServerFormWPS
+
+from .forms import WaterYieldForm
 
 from .forms import JobForm
 
@@ -279,17 +288,17 @@ def server_element_list(request, server_type, server_pk):
 
 def server_element_register(request, server_type, server_pk, element_id):
     server_dict = {
-        "CSV" : ServerCSV,
-        "WCS" : ServerWCS,
-        "WFS" : ServerWFS,
-        "WPS" : ServerWPS
+        "CSV" : (ServerCSV, ElementCSV), 
+        "WCS" : (ServerWCS, ElementWCS),
+        "WFS" : (ServerWFS, ElementWFS),
+        "WPS" : (ServerWPS, ElementWPS)
         }
 
-    ServerClass = server_dict[server_type]
+    ServerClass, ElementClass = server_dict[server_type]
     
     server = get_object_or_404(ServerClass, pk=server_pk)
 
-    element = ServerElement(server=server,identifier=element_id)
+    element = ElementClass(server=server,identifier=element_id)
     element.save()
 
     server.registrations = server.registrations + 1
@@ -650,3 +659,17 @@ def job_edit(request, process_pk):
         form = testForm(request.POST or None, initial={'data': process.args})
 
     return render(request, 'wpsclient/job_edit.html', {'form': form})
+
+
+def water_yield(request):
+    if request.method == "POST":
+        form = WaterYieldForm(request.POST)
+        if form.is_valid():
+            server = form.save()
+            #server.save()
+            return redirect('water_yield')
+            
+    else: #elif request.method == "GET"
+        form = WaterYieldForm()
+
+    return render(request, 'wpsclient/water_yield.html', {'form': form})

@@ -63,9 +63,21 @@ class ServerElement(models.Model):
         self.save()
 
     def __str__(self):
-        return "-".join([self.server,
+        return "-".join([str(self.server),
                          self.identifier])
 
+
+class ElementCSV(ServerElement):
+    element_type = models.CharField(max_length=3, default='CSV', editable=False)
+
+class ElementWCS(ServerElement):
+    element_type = models.CharField(max_length=3, default='WCS', editable=False)
+
+class ElementWFS(ServerElement):
+    element_type = models.CharField(max_length=3, default='WFS', editable=False)
+
+class ElementWPS(ServerElement):
+    element_type = models.CharField(max_length=3, default='WPS', editable=False)
 
 class Job(models.Model):
     server = models.ForeignKey(ServerWPS, on_delete=models.CASCADE)   
@@ -78,7 +90,7 @@ class Job(models.Model):
         self.save()
 
     def __str__(self):
-        return "-".join([self.server,
+        return "/".join([self.server,
                          self.process])
 
 ##class WCS_Instance(models.Model):
@@ -102,3 +114,22 @@ class Job(models.Model):
 ##
 ##        args = JSONField()
 ##        
+
+class WaterYieldModel(models.Model):
+##    depth = ServerElement.objects.filter(server__server_type="WCS")
+##    precipitation = ServerElement.objects.filter(server__server_type="WCS")
+##    pawc = ServerElement.objects.filter(server__server_type="WCS")
+##    evapotranspiration = ServerElement.objects.filter(server__server_type="WCS")
+##    lulc = ServerElement.objects.filter(server__server_type="WCS")
+##    watersheds = ServerElement.objects.filter(server__server_type="WFS")
+##    biophysical = ServerElement.objects.filter(server__server_type="CSV")
+    z = models.IntegerField(default=1)
+
+    depth = models.ForeignKey(ElementWCS, related_name="depth", on_delete=models.CASCADE)
+    precipitation = models.ForeignKey(ElementWCS, related_name="precipitation", on_delete=models.CASCADE)
+    pawc = models.ForeignKey(ElementWCS, related_name="pawc", on_delete=models.CASCADE)
+    evapotranspiration = models.ForeignKey(ElementWCS, related_name="evapotranspiration", on_delete=models.CASCADE)
+    lulc = models.ForeignKey(ElementWCS, related_name="lulc", on_delete=models.CASCADE)
+    watersheds = models.ForeignKey(ElementWFS, related_name="watersheds", on_delete=models.CASCADE)
+    biophysical = models.ForeignKey(ElementCSV, related_name="biophysical", on_delete=models.CASCADE)
+

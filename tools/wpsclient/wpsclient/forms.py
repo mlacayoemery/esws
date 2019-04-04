@@ -4,6 +4,9 @@ from .models import ServerCSV
 from .models import ServerWCS
 from .models import ServerWFS
 from .models import ServerWPS
+from .models import ServerElement
+
+from .models import WaterYieldModel
 
 from .models import Job
 
@@ -95,3 +98,26 @@ class JobDynamic(forms.ModelForm):
         for name, value in self.cleaned_data.items():
             yield (self.fields[name].label, value)
         
+
+class WaterYieldForm(forms.ModelForm):
+    class Meta:
+        model = WaterYieldModel
+        fields = ("depth",
+                  "precipitation",
+                  "pawc",
+                  "evapotranspiration",
+                  "lulc",
+                  "watersheds",
+                  "biophysical",
+                  "z")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+##        self.fields["depth"].queryset = ServerElement.objects.filter(server__server_type="WCS")
+##        self.fields["precipitation"].queryset = ServerElement.objects.filter(server__server_type="WCS")
+##        self.fields["pawc"].queryset = ServerElement.objects.filter(server__server_type="WCS")
+##        self.fields["evapotranspiration"].queryset = ServerElement.objects.filter(server__server_type="WCS")
+##        self.fields["lulc"].queryset = ServerElement.objects.filter(server__server_type="WCS")
+##        self.fields["watersheds"].queryset = ServerElement.objects.filter(server__server_type="WFS")
+##        self.fields["biophysical"].queryset = ServerElement.objects.filter(server__server_type="CSV")

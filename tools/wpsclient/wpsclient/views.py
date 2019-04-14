@@ -43,6 +43,8 @@ from django.shortcuts import render_to_response
 from django.template import RequestContext
 from .forms import testForm
 
+import django.core.exceptions
+
 import copy
 import collections
 
@@ -660,14 +662,56 @@ def job_edit(request, process_pk):
 
     return render(request, 'wpsclient/job_edit.html', {'form': form})
 
+def get_server_element(pk):
+    element_types = [ElementCSV,
+                     ElementWCS,
+                     ElementWFS,
+                     ElementWPS]
 
+    for e_type in element_types:
+        try:
+            return e_type.objects.get(pk=pk)
+        except django.core.exceptions.ObjectDoesNotExist:
+            pass
+
+    return None
+            
+def get_ows_data_url(server_type, server_url, identifier):
+    ows_templates = {
+        "CSV" : "%s/%s",
+        "WCS" : "%s/ows?service=WCS&version=2.0.0&request=GetCoverage&coverageId=%s&format=image%%2Fgeotiff",
+        "WFS" : "%s/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=%s&outputFormat=SHAPE-ZIP",
+        }
+
+    return ows_templates[server_type] % (server_url, identifier)
+ 
 def water_yield(request):
     if request.method == "POST":
         form = WaterYieldForm(request.POST)
-        if form.is_valid():
-            server = form.save()
-            #server.save()
-            return redirect('water_yield')
+
+        #clean up data and convert server element ids to gettable URLs
+        data = copy.copy(form.data)
+        del data["csrfmiddlewaretoken"]
+
+        keys = list(data.keys())
+        keys.pop(-1)
+
+        for k in keys:
+            element = get_server_element(data[k])
+            data[k] = get_ows_data_url(element.element_type,element.server.url,element.identifier)
+
+        #save data to a job and redirect to details
+        args = data
+        server_pk="4"
+        server = get_object_or_404(ServerWPS, pk=server_pk)
+        process_id="JTS:area"
+        process = Job(server=server,identifier=process_id,args=args)
+        process.save()               
+
+        server.jobs = server.jobs + 1
+        server.save()
+        
+        return redirect('job_detail', process_pk=process.pk)        
             
     else: #elif request.method == "GET"
         form = WaterYieldForm()

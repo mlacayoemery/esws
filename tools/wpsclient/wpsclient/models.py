@@ -63,7 +63,7 @@ class ServerElement(models.Model):
         self.save()
 
     def __str__(self):
-        return "-".join([str(self.server),
+        return "/".join([str(self.server),
                          self.identifier])
 
 
@@ -90,7 +90,7 @@ class Job(models.Model):
         self.save()
 
     def __str__(self):
-        return "/".join([self.server,
+        return "-".join([self.server,
                          self.process])
 
 ##class WCS_Instance(models.Model):

@@ -13,7 +13,7 @@ logging.getLogger().addHandler(logging.StreamHandler())
 
 logging.info("WPS server starting.")
 
-pkg = "test"
+pkg = "wpsprocess"
 process_path = os.path.join(os.path.dirname(__file__), pkg)
 
 app = flask.Flask(__name__)

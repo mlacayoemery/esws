@@ -1,0 +1,5 @@
+http://127.0.0.1:8080/geoserver/cas/wms?service=WMS&version=1.1.0&request=GetMap&layers=cas:eto&styles=&bbox=444900.9029974863,4900407.170489954,485070.9029974863,4956627.170489954&width=548&height=768&srs=EPSG:26910&format=image%2Fgeotiff
+http://127.0.0.1:8080/geoserver/cas/wcs?service=WCS&version=1.0.0&request=GetCoverage&coverage=cas:eto&bbox=444900.9029974863,4900407.170489954,485070.9029974863,4956627.170489954&width=548&height=768&crs=EPSG:26910&format=image%2Fgeotiff
+http://127.0.0.1:8080/geoserver/ows?service=WCS&version=1.0.0&request=DescribeCoverage&coverage=cas:eto
+
+http://127.0.0.1:8080/geoserver/cas/wcs?service=WCS&version=2.0.0&request=GetCoverage&coverageId=cas:eto&&format=image%2Fgeotiff

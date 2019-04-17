@@ -4,6 +4,16 @@ import geoserver.catalog
 import uuid
 
 import urllib
+
+try:
+    #Python2
+    import urllib
+    urlretrieve = urllib.URLopener().retrieve
+    
+except ImportError:
+    #Python
+    from urllib.request import urlretrieve
+
 import tempfile
 import zipfile
 
@@ -15,13 +25,16 @@ class Catalog:
                  gs_url = "http://localhost:8080/geoserver",
                  username = "admin",
                  password = "geoserver",
-                 ws_prefix = "user-"):
+                 ws_prefix = "user-",
+                 logger = logging.getLogger('easyows')):
 
         self.gs_url = gs_url
         self.username = username
         self.password = password
         self.gs_cat = self.get_cat(self.gs_url + "/rest")
         self.ws_prefix = ws_prefix
+
+        self.logger = logger
 
         self.ows_cache = {}
 
@@ -36,6 +49,19 @@ class Catalog:
         "Creates workspace with UUID and returns name"
         
         return gs_cat.create_workspace(self.ws_prefix + str(uuid.uuid1())).name
+
+    def clean_named_workspace(self,
+                              f = None):
+
+        if f is None:
+            def f(s):
+                return s[:5] == self.ws_prefix
+
+        for ws in self.gs_cat.get_workspaces():
+            if f(ws.name):
+                self.logger.info("%s" % ws.name)
+                self.gs_cat.delete(ws, recurse=True)
+        
     
     def publish_shp(self,
                     shp_path,
@@ -197,28 +223,3 @@ class Job:
                 pass
 
         return False
-
-def extract_wrapper(args):
-    self.extract_shapefile_value_csv(**args)
-
-def extract_shapefile_value_csv(shapefile_path, key, csv_path, id_field="ws_id", id_value=1, value_field="sed_retent"):
-    #open the output results
-    data_source = driver.Open(shapefile_path, 0)
-
-    #get the actual data from the results
-    layer = data_source.GetLayer()
-
-    #loop over each feature in the data
-    for feature in layer:
-
-        #check if watershed 1 found
-        if feature.GetField(id_field) == 1:
-
-            #save retention
-            with open(csv_path, 'ab') as csvfile:
-                datawriter = csv.writer(csvfile)
-                datawriter.writerow([key, feature.GetField(value_field)])
-
-            data_source = None
-
-            return None

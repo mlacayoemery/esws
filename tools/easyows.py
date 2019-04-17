@@ -1,4 +1,5 @@
 import logging
+import os
 
 import geoserver.catalog
 import uuid
@@ -47,8 +48,15 @@ class Catalog:
 
     def make_named_workspace(self):
         "Creates workspace with UUID and returns name"
-        
-        return gs_cat.create_workspace(self.ws_prefix + str(uuid.uuid1())).name
+
+        workspace_name = self.ws_prefix + str(uuid.uuid1())
+
+        try:
+            return self.gs_cat.create_workspace(workspace_name).name
+
+        except TypeError:
+            #gsconfig 2.0.1
+            return self.gs_cat.create_workspace(workspace_name, workspace_name).name
 
     def clean_named_workspace(self,
                               f = None):
@@ -100,9 +108,9 @@ class Catalog:
 
         tiffdata = { 'tiff' : tif_path }
 
-        return gs_cat.create_coveragestore_external_geotiff(tif_name,
-                                                            "file://" + tif_path,
-                                                            self.gs_cat.get_workspace(gs_workspace)) 
+        return self.gs_cat.create_coveragestore(name = tif_name,
+                                                path = "file://" + tif_path,
+                                                workspace = self.gs_cat.get_workspace(gs_workspace)) 
 
     def layer_url(self,layer_name):
         template = self.gs_url + "/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=%s&outputFormat=SHAPE-ZIP"

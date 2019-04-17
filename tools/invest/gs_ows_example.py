@@ -1,4 +1,6 @@
 import logging
+import sys
+import os
 
 if __name__ == '__main__' and __package__ is None:
     from os import sys, path
@@ -16,55 +18,18 @@ sys.path.append("/home/mlacayo/workspace/invest/src/natcap/invest/pygeoprocessin
 import natcap.invest.scenario_gen_proximity
 import natcap.invest.sdr
 
-data_path = "/home/mlacayo/workspace/cas/data"
-
-sdr_base_args = {
-    u'biophysical_table_path': u'/home/mlacayo/workspace/cas/data/biophysical_table.csv',
-    u'dem_path': cover_url("cas:dem"),
-    u'drainage_path': u'',
-    u'erodibility_path': cover_url("cas:erodibility"),
-    u'erosivity_path': cover_url("cas:erosivity"),
-    u'ic_0_param': u'0.5',
-    u'k_param': u'2',
-    u'lulc_path': cover_url("cas:landuse_90"),
-    u'sdr_max': u'0.8',
-    u'threshold_flow_accumulation': u'1000',
-    u'watersheds_path': layer_url("cas:watersheds"),
-    u'workspace_dir': u'/home/mlacayo/workspace/cas/data/output/output/sdr_base',
-    }
-
-#convert 50,000 HA (~36%) of pasture (type 80) to conifers (type 56)
-#when it is near any age conifers (types 56, 57, 58, 59, 60, 61)
-gen_forest_args = {
-    u'aoi_path': u'',
-    u'area_to_convert': u'50000',
-    u'base_lulc_path': cover_url("cas:landuse_90"),
-    u'convert_farthest_from_edge': False,
-    u'convert_nearest_to_edge': True,
-    u'convertible_landcover_codes': u'80',
-    u'focal_landcover_codes': u'56 57 58 59 60 61',
-    u'n_fragmentation_steps': u'1',
-    u'replacment_lucode': u'56',
-    u'workspace_dir': u'/home/mlacayo/workspace/cas/data/output/output/scenario_forest',
-    }
-
-#convert 50,000 HA (~36%) of pasture (type 80) to low density residential (type 1)
-#when it is near any density residential (types 1, 2, 3 4)
-gen_residential_args = {
-    u'aoi_path': u'',
-    u'area_to_convert': u'50000',
-    u'base_lulc_path': cover_url("cas:landuse_90"),
-    u'convert_farthest_from_edge': False,
-    u'convert_nearest_to_edge': True,
-    u'convertible_landcover_codes': u'80',
-    u'focal_landcover_codes': u'1 2 3 4',
-    u'n_fragmentation_steps': u'1',
-    u'replacment_lucode': u'1',
-    u'workspace_dir': u'/home/mlacayo/workspace/cas/data/output/output/scenario_residential',
-    }
+import csv
 
 if __name__ == '__main__':
-    logger = logging.getLogger('gsows')
+    logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+    logger = logging.getLogger()
+##    handler = logging.StreamHandler(sys.stdout)
+##    handler.setLevel(logging.DEBUG)
+##    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+##    handler.setFormatter(formatter)    
+##    logger.addHandler(handler)
+
+    logger.info("Starting GS OWS example.")
     
     cat = easyows.Catalog(gs_url = "http://localhost:8080/geoserver",
                           username = "admin",
@@ -75,6 +40,54 @@ if __name__ == '__main__':
     
     logger.info("Removing workspace(s)")
     cat.clean_named_workspace()
+
+    data_path = "/home/mlacayo/workspace/cas/data"
+
+    sdr_base_args = {
+        u'biophysical_table_path': u'/home/mlacayo/workspace/cas/data/biophysical_table.csv',
+        u'dem_path': cat.cover_url("cas:dem"),
+        u'drainage_path': u'',
+        u'erodibility_path': cat.cover_url("cas:erodibility"),
+        u'erosivity_path': cat.cover_url("cas:erosivity"),
+        u'ic_0_param': u'0.5',
+        u'k_param': u'2',
+        u'lulc_path': cat.cover_url("cas:landuse_90"),
+        u'sdr_max': u'0.8',
+        u'threshold_flow_accumulation': u'1000',
+        u'watersheds_path': cat.layer_url("cas:watersheds"),
+        u'workspace_dir': u'/home/mlacayo/workspace/cas/data/output/output/sdr_base',
+        }
+
+    #convert 50,000 HA (~36%) of pasture (type 80) to conifers (type 56)
+    #when it is near any age conifers (types 56, 57, 58, 59, 60, 61)
+    gen_forest_args = {
+        u'aoi_path': u'',
+        u'area_to_convert': u'50000',
+        u'base_lulc_path': cat.cover_url("cas:landuse_90"),
+        u'convert_farthest_from_edge': False,
+        u'convert_nearest_to_edge': True,
+        u'convertible_landcover_codes': u'80',
+        u'focal_landcover_codes': u'56 57 58 59 60 61',
+        u'n_fragmentation_steps': u'1',
+        u'replacment_lucode': u'56',
+        u'workspace_dir': u'/home/mlacayo/workspace/cas/data/output/output/scenario_forest',
+        }
+
+    #convert 50,000 HA (~36%) of pasture (type 80) to low density residential (type 1)
+    #when it is near any density residential (types 1, 2, 3 4)
+    gen_residential_args = {
+        u'aoi_path': u'',
+        u'area_to_convert': u'50000',
+        u'base_lulc_path': cat.cover_url("cas:landuse_90"),
+        u'convert_farthest_from_edge': False,
+        u'convert_nearest_to_edge': True,
+        u'convertible_landcover_codes': u'80',
+        u'focal_landcover_codes': u'1 2 3 4',
+        u'n_fragmentation_steps': u'1',
+        u'replacment_lucode': u'1',
+        u'workspace_dir': u'/home/mlacayo/workspace/cas/data/output/output/scenario_residential',
+        }
+
        
     csv_path = "/home/mlacayo/workspace/cas/data/output/sed_retent.csv"
     
@@ -126,7 +139,7 @@ if __name__ == '__main__':
 
 
         args = {
-            "shapefile_path" : layer_url(layer_name),
+            "shapefile_path" : cat.layer_url(layer_name),
             "key" : flow,
             "csv_path" : csv_path}
 
@@ -142,11 +155,8 @@ if __name__ == '__main__':
 
     while len(job_queue) != 0:
         job = job_queue.pop(0)
-        if not run_job(job):
-            if job[0] < 2:
-                job_queue.insert(0, job)
-            else:
-                job.append(job)
+        if not job.run():
+            job_queue.insert(0, job)
 
     ###select the retention closest to 9,000,000
     retention_dict = {}
@@ -182,7 +192,7 @@ if __name__ == '__main__':
     print("Generate scenario rasters")
 
     #generate the forest scenario LULC
-    ws = make_named_workspace()
+    ws = cat.make_named_workspace()
 
     forest_layer_name = ":".join([ws, "scenario"])
 
@@ -190,11 +200,17 @@ if __name__ == '__main__':
         forest_layer_name : os.path.join(gen_forest_args[u'workspace_dir'], u'nearest_to_edge.tif')
     }
     
-    job = [0, natcap.invest.scenario_gen_proximity.execute, gen_forest_args, uploads, "Generate forest scenario raster"]    
+    job = easyows.Job(natcap.invest.scenario_gen_proximity.execute,
+                      gen_forest_args,
+                      uploads,
+                      "Generate forest scenario raster",
+                      0,
+                      cat,
+                      logger)
     job_queue.append(job)
 
     #generate the residential scenario LULC
-    ws = make_named_workspace()
+    ws = cat.make_named_workspace()
 
     residential_layer_name = ":".join([ws, "scenario"])
 
@@ -202,7 +218,13 @@ if __name__ == '__main__':
         residential_layer_name : os.path.join(gen_residential_args[u'workspace_dir'], u'nearest_to_edge.tif')
     }
     
-    job = [0, natcap.invest.scenario_gen_proximity.execute, gen_residential_args, uploads, "Generate residential scenario raster"]
+    job = easyows.Job(natcap.invest.scenario_gen_proximity.execute,
+                      gen_residential_args,
+                      uploads,
+                      "Generate residential scenario raster",
+                      0,
+                      cat,
+                      logger)
     job_queue.append(job)
 
     ###run SDR for the scenarios
@@ -215,10 +237,10 @@ if __name__ == '__main__':
     sdr_forest_args[u'workspace_dir'] = u'/home/mlacayo/workspace/cas/data/output/output/sdr_scenario_forest'
 
     #set the LULC to the scenario
-    sdr_forest_args[u'lulc_path'] = cover_url(forest_layer_name)
+    sdr_forest_args[u'lulc_path'] = cat.cover_url(forest_layer_name)
 
     #run the SDR forest scenario
-    ws = make_named_workspace()
+    ws = cat.make_named_workspace()
 
     layer_name = ":".join([ws, "sdr"])
 
@@ -226,7 +248,13 @@ if __name__ == '__main__':
         layer_name : os.path.join(sdr_forest_args[u'workspace_dir'], u'watershed_results_sdr.shp')
     }
     
-    job = [0, natcap.invest.sdr.execute, sdr_forest_args, uploads, "Calculate SDR for forest scenario"]
+    job = easyows.Job(natcap.invest.sdr.execute,
+                      sdr_forest_args,
+                      uploads,
+                      "Calculate SDR for forest scenario",
+                      0,
+                      cat,
+                      logger)
     job_queue.append(job)
 
     #create the SDR residential scenario dictionary
@@ -236,10 +264,10 @@ if __name__ == '__main__':
     sdr_residential_args[u'workspace_dir'] = u'/home/mlacayo/workspace/cas/data/output/output/sdr_scenario_residential'
 
     #set the LULC to the scenario
-    sdr_residential_args[u'lulc_path'] = cover_url(residential_layer_name)
+    sdr_residential_args[u'lulc_path'] = cat.cover_url(residential_layer_name)
 
     #run the SDR residential scenario
-    ws = make_named_workspace()
+    ws = cat.make_named_workspace()
 
     layer_name = ":".join([ws, "sdr"])
 
@@ -248,13 +276,16 @@ if __name__ == '__main__':
     }
 
     
-    job = [0, natcap.invest.sdr.execute, sdr_residential_args, uploads, "Calculate SDR for residential scenario"]
+    job = easyows.Job(natcap.invest.sdr.execute,
+                      sdr_residential_args,
+                      uploads,
+                      "Calculate SDR for residential scenario",
+                      0,
+                      cat,
+                      logger)
     job_queue.append(job)
 
     while len(job_queue) != 0:
         job = job_queue.pop(0)
-        if not run_job(job):
-            if job[0] < 2:
-                job_queue.insert(0, job)
-            else:
-                job.append(job)
+        if not job.run():
+            job_queue.insert(0, job)

@@ -6,7 +6,7 @@ driver = osgeo.ogr.GetDriverByName("ESRI Shapefile")
 import csv
 
 def extract_wrapper(args):
-    self.extract_shapefile_value_csv(**args)
+    extract_shapefile_value_csv(**args)
 
 def extract_shapefile_value_csv(shapefile_path, key, csv_path, id_field="ws_id", id_value=1, value_field="sed_retent"):
     #open the output results

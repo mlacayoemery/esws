@@ -5,6 +5,8 @@ import os.path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 import easyows
 
+import natcap.invest.hydropower.hydropower_water_yield
+
 class WebProcess(pywps.Process):
     def __init__(self):
         inputs = [pywps.LiteralInput('workspace_dir',
@@ -51,8 +53,8 @@ class WebProcess(pywps.Process):
             self._handler,
             identifier='natcap.invest.hydropower.hydropower_water_yield',
             title='Water Yield',
-            abstract='InVEST water balance model',
-            version='3.6.0',
+            abstract= natcap.invest.hydropower.hydropower_water_yield.__doc__,
+            version= natcap.invest.__version__,
             inputs=inputs,
             outputs=outputs,
             store_supported=True,
@@ -75,6 +77,8 @@ class WebProcess(pywps.Process):
 
         for a in args_list:
             args[a] = request.inputs[a][0].data
+
+        #natcap.invest.hydropower.hydropower_water_yield.execute(args)
         
         response.outputs['response'].data = "Running Water Yield model on %s" % str(args)
         response.outputs['response'].uom = pywps.UOM('unity')

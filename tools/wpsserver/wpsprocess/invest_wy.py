@@ -7,7 +7,11 @@ import easyows
 
 class WebProcess(pywps.Process):
     def __init__(self):
-        inputs = [pywps.LiteralInput('precipitation_uri',
+        inputs = [pywps.LiteralInput('workspace_dir',
+                                     'GeoServer workspace',
+                                     data_type='string'),
+
+                  pywps.LiteralInput('precipitation_uri',
                                      'Precipitation',
                                      data_type='string'),
 
@@ -57,8 +61,21 @@ class WebProcess(pywps.Process):
 
     def _handler(self, request, response):
 
+        workspace = request.inputs["workspace_dir"][0].data
 
+        args = {}
+        args_list = ['precipitation_uri',
+                     'eto_uri',
+                     'depth_to_root_rest_layer_uri',
+                     'pawc_uri',
+                     'lulc_uri',
+                     'watersheds_uri',
+                     'biophysical_table_uri',
+                     'seasonality_constant']        
+
+        for a in args_list:
+            args[a] = request.inputs[a][0].data
         
-        response.outputs['response'].data = "Request recieved"
+        response.outputs['response'].data = "Running Water Yield model on %s" % str(args)
         response.outputs['response'].uom = pywps.UOM('unity')
         return response

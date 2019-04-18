@@ -172,69 +172,77 @@ class Job:
             ows_cache=self.catalog.ows_cache
         else:
             self.logger.debug("Checking given OWS cache")
-        
+
+        failure = False
         for key, value in self.args.iteritems():
-            if type(value) == str:
-                if value[:4].lower() == "http":
-                    self.logger.debug("Found remote parameter %s" % value)
-                    #print value
-                    if "service=WFS" in value:
-                        self.logger.debug("Detected WFS service")
-                        if value in ows_cache:
-                            self.args[key] = ows_cache[value]
-                            self.logger.info("Assigned %s cached %s" % (key, self.args[key]))
+            try:
+                if type(value) == str:
+                    if value[:4].lower() == "http":
+                        self.logger.debug("Found remote parameter %s" % value)
+                        #print value
+                        if "service=WFS" in value:
+                            self.logger.debug("Detected WFS service")
+                            if value in ows_cache:
+                                self.args[key] = ows_cache[value]
+                                self.logger.info("Assigned %s cached %s" % (key, self.args[key]))
 
-                        else:
-                            workspace, name = self.catalog.layer_name_from_url(value).split(":")
-                            self.logger.debug("Checking for %s in %s" % (name,workspace))
-                            if self.catalog.store_exists(name, workspace):
-                                self.logger.debug("Remote resource exists")
                             else:
-                                self.logger.debug("Remote resource does not exist")
-                                raise MissingResource("Missing resource")
-                            
-                            try:
-                                _, tmp_path = tempfile.mkstemp(suffix=".zip", prefix=prefix)
+                                workspace, name = self.catalog.layer_name_from_url(value).split(":")
+                                self.logger.debug("Checking for %s in %s" % (name,workspace))
+                                if self.catalog.store_exists(name, workspace):
+                                    self.logger.debug("Remote resource exists")
+                                else:
+                                    self.logger.debug("Remote resource does not exist")
+                                    raise MissingResource("Missing resource")
+                                
+                                try:
+                                    _, tmp_path = tempfile.mkstemp(suffix=".zip", prefix=prefix)
+                                    urllib.URLopener().retrieve(value, tmp_path)
+
+                                    tmp_dir = tempfile.mkdtemp(prefix=prefix)
+                                    zipfile.ZipFile(tmp_path, 'r').extractall(tmp_dir)
+
+                                    for wfs_file in os.listdir(tmp_dir):
+                                        if wfs_file.endswith(".shp"):
+                                            self.args[key] = os.path.join(tmp_dir,wfs_file)
+                                            self.logger.info("Assigned %s %s" % (key, self.args[key]))
+                                            ows_cache[value] = self.args[key]
+                                            
+                                except zipfile.BadZipfile:
+                                    self.logger.error("Missing %s" % value)
+                                    raise MissingResource("Missing resource")
+
+                        elif "service=WCS" in value:
+                            self.logger.debug("Detected WCS service")
+                            if value in ows_cache:
+                                self.args[key] = ows_cache[value]
+                                self.logger.info("Assigned %s cached %s" % (key, self.args[key]))
+
+                            else:
+                                workspace, name = self.catalog.cover_name_from_url(value).split(":")
+                                self.logger.debug("Checking for %s in %s" % (name,workspace))                            
+                                if self.catalog.store_exists(name, workspace):
+                                    self.logger.debug("Remote resource exists")
+                                else:
+                                    self.logger.debug("Remote resource does not exist")
+                                    raise MissingResource("Missing resource")
+                                
+                                _, tmp_path = tempfile.mkstemp(suffix=".tif", prefix=prefix)
                                 urllib.URLopener().retrieve(value, tmp_path)
-
-                                tmp_dir = tempfile.mkdtemp(prefix=prefix)
-                                zipfile.ZipFile(tmp_path, 'r').extractall(tmp_dir)
-
-                                for wfs_file in os.listdir(tmp_dir):
-                                    if wfs_file.endswith(".shp"):
-                                        self.args[key] = os.path.join(tmp_dir,wfs_file)
-                                        self.logger.info("Assigned %s %s" % (key, self.args[key]))
-                                        ows_cache[value] = self.args[key]
-                                        
-                            except zipfile.BadZipfile:
-                                self.logger.error("Missing %s" % value)
-                                raise MissingResource("Missing resource")
-
-                    elif "service=WCS" in value:
-                        self.logger.debug("Detected WCS service")
-                        if value in ows_cache:
-                            self.args[key] = ows_cache[value]
-                            self.logger.info("Assigned %s cached %s" % (key, self.args[key]))
+                                self.args[key] = tmp_path
+                                self.logger.info("Assigned %s %s" % (key, self.args[key]))
+                                ows_cache[value] = self.args[key]
 
                         else:
-                            workspace, name = self.catalog.cover_name_from_url(value).split(":")
-                            self.logger.debug("Checking for %s in %s" % (name,workspace))                            
-                            if self.catalog.store_exists(name, workspace):
-                                self.logger.debug("Remote resource exists")
-                            else:
-                                self.logger.debug("Remote resource does not exist")
-                                raise MissingResource("Missing resource")
-                            
-                            _, tmp_path = tempfile.mkstemp(suffix=".tif", prefix=prefix)
-                            urllib.URLopener().retrieve(value, tmp_path)
-                            self.args[key] = tmp_path
-                            self.logger.info("Assigned %s %s" % (key, self.args[key]))
-                            ows_cache[value] = self.args[key]
-
-                    else:
-                        self.logger.error("Unknown protocol for %s" % value)
-                        raise ValueError("Unknown protocol for %s" % value)
-    
+                            self.logger.error("Unknown protocol for %s" % value)
+                            raise ValueError("Unknown protocol for %s" % value)
+            except MissingResource:
+                self.logger.debug("Continuing after missing resource detected")
+                failure = True
+        if failure:
+            self.logger.debug("Rasing mising resouce for at least one instance")
+            raise MissingResource("Missing resource")
+        
     def run(self, increment=1):
         self.logger.info("Trying %s" % self.msg)
         

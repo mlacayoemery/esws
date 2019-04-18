@@ -15,6 +15,8 @@ except ImportError:
     #Python
     from urllib.request import urlretrieve
 
+import re
+
 import tempfile
 import zipfile
 
@@ -110,17 +112,27 @@ class Catalog:
 
         return self.gs_cat.create_coveragestore(name = tif_name,
                                                 path = "file://" + tif_path,
-                                                workspace = self.gs_cat.get_workspace(gs_workspace)) 
+                                                workspace = self.gs_cat.get_workspace(gs_workspace),
+                                                layer_name = tif_name) 
 
     def layer_url(self,layer_name):
         template = self.gs_url + "/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=%s&outputFormat=SHAPE-ZIP"
 
         return template % layer_name
 
+    def layer_name_from_url(self,layer_url):
+        return re.search("typeName=(.+)&", layer_url).group(1)
+
     def cover_url(self,layer_name):
         template = self.gs_url + "/ows?service=WCS&version=2.0.0&request=GetCoverage&coverageId=%s&format=image%%2Fgeotiff"
 
         return template % layer_name
+
+    def cover_name_from_url(self, cover_url):
+        return re.search("coverageId=(.+)&", cover_url).group(1)
+
+    def store_exists(self, name, workspace):
+        return len(self.gs_cat.get_stores(names=name, workspaces=workspace)) > 0
 
 
 class Job:
@@ -156,18 +168,31 @@ class Job:
         "Get any remote parameters with option cache"
 
         if ows_cache is None:
+            self.logger.debug("Trying catalog cache %i" % id(self.catalog.ows_cache))
             ows_cache=self.catalog.ows_cache
+        else:
+            self.logger.debug("Checking given OWS cache")
         
         for key, value in self.args.iteritems():
             if type(value) == str:
                 if value[:4].lower() == "http":
+                    self.logger.debug("Found remote parameter %s" % value)
                     #print value
                     if "service=WFS" in value:
+                        self.logger.debug("Detected WFS service")
                         if value in ows_cache:
                             self.args[key] = ows_cache[value]
                             self.logger.info("Assigned %s cached %s" % (key, self.args[key]))
 
                         else:
+                            workspace, name = self.catalog.layer_name_from_url(value).split(":")
+                            self.logger.debug("Checking for %s in %s" % (name,workspace))
+                            if self.catalog.store_exists(name, workspace):
+                                self.logger.debug("Remote resource exists")
+                            else:
+                                self.logger.debug("Remote resource does not exist")
+                                raise MissingResource("Missing resource")
+                            
                             try:
                                 _, tmp_path = tempfile.mkstemp(suffix=".zip", prefix=prefix)
                                 urllib.URLopener().retrieve(value, tmp_path)
@@ -186,11 +211,20 @@ class Job:
                                 raise MissingResource("Missing resource")
 
                     elif "service=WCS" in value:
+                        self.logger.debug("Detected WCS service")
                         if value in ows_cache:
                             self.args[key] = ows_cache[value]
                             self.logger.info("Assigned %s cached %s" % (key, self.args[key]))
 
                         else:
+                            workspace, name = self.catalog.cover_name_from_url(value).split(":")
+                            self.logger.debug("Checking for %s in %s" % (name,workspace))                            
+                            if self.catalog.store_exists(name, workspace):
+                                self.logger.debug("Remote resource exists")
+                            else:
+                                self.logger.debug("Remote resource does not exist")
+                                raise MissingResource("Missing resource")
+                            
                             _, tmp_path = tempfile.mkstemp(suffix=".tif", prefix=prefix)
                             urllib.URLopener().retrieve(value, tmp_path)
                             self.args[key] = tmp_path
@@ -202,9 +236,11 @@ class Job:
                         raise ValueError("Unknown protocol for %s" % value)
     
     def run(self, increment=1):
-        self.priority += increment
-
         self.logger.info("Trying %s" % self.msg)
+        
+        self.priority += increment
+        self.logger.debug("Job priority %i" % self.priority)        
+
         if self.are_local_parameters():
             apply(self.process, [self.args])
             
@@ -223,11 +259,15 @@ class Job:
             return True
 
         else:
-            self.logger.info("Downloading remote inputs")
+            self.logger.info("Downloading remote parameters")
             try:
                 self.get_remote_parameters()
 
             except MissingResource:
-                pass
+                self.logger.debug("Could not download all remote parameters")
+
+            except IOError:
+                self.logger.debug("Could not download all remote parameters")
+
 
         return False

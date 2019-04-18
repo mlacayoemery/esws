@@ -21,8 +21,8 @@ import natcap.invest.sdr
 import csv
 
 if __name__ == '__main__':
-    logging.basicConfig(stream=sys.stdout, level=logging.INFO)
-    logger = logging.getLogger()
+    logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+    logger = logging.getLogger("gsows")
 ##    handler = logging.StreamHandler(sys.stdout)
 ##    handler.setLevel(logging.DEBUG)
 ##    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -34,8 +34,7 @@ if __name__ == '__main__':
     cat = easyows.Catalog(gs_url = "http://localhost:8080/geoserver",
                           username = "admin",
                           password = "geoserver",
-                          ws_prefix = "user-",
-                          logger = logger)
+                          ws_prefix = "user-")
 
     
     logger.info("Removing workspace(s)")
@@ -134,8 +133,7 @@ if __name__ == '__main__':
                                      uploads,
                                      "Running SDR with flow %i" % flow,
                                      0,
-                                     cat,
-                                     logger))
+                                     cat))
 
 
         args = {
@@ -150,8 +148,7 @@ if __name__ == '__main__':
                                      uploads,
                                      "Reading SDR results for flow %i" % flow,
                                      0,
-                                     cat,
-                                     logger))
+                                     cat))
 
     while len(job_queue) != 0:
         job = job_queue.pop(0)
@@ -205,8 +202,7 @@ if __name__ == '__main__':
                       uploads,
                       "Generate forest scenario raster",
                       0,
-                      cat,
-                      logger)
+                      cat)
     job_queue.append(job)
 
     #generate the residential scenario LULC
@@ -223,8 +219,7 @@ if __name__ == '__main__':
                       uploads,
                       "Generate residential scenario raster",
                       0,
-                      cat,
-                      logger)
+                      cat)
     job_queue.append(job)
 
     ###run SDR for the scenarios
@@ -253,8 +248,7 @@ if __name__ == '__main__':
                       uploads,
                       "Calculate SDR for forest scenario",
                       0,
-                      cat,
-                      logger)
+                      cat)
     job_queue.append(job)
 
     #create the SDR residential scenario dictionary
@@ -281,8 +275,7 @@ if __name__ == '__main__':
                       uploads,
                       "Calculate SDR for residential scenario",
                       0,
-                      cat,
-                      logger)
+                      cat)
     job_queue.append(job)
 
     while len(job_queue) != 0:

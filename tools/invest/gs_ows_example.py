@@ -282,3 +282,6 @@ if __name__ == '__main__':
         job = job_queue.pop(0)
         if not job.run():
             job_queue.insert(0, job)
+
+
+    logger.info("Complete")

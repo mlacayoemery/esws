@@ -1,9 +1,12 @@
+import logging
 import pywps
 
 import sys
 import os.path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+
 import easyows
+import tempfile
 
 import natcap.invest.hydropower.hydropower_water_yield
 
@@ -62,6 +65,12 @@ class WebProcess(pywps.Process):
         )
 
     def _handler(self, request, response):
+        logger = logging.getLogger("wps_invest_wy")
+        fh = logging.FileHandler('/tmp/esws.log')
+        fh.setLevel(logging.DEBUG)
+        logger.addHandler(fh)
+        
+        logger.info("BEGIN CALL TO WPS INVEST_WY")
 
         workspace = request.inputs["workspace_dir"][0].data
 
@@ -78,7 +87,8 @@ class WebProcess(pywps.Process):
         for a in args_list:
             args[a] = request.inputs[a][0].data
 
-        args["workspace_dir"] = "/tmp/" + workspace
+        args["workspace_dir"] = tempfile.mkdtemp(prefix="esws-")
+
 
         for k in args.keys():
             try:
@@ -87,8 +97,36 @@ class WebProcess(pywps.Process):
             except AttributeError:
                 continue
 
-        natcap.invest.hydropower.hydropower_water_yield.execute(args)
+        cat = easyows.Catalog(gs_url = "http://localhost:8080/geoserver",
+                              username = "admin",
+                              password = "geoserver",
+                              ws_prefix = "user-",
+                              logger = logger)
+
+        logger.info("Removing workspace(s)")
+        cat.clean_named_workspace()
+
+    
+        ws = cat.make_named_workspace()
+
+        layer_name = ":".join([ws, "wy"])
+
+        uploads = {
+            layer_name : os.path.join(args[u'workspace_dir'], "output", u'watershed_results_wyield.shp')
+        }
+
+        j = easyows.Job(natcap.invest.hydropower.hydropower_water_yield.execute,
+                        args,
+                        uploads,
+                        "Call to InVEST WY WPS %s" % workspace,
+                        0,
+                        cat)
+
+        j.run()
         
         response.outputs['response'].data = "Running Water Yield model on %s" % str(args)
         response.outputs['response'].uom = pywps.UOM('unity')
+
+        logger.info("END CALL TO WPS INVEST_WY")
+        
         return response

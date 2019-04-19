@@ -6,8 +6,8 @@ http://127.0.0.1:8080/geoserver/cas/wcs?service=WCS&version=2.0.0&request=GetCov
 
 http://127.0.0.1:5000/wps?service=wps&version=1.0.0&request=DescribeProcess&IDENTIFIER=natcap.invest.hydropower.hydropower_water_yield
 
-http://127.0.0.1:5000/wps?service=wps&version=1.0.0&request=Execute&IDENTIFIER=natcap.invest.hydropower.hydropower_water_yield&datainputs=workspace_dir=d;precipitation_uri=p;
-eto_uri=e;depth_to_root_rest_layer_uri=r;pawc_uri=w;lulc_uri=l;watersheds_uri=s;biophysical_table_uri=b;seasonality_constant=1
+http://127.0.0.1:5000/wps?service=wps&version=1.0.0&request=Execute&IDENTIFIER=natcap.invest.hydropower.hydropower_water_yield&datainputs=workspace_dir=UUID;precipitation_uri=~/workspace/data/Base_Data/Freshwater/precip.tif;
+eto_uri=~/workspace/data/Base_Data/Freshwater/eto.tif;depth_to_root_rest_layer_uri=~/workspace/data/Base_Data/Freshwater/depth_to_root_rest_layer.tif;pawc_uri=~/workspace/data/Base_Data/Freshwater/pawc.tif;lulc_uri=~/workspace/data/Base_Data/Freshwater/landuse_90.tif;watersheds_uri=~/workspace/data/Base_Data/Freshwater/watersheds.shp;biophysical_table_uri=~/workspace/data/Hydropower/input/biophysical_table.csv;seasonality_constant=5
 
 http://127.0.0.1:5000/wps?service=wps&version=1.0.0&request=GetCapabilities
 http://127.0.0.1:5000/wps?service=wps&version=1.0.0&request=DescribeProcess&IDENTIFIER=echo_string

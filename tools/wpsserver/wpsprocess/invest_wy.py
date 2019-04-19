@@ -78,7 +78,16 @@ class WebProcess(pywps.Process):
         for a in args_list:
             args[a] = request.inputs[a][0].data
 
-        #natcap.invest.hydropower.hydropower_water_yield.execute(args)
+        args["workspace_dir"] = "/tmp/" + workspace
+
+        for k in args.keys():
+            try:
+                args[k] = os.path.expanduser(args[k])
+
+            except AttributeError:
+                continue
+
+        natcap.invest.hydropower.hydropower_water_yield.execute(args)
         
         response.outputs['response'].data = "Running Water Yield model on %s" % str(args)
         response.outputs['response'].uom = pywps.UOM('unity')

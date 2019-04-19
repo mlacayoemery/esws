@@ -48,10 +48,13 @@ class Catalog:
                                          username = self.username,
                                          password = self.password)
 
-    def make_named_workspace(self):
+    def make_named_workspace(self, ws_uuid=None):
         "Creates workspace with UUID and returns name"
 
-        workspace_name = self.ws_prefix + str(uuid.uuid1())
+        if uuid is None:
+            workspace_name = self.ws_prefix + str(uuid.uuid1())
+        else:
+            workspace_name = self.ws_prefix + ws_uuid
 
         try:
             return self.gs_cat.create_workspace(workspace_name).name

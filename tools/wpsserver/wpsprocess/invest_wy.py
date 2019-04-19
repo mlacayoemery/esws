@@ -107,7 +107,7 @@ class WebProcess(pywps.Process):
         cat.clean_named_workspace()
 
     
-        ws = cat.make_named_workspace()
+        ws = cat.make_named_workspace(str(self.uuid))
 
         layer_name = ":".join([ws, "wy"])
 
@@ -124,7 +124,7 @@ class WebProcess(pywps.Process):
 
         j.run()
         
-        response.outputs['response'].data = "Running Water Yield model on %s" % str(args)
+        response.outputs['response'].data = "Success in running Water Yield model %s" % ws
         response.outputs['response'].uom = pywps.UOM('unity')
 
         logger.info("END CALL TO WPS INVEST_WY")

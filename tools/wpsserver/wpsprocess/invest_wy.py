@@ -87,7 +87,7 @@ class WebProcess(pywps.Process):
         for a in args_list:
             args[a] = request.inputs[a][0].data
 
-        args["workspace_dir"] = tempfile.mkdtemp(prefix="esws-")
+        args["workspace_dir"] = tempfile.mkdtemp(prefix="esws-%s-" % str(self.uuid))
 
 
         for k in args.keys():
@@ -100,7 +100,7 @@ class WebProcess(pywps.Process):
         cat = easyows.Catalog(gs_url = "http://localhost:8080/geoserver",
                               username = "admin",
                               password = "geoserver",
-                              ws_prefix = "user-",
+                              ws_prefix = "esws-",
                               logger = logger)
 
         logger.info("Removing workspace(s)")

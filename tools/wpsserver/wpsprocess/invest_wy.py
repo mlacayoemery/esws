@@ -124,11 +124,13 @@ class WebProcess(pywps.Process):
                         cat,
                         logger)
 
-        j.run()
-        
-        response.outputs['response'].data = "Success in running Water Yield model %s" % ws
-        response.outputs['response'].uom = pywps.UOM('unity')
+        while j.priority < 3:
+            if j.run():
+                response.outputs['response'].data = "Success in running Water Yield model %s" % ws
+                response.outputs['response'].uom = pywps.UOM('unity')
 
-        logger.info("END CALL TO WPS INVEST_WY")
-        
-        return response
+                logger.info("END CALL TO WPS INVEST_WY")
+                       
+                return response
+
+        raise IOError, "Job timed out."

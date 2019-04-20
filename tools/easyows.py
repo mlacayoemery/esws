@@ -190,6 +190,7 @@ class Job:
             self.logger.debug("Checking given OWS cache")
 
         failure = False
+        failure_list = []
         for key, value in self.args.iteritems():
             try:
                 if type(value) in [str, unicode]:
@@ -258,8 +259,10 @@ class Job:
             except MissingResource:
                 self.logger.debug("Continuing after missing resource detected")
                 failure = True
+                failure_list.append("%s:%s" % (workspace, name))
+                
         if failure:
-            self.logger.debug("Rasing mising resouce for at least one instance")
+            self.logger.debug("Missing resources(s) %s" % str(failure_list))
             raise MissingResource("Missing resource")
         
     def run(self, increment=1):

@@ -6,14 +6,13 @@ import uuid
 
 import urllib
 
-try:
-    #Python2
+import sys
+if sys.version_info.major == 2:
     import urllib
     urlretrieve = urllib.URLopener().retrieve
     unquote = urllib.unquote
-    
-except ImportError:
-    #Python
+
+else:
     from urllib.request import urlretrieve
     from urllib.parse import unquote
 
@@ -53,7 +52,7 @@ class Catalog:
     def make_named_workspace(self, ws_uuid=None):
         "Creates workspace with UUID and returns name"
 
-        if uuid is None:
+        if ws_uuid is None:
             workspace_name = self.ws_prefix + str(uuid.uuid1())
         else:
             workspace_name = self.ws_prefix + ws_uuid
@@ -254,8 +253,21 @@ class Job:
                                 ows_cache[value] = self.args[key]
 
                         else:
-                            self.logger.error("Unknown protocol for %s" % value)
-                            raise ValueError("Unknown protocol for %s" % value)
+                            #self.logger.error("Unknown protocol for %s" % value)
+                            #raise ValueError("Unknown protocol for %s" % value)
+
+                            self.logger.debug("Trying simple HTTP get")
+                            if value in ows_cache:
+                                self.args[key] = ows_cache[value]
+                                self.logger.debug("Assigned %s cached %s" % (key, self.args[key]))
+
+                            else:                               
+                                _, tmp_path = tempfile.mkstemp(suffix=".csv", prefix=prefix)
+                                urllib.URLopener().retrieve(value, tmp_path)
+                                self.args[key] = tmp_path
+                                self.logger.debug("Assigned %s %s" % (key, self.args[key]))
+                                ows_cache[value] = self.args[key]                            
+                            
             except MissingResource:
                 self.logger.debug("Continuing after missing resource detected")
                 failure = True

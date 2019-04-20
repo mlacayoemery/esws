@@ -50,6 +50,21 @@ import collections
 
 import bs4
 import re
+
+from os import sys, path
+p = path.dirname(path.dirname(path.dirname(path.abspath(__file__))))
+sys.path.append(p)
+
+import easyows
+import uuid
+
+import sys
+import urllib
+if sys.version_info.major == 2:
+    quote = urllib.quote
+else:
+    quote = urllib.parse.quote
+    
  
 # Create your views here.
 def dashboard(request):
@@ -698,13 +713,19 @@ def water_yield(request):
 
         for k in keys:
             element = get_server_element(data[k])
-            data[k] = get_ows_data_url(element.element_type,element.server.url,element.identifier)
+            data[k] = get_ows_data_url(element.element_type,element.server.url,element.identifier)      
 
         #save data to a job and redirect to details
         args = data
         server_pk="4"
         server = get_object_or_404(ServerWPS, pk=server_pk)
-        process_id="JTS:area"
+        process_id="natcap.invest.hydropower.hydropower_water_yield"
+
+        #cat = easyows.Catalog()
+        name = str(uuid.uuid1())
+        #cat.gs_cat.create_workspace(name)
+        args["workspace_dir"] = name
+        
         process = Job(server=server,identifier=process_id,args=args)
         process.save()               
 
@@ -717,3 +738,14 @@ def water_yield(request):
         form = WaterYieldForm()
 
     return render(request, 'wpsclient/water_yield.html', {'form': form})
+
+def water_yield_run(request, process_pk):
+    process = get_object_or_404(Job, pk=process_pk)
+
+    msg = "http://127.0.0.1:5000/wps?service=wps&version=1.0.0&request=Execute&IDENTIFIER=natcap.invest.hydropower.hydropower_water_yield&datainputs="
+    msg = msg + ";".join(["%s=%s" % (k, quote(quote(process.args[k]))) for k in process.args.keys()])
+
+    return render(request, "wpsclient/water_yield_run.html", {"msg" : msg})
+
+
+    

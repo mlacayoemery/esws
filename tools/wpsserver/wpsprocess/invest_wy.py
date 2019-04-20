@@ -67,10 +67,11 @@ class WebProcess(pywps.Process):
     def _handler(self, request, response):
         logger = logging.getLogger("wps_invest_wy")
         fh = logging.FileHandler('/tmp/esws.log')
-        fh.setLevel(logging.DEBUG)
         logger.addHandler(fh)
+        logger.setLevel(logging.DEBUG)
         
         logger.info("BEGIN CALL TO WPS INVEST_WY")
+        logger.debug("DEBUG MODE")
 
         workspace = request.inputs["workspace_dir"][0].data
 
@@ -118,9 +119,10 @@ class WebProcess(pywps.Process):
         j = easyows.Job(natcap.invest.hydropower.hydropower_water_yield.execute,
                         args,
                         uploads,
-                        "Call to InVEST WY WPS %s" % workspace,
+                        "Call to InVEST WY WPS %s" % ws,
                         0,
-                        cat)
+                        cat,
+                        logger)
 
         j.run()
         

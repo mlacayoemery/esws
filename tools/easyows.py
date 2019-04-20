@@ -10,10 +10,12 @@ try:
     #Python2
     import urllib
     urlretrieve = urllib.URLopener().retrieve
+    unquote = urllib.unquote
     
 except ImportError:
     #Python
     from urllib.request import urlretrieve
+    from urllib.parse import unquote
 
 import re
 
@@ -31,18 +33,18 @@ class Catalog:
                  ws_prefix = "user-",
                  logger = logging.getLogger('easyows')):
 
+        self.logger = logger
         self.gs_url = gs_url
         self.username = username
         self.password = password
         self.gs_cat = self.get_cat(self.gs_url + "/rest")
         self.ws_prefix = ws_prefix
 
-        self.logger = logger
-
         self.ows_cache = {}
 
     def get_cat(self, rest_url):
         "Creates connection to catalog"
+        self.logger.debug("Connecting to catalog %s" % rest_url)
         
         return geoserver.catalog.Catalog(rest_url,
                                          username = self.username,
@@ -55,6 +57,8 @@ class Catalog:
             workspace_name = self.ws_prefix + str(uuid.uuid1())
         else:
             workspace_name = self.ws_prefix + ws_uuid
+
+        self.logger.debug("Attempting to create workspace %s" % workspace_name)
 
         try:
             return self.gs_cat.create_workspace(workspace_name).name
@@ -70,9 +74,11 @@ class Catalog:
             def f(s):
                 return s[:5] == self.ws_prefix
 
+        self.logger.debug("Cleaning workspace")
+
         for ws in self.gs_cat.get_workspaces():
             if f(ws.name):
-                self.logger.info("%s" % ws.name)
+                self.logger.debug("%s" % ws.name)
                 self.gs_cat.delete(ws, recurse=True)
         
     
@@ -148,18 +154,25 @@ class Job:
                  catalog = Catalog(),                 
                  logger = logging.getLogger('easyows')):
 
+        self.logger = logger
+
+        logger.debug("Construting job with args %s" % str(args))
+        
         self.catalog = catalog
         self.priority = priority
         self.process = process
         self.args = args
         self.uploads = uploads
         self.msg = msg
-        self.logger = logger
+
 
     def are_local_parameters(self):
         "Boolean of whether all the arguments to the process are local"
+
         for key, value in self.args.iteritems():
-            if type(value) == str:
+            if type(value) in [str, unicode]:
+                self.logger.debug("Checking locality of %s" % value)                
+
                 if value[:4].lower() == "http":
                     return False
 
@@ -179,15 +192,18 @@ class Job:
         failure = False
         for key, value in self.args.iteritems():
             try:
-                if type(value) == str:
+                if type(value) in [str, unicode]:
                     if value[:4].lower() == "http":
                         self.logger.debug("Found remote parameter %s" % value)
+                        if value[4] == "%":
+                            self.logger.debug("Found quoted URL")
+                            value = unquote(value)
                         #print value
                         if "service=WFS" in value:
                             self.logger.debug("Detected WFS service")
                             if value in ows_cache:
                                 self.args[key] = ows_cache[value]
-                                self.logger.info("Assigned %s cached %s" % (key, self.args[key]))
+                                self.logger.debug("Assigned %s cached %s" % (key, self.args[key]))
 
                             else:
                                 workspace, name = self.catalog.layer_name_from_url(value).split(":")
@@ -208,7 +224,7 @@ class Job:
                                     for wfs_file in os.listdir(tmp_dir):
                                         if wfs_file.endswith(".shp"):
                                             self.args[key] = os.path.join(tmp_dir,wfs_file)
-                                            self.logger.info("Assigned %s %s" % (key, self.args[key]))
+                                            self.logger.debug("Assigned %s %s" % (key, self.args[key]))
                                             ows_cache[value] = self.args[key]
                                             
                                 except zipfile.BadZipfile:
@@ -219,7 +235,7 @@ class Job:
                             self.logger.debug("Detected WCS service")
                             if value in ows_cache:
                                 self.args[key] = ows_cache[value]
-                                self.logger.info("Assigned %s cached %s" % (key, self.args[key]))
+                                self.logger.debug("Assigned %s cached %s" % (key, self.args[key]))
 
                             else:
                                 workspace, name = self.catalog.cover_name_from_url(value).split(":")
@@ -233,7 +249,7 @@ class Job:
                                 _, tmp_path = tempfile.mkstemp(suffix=".tif", prefix=prefix)
                                 urllib.URLopener().retrieve(value, tmp_path)
                                 self.args[key] = tmp_path
-                                self.logger.info("Assigned %s %s" % (key, self.args[key]))
+                                self.logger.debug("Assigned %s %s" % (key, self.args[key]))
                                 ows_cache[value] = self.args[key]
 
                         else:
@@ -247,16 +263,17 @@ class Job:
             raise MissingResource("Missing resource")
         
     def run(self, increment=1):
-        self.logger.info("Trying %s" % self.msg)
+        self.logger.debug("Trying %s" % self.msg)
         
         self.priority += increment
         self.logger.debug("Job priority %i" % self.priority)        
 
         if self.are_local_parameters():
+            self.logger.debug("Local parameters detected")
             apply(self.process, [self.args])
             
             for layer_name, layer_path in self.uploads.iteritems():
-                self.logger.info("Uploading %s" % layer_name)
+                self.logger.debug("Uploading %s" % layer_name)
                 ws, layer_name = layer_name.split(":")
                 if layer_path.lower().endswith(".shp"):
                     self.catalog.publish_shp(layer_path, layer_name, ws)
@@ -270,7 +287,7 @@ class Job:
             return True
 
         else:
-            self.logger.info("Downloading remote parameters")
+            self.logger.debug("Downloading remote parameters")
             try:
                 self.get_remote_parameters()
 

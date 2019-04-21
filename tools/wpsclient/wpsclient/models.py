@@ -83,6 +83,7 @@ class Job(models.Model):
     server = models.ForeignKey(ServerWPS, on_delete=models.CASCADE)   
     identifier = models.CharField(max_length=200)
     status = models.CharField(max_length=12, default='Pending')
+    status_url = models.TextField(default="")
 
     args = JSONField()
 
@@ -123,13 +124,12 @@ class WaterYieldModel(models.Model):
 ##    lulc = ServerElement.objects.filter(server__server_type="WCS")
 ##    watersheds = ServerElement.objects.filter(server__server_type="WFS")
 ##    biophysical = ServerElement.objects.filter(server__server_type="CSV")
+
+    precipitation_uri = models.ForeignKey(ElementWCS, related_name="precipitation", on_delete=models.CASCADE, default=6)
+    eto_uri = models.ForeignKey(ElementWCS, related_name="evapotranspiration", on_delete=models.CASCADE, default=3)    
+    depth_to_root_rest_layer_uri = models.ForeignKey(ElementWCS, related_name="depth", on_delete=models.CASCADE, default=2)
+    pawc_uri = models.ForeignKey(ElementWCS, related_name="pawc", on_delete=models.CASCADE, default=4)
+    lulc_uri = models.ForeignKey(ElementWCS, related_name="lulc", on_delete=models.CASCADE, default=5)
+    watersheds_uri = models.ForeignKey(ElementWFS, related_name="watersheds", on_delete=models.CASCADE, default=7)
+    biophysical_table_uri = models.ForeignKey(ElementCSV, related_name="biophysical", on_delete=models.CASCADE, default=1)
     seasonality_constant = models.IntegerField(default=5)
-
-    depth_to_root_rest_layer_uri = models.ForeignKey(ElementWCS, related_name="depth", on_delete=models.CASCADE)
-    precipitation_uri = models.ForeignKey(ElementWCS, related_name="precipitation", on_delete=models.CASCADE)
-    pawc_uri = models.ForeignKey(ElementWCS, related_name="pawc", on_delete=models.CASCADE)
-    eto_uri = models.ForeignKey(ElementWCS, related_name="evapotranspiration", on_delete=models.CASCADE)
-    lulc_uri = models.ForeignKey(ElementWCS, related_name="lulc", on_delete=models.CASCADE)
-    watersheds_uri = models.ForeignKey(ElementWFS, related_name="watersheds", on_delete=models.CASCADE)
-    biophysical_table_uri = models.ForeignKey(ElementCSV, related_name="biophysical", on_delete=models.CASCADE)
-

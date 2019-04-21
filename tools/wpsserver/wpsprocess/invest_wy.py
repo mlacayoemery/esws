@@ -73,7 +73,7 @@ class WebProcess(pywps.Process):
         logger.info("BEGIN CALL TO WPS INVEST_WY")
         logger.debug("DEBUG MODE")
 
-        workspace = request.inputs["workspace_dir"][0].data
+        workspace_uuid = request.inputs["workspace_dir"][0].data
 
         args = {}
         args_list = ['precipitation_uri',
@@ -108,7 +108,7 @@ class WebProcess(pywps.Process):
         cat.clean_named_workspace()
 
     
-        ws = cat.make_named_workspace(str(self.uuid))
+        ws = cat.make_named_workspace(workspace_uuid)
 
         layer_name = ":".join([ws, "wy"])
 
@@ -124,9 +124,24 @@ class WebProcess(pywps.Process):
                         cat,
                         logger)
 
+##        response.outputs['response'].data = str(args)
+##        response.outputs['response'].uom = pywps.UOM('unity')
+##
+##        return response
+
+
+        gs_url = "http://127.0.0.1:8080/geoserver"
+        result_layers = ",".join([cat.cover_name_from_url(args["lulc_uri"]),layer_name])
+        bbox = "453436.69380764756,4918220.405289317,468316.69380764384,4952570.405289317"
+        width = "332"
+        height = "768"
+        srs = "EPSG:26910"
+        result_template="%s/wms?service=WMS&version=1.1.0&request=GetMap&layers=%s&styles=&bbox=%s&width=%s&height=%s&srs=%s&format=application/openlayers"
+        result_url = result_template % (gs_url, result_layers, bbox, width, height, srs)
+
         while j.priority < 3:
             if j.run():
-                response.outputs['response'].data = "Success in running Water Yield model %s" % ws
+                response.outputs['response'].data = result_url
                 response.outputs['response'].uom = pywps.UOM('unity')
 
                 logger.info("END CALL TO WPS INVEST_WY")

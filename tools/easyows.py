@@ -129,7 +129,14 @@ class Catalog:
         return template % layer_name
 
     def layer_name_from_url(self,layer_url):
-        return re.search("typeName=(.+)&", layer_url).group(1)
+        if not layer_url[:4].lower() == "http":
+            raise ValueError("Not a vaild URL")
+
+        if layer_url[4] == "%":
+            self.logger.debug("Found quoted URL")
+            return re.search("typeName=(.+)&", unquote(layer_url)).group(1)
+        else:
+            return re.search("typeName=(.+)&", layer_url).group(1)
 
     def cover_url(self,layer_name):
         template = self.gs_url + "/ows?service=WCS&version=2.0.0&request=GetCoverage&coverageId=%s&format=image%%2Fgeotiff"
@@ -137,7 +144,14 @@ class Catalog:
         return template % layer_name
 
     def cover_name_from_url(self, cover_url):
-        return re.search("coverageId=(.+)&", cover_url).group(1)
+        if not cover_url[:4].lower() == "http":
+            raise ValueError("Not a vaild URL")
+
+        if cover_url[4] == "%":
+            self.logger.debug("Found quoted URL")
+            return re.search("coverageId=(.+)&", unquote(cover_url)).group(1)
+        else:
+            return re.search("coverageId=(.+)&", cover_url).group(1)
 
     def store_exists(self, name, workspace):
         return len(self.gs_cat.get_stores(names=name, workspaces=workspace)) > 0

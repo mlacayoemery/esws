@@ -84,7 +84,8 @@ read -p "Press [Enter] key to continue..."
 #install Python requirements
 sudo pip2 install --upgrade Cython
 sudo pip2 install --upgrade numpy>=1.11.0
-sudo pip2 install --upgrade -r requirements.txt
+sudo pip2 install --upgrade -r requirements_py2.txt
+sudo pip3 install --upgrade -r requirements_py3.txt
 read -p "Press [Enter] key to continue..."
 ;;
 

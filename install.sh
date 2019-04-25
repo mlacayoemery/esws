@@ -67,7 +67,7 @@ else
 fi
 tar -xvf proj-5.2.0.tar.gz
 if [test -f "proj-datumgrid-1.8.zip" ]; then
-    echo "PROJ.4 datum grid GDAL already downloaded"
+    echo "PROJ.4 datum grid already downloaded"
 else
     wget http://download.osgeo.org/proj/proj-datumgrid-1.8.zip
 fi

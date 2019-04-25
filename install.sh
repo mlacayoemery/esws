@@ -29,6 +29,7 @@ case $CHOICE in
 1)
 #install system requirements
 sudo xargs apt-get install -y < requirements.system
+read -p "Press [Enter] key to continue..."
 ;;
 
 2)

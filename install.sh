@@ -51,8 +51,8 @@ cd gdal-2.3.1
 ./configure --with-python
 make
 sudo make install
-sudo pip2 install /data/share/gdal-2.3.1/swig/python
-sudo pip3 install /data/share/gdal-2.3.1/swig/python
+sudo pip2 install /swig/python
+sudo pip3 install /swig/python
 cd ../esws
 read -p "Press [Enter] key to continue..."
 ;;

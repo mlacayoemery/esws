@@ -69,8 +69,16 @@ sudo pip2 install -r requirements.txt
 5)
 #install GeoServer
 cd ..
-wget http://sourceforge.net/projects/geoserver/files/GeoServer/2.13.3/geoserver-2.13.3-war.zip
-wget http://sourceforge.net/projects/geoserver/files/GeoServer/2.13.3/extensions/geoserver-2.13.3-wps-plugin.zip
+if [ -f "geoserver-2.13.3-war.zip" ]; then
+    echo "GeoServer already downloaded"
+else 
+    wget http://sourceforge.net/projects/geoserver/files/GeoServer/2.13.3/geoserver-2.13.3-war.zip
+fi
+if [ -f "geoserver-2.13.3-wps-plugin.zip" ]; then
+    echo "GeoServer WPS plugin already downloaded"
+else 
+    wget http://sourceforge.net/projects/geoserver/files/GeoServer/2.13.3/extensions/geoserver-2.13.3-wps-plugin.zip
+fi
 unzip -p geoserver-2.13.3-war.zip geoserver.war > gs213.war
 sudo service tomcat8 stop
 sudo mv gs213.war /var/lib/tomcat8/webapps

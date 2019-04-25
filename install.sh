@@ -41,7 +41,7 @@ else
     export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
     sudo ldconfig
 fi
-if [test -f "gdal-2.3.1.tar.gz" ]; then
+if [ -f "gdal-2.3.1.tar.gz" ]; then
     echo "GDAL already downloaded"
 else
     wget http://download.osgeo.org/gdal/2.3.1/gdal-2.3.1.tar.gz
@@ -60,13 +60,13 @@ read -p "Press [Enter] key to continue..."
 3)
 #install PROJ.4 for shapely
 cd ..
-if [test -f "proj-5.2.0.tar.gz" ]; then
+if [ -f "proj-5.2.0.tar.gz" ]; then
     echo "PROJ.4 already downloaded"
 else
     wget http://download.osgeo.org/proj/proj-5.2.0.tar.gz
 fi
 tar -xvf proj-5.2.0.tar.gz
-if [test -f "proj-datumgrid-1.8.zip" ]; then
+if [ -f "proj-datumgrid-1.8.zip" ]; then
     echo "PROJ.4 datum grid already downloaded"
 else
     wget http://download.osgeo.org/proj/proj-datumgrid-1.8.zip
@@ -89,12 +89,12 @@ read -p "Press [Enter] key to continue..."
 5)
 #install GeoServer
 cd ..
-if [test -f "geoserver-2.13.3-war.zip" ]; then
+if [ -f "geoserver-2.13.3-war.zip" ]; then
     echo "GeoServer already downloaded"
 else 
     wget http://sourceforge.net/projects/geoserver/files/GeoServer/2.13.3/geoserver-2.13.3-war.zip
 fi
-if [test -f "geoserver-2.13.3-wps-plugin.zip" ]; then
+if [ -f "geoserver-2.13.3-wps-plugin.zip" ]; then
     echo "GeoServer WPS plugin already downloaded"
 else 
     wget http://sourceforge.net/projects/geoserver/files/GeoServer/2.13.3/extensions/geoserver-2.13.3-wps-plugin.zip

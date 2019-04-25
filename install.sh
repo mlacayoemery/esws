@@ -16,6 +16,7 @@ OPTIONS=(1 "Install system requirements"
          6 "Quit setup")
 
 while true; do 
+git pull
 CHOICE=$(dialog --clear \
                 --backtitle "$BACKTITLE" \
                 --title "$TITLE" \

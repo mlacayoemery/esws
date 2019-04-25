@@ -35,8 +35,12 @@ read -p "Press [Enter] key to continue..."
 2)
 #install GDAL with Python 2 and 3 bindings
 cd ..
-export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
-sudo ldconfig
+if [[ $LD_LIBRARY_PATH == *""* ]]; then
+    echo "LD_LIBRARY_PATH already set"
+else
+    export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+    sudo ldconfig
+fi
 if [test -f "gdal-2.3.1.tar.gz" ]; then
     echo "GDAL already downloaded"
 else

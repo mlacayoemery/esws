@@ -5,14 +5,14 @@ numpy>=1.11.0
 #-e /data/share/gdal-2.3.1/swig/python
 GDAL==2.3.1
 
--e hg+https://bitbucket.org/mlacayoemery/invest#egg=natcap
+-e https://bitbucket.org/mlacayoemery/invest#egg=natcap
 #-e /data/share/invest
 #natcap.invest==3.5.0.post104+hc0048a13fe66.d20180827
 #pygeoprocessing
 #natcap.invest
 
 ##wpsclient
--e git+https://github.com/mlacayoemery/django-SplitJSONWidget-form.git@77c458d3fd17a97d8bb4753baaed71b3a6f1028c#egg=django-split-json-widget
+-e https://github.com/mlacayoemery/django-SplitJSONWidget-form.git@77c458d3fd17a97d8bb4753baaed71b3a6f1028c#egg=django-split-json-widget
 django==2.0.11
 jsonfield
 
@@ -21,4 +21,4 @@ flask
 pywps
 
 ##miscellaneous
--e git+https://github.com/boundlessgeo/gsconfig.git@d05a4dc152aa3fb97171f418d7dc09f5f45445a5#egg=gsconfig-py
+-e https://github.com/boundlessgeo/gsconfig.git@d05a4dc152aa3fb97171f418d7dc09f5f45445a5#egg=gsconfig-py

@@ -3,16 +3,17 @@ apt-get install -y dialog
 
 HEIGHT=15
 WIDTH=40
-CHOICE_HEIGHT=5
+CHOICE_HEIGHT=6
 BACKTITLE="Ecosystem Service Web Services (ESWS)"
-TITLE="InVEST WY Demo"
+TITLE="ESWS"
 MENU="Choose one of the following options:"
 
 OPTIONS=(1 "Install system requirements"
          2 "Install GDAL from source with Python 2 and 3 bindings"
          3 "Install PROJ.4 from source for Shapely Python library"
          4 "Install Python requirements"
-         5 "Install GeoServer")
+         5 "Install GeoServer"
+         6 "Quit setup")
 
 while true; do 
 CHOICE=$(dialog --clear \
@@ -78,6 +79,11 @@ unzip geoserver-2.13.3-wps-plugin.zip -d /var/lib/tomcat8/webapps/geoserver/WEB-
 exit
 service tomcat8 start
 cd ../esws
+;;
+
+6)
+#quit installer
+break
 ;;
 esac
 

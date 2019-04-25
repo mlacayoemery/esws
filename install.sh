@@ -35,7 +35,7 @@ read -p "Press [Enter] key to continue..."
 2)
 #install GDAL with Python 2 and 3 bindings
 cd ..
-if [[ $LD_LIBRARY_PATH == *""* ]]; then
+if [[ $LD_LIBRARY_PATH == *"/usr/local/lib"* ]]; then
     echo "LD_LIBRARY_PATH already set"
 else
     export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH

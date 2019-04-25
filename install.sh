@@ -3,7 +3,7 @@ apt-get install -y dialog
 
 HEIGHT=15
 WIDTH=40
-CHOICE_HEIGHT=4
+CHOICE_HEIGHT=5
 BACKTITLE="Ecosystem Service Web Services (ESWS)"
 TITLE="InVEST WY Demo"
 MENU="Choose one of the following options:"
@@ -14,6 +14,7 @@ OPTIONS=(1 "Install system requirements"
          4 "Install Python requirements"
          5 "Install GeoServer")
 
+while true; do 
 CHOICE=$(dialog --clear \
                 --backtitle "$BACKTITLE" \
                 --title "$TITLE" \
@@ -79,4 +80,6 @@ service tomcat8 start
 cd ../esws
 ;;
 esac
+
+done
 

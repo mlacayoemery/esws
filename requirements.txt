@@ -13,7 +13,7 @@ natcap.invest==3.6.0
 #natcap.invest
 
 ##wpsclient
--e https://github.com/mlacayoemery/django-SplitJSONWidget-form.git@77c458d3fd17a97d8bb4753baaed71b3a6f1028c#egg=django-split-json-widget
+-e git+https://github.com/mlacayoemery/django-SplitJSONWidget-form.git@77c458d3fd17a97d8bb4753baaed71b3a6f1028c#egg=django-split-json-widget
 django==2.0.11
 jsonfield
 
@@ -22,4 +22,4 @@ flask
 pywps
 
 ##miscellaneous
--e https://github.com/boundlessgeo/gsconfig.git@d05a4dc152aa3fb97171f418d7dc09f5f45445a5#egg=gsconfig-py
+-e git+https://github.com/boundlessgeo/gsconfig.git@d05a4dc152aa3fb97171f418d7dc09f5f45445a5#egg=gsconfig-py

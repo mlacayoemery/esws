@@ -26,7 +26,7 @@ clear
 case $CHOICE in
 1)
 #install system requirements
-xargs apt-get install -y < requirements.system
+sudo xargs apt-get install -y < requirements.system
 ;;
 
 2)

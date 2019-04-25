@@ -1,5 +1,5 @@
 #!/bin/bash
-apt-get install -y dialog
+sudo apt-get install -y dialog
 
 HEIGHT=15
 WIDTH=40

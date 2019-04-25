@@ -107,11 +107,12 @@ unzip -p geoserver-2.13.3-war.zip geoserver.war > gs213.war
 sudo service tomcat8 stop
 sudo mv gs213.war /var/lib/tomcat8/webapps
 sudo service tomcat8 start
+echo "Waiting 10 seconds for Tomcat setup"
 sleep 10
 sudo service tomcat8 stop
 sudo -u tomcat8 unzip geoserver-2.13.3-wps-plugin.zip -d /var/lib/tomcat8/webapps/gs213/WEB-INF/lib
 sudo service tomcat8 start
-cd ../esws
+cd esws
 read -p "Press [Enter] key to continue..."
 ;;
 

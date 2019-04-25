@@ -2,3 +2,13 @@ python2
 python-pip
 python3
 python3-pip
+build-essential
+autoconf
+automake
+libtool
+curl
+make
+g++
+unzip
+libspatialindex-dev
+python-dev

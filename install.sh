@@ -37,7 +37,11 @@ read -p "Press [Enter] key to continue..."
 cd ..
 export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
 sudo ldconfig
-wget http://download.osgeo.org/gdal/2.3.1/gdal-2.3.1.tar.gz
+if [test -f "gdal-2.3.1.tar.gz" ]; then
+    echo "GDAL already downloaded"
+else
+    wget http://download.osgeo.org/gdal/2.3.1/gdal-2.3.1.tar.gz
+fi
 tar -xvf gdal-2.3.1.tar.gz
 cd gdal-2.3.1
 ./configure --with-python
@@ -46,36 +50,47 @@ sudo make install
 sudo pip2 install /data/share/gdal-2.3.1/swig/python
 sudo pip3 install /data/share/gdal-2.3.1/swig/python
 cd ../esws
+read -p "Press [Enter] key to continue..."
 ;;
 
 3)
 #install PROJ.4 for shapely
 cd ..
-wget http://download.osgeo.org/proj/proj-5.2.0.tar.gz
+if [test -f "proj-5.2.0.tar.gz" ]; then
+    echo "PROJ.4 already downloaded"
+else
+    wget http://download.osgeo.org/proj/proj-5.2.0.tar.gz
+fi
 tar -xvf proj-5.2.0.tar.gz
-wget http://download.osgeo.org/proj/proj-datumgrid-1.8.zip
+if [test -f "proj-datumgrid-1.8.zip" ]; then
+    echo "PROJ.4 datum grid GDAL already downloaded"
+else
+    wget http://download.osgeo.org/proj/proj-datumgrid-1.8.zip
+fi
 unzip proj-datumgrid-1.8.zip -d proj-5.2.0/nad
 cd proj-5.2.0
 ./configure
 make
 sudo make install
 cd ../esws
+read -p "Press [Enter] key to continue..."
 ;;
 
 4)
 #install Python requirements
 sudo pip2 install -r requirements.txt
+read -p "Press [Enter] key to continue..."
 ;;
 
 5)
 #install GeoServer
 cd ..
-if [ -f "geoserver-2.13.3-war.zip" ]; then
+if [test -f "geoserver-2.13.3-war.zip" ]; then
     echo "GeoServer already downloaded"
 else 
     wget http://sourceforge.net/projects/geoserver/files/GeoServer/2.13.3/geoserver-2.13.3-war.zip
 fi
-if [ -f "geoserver-2.13.3-wps-plugin.zip" ]; then
+if [test -f "geoserver-2.13.3-wps-plugin.zip" ]; then
     echo "GeoServer WPS plugin already downloaded"
 else 
     wget http://sourceforge.net/projects/geoserver/files/GeoServer/2.13.3/extensions/geoserver-2.13.3-wps-plugin.zip
@@ -88,6 +103,7 @@ unzip geoserver-2.13.3-wps-plugin.zip -d /var/lib/tomcat8/webapps/geoserver/WEB-
 exit
 sudo service tomcat8 start
 cd ../esws
+read -p "Press [Enter] key to continue..."
 ;;
 
 6)

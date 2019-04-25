@@ -35,15 +35,15 @@ sudo xargs apt-get install -y < requirements.system
 #install GDAL with Python 2 and 3 bindings
 cd ..
 export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
-ldconfig
+sudo ldconfig
 wget http://download.osgeo.org/gdal/2.3.1/gdal-2.3.1.tar.gz
 tar -xvf gdal-2.3.1.tar.gz
 cd gdal-2.3.1
 ./configure --with-python
 make
-make install
-pip2 install /data/share/gdal-2.3.1/swig/python
-pip3 install /data/share/gdal-2.3.1/swig/python
+sudo make install
+sudo pip2 install /data/share/gdal-2.3.1/swig/python
+sudo pip3 install /data/share/gdal-2.3.1/swig/python
 cd ../esws
 ;;
 
@@ -57,13 +57,13 @@ unzip proj-datumgrid-1.8.zip -d proj-5.2.0/nad
 cd proj-5.2.0
 ./configure
 make
-make install
+sudo make install
 cd ../esws
 ;;
 
 4)
 #install Python requirements
-pip2 install -r requirements.txt
+sudo pip2 install -r requirements.txt
 ;;
 
 5)
@@ -72,12 +72,12 @@ cd ..
 wget http://sourceforge.net/projects/geoserver/files/GeoServer/2.13.3/geoserver-2.13.3-war.zip
 wget http://sourceforge.net/projects/geoserver/files/GeoServer/2.13.3/extensions/geoserver-2.13.3-wps-plugin.zip
 unzip -p geoserver-2.13.3-war.zip geoserver.war > gs213.war
-service tomcat8 stop
-mv gs213.war /var/lib/tomcat8/webapps
-su tomcat8
+sudo service tomcat8 stop
+sudo mv gs213.war /var/lib/tomcat8/webapps
+sudo su tomcat8
 unzip geoserver-2.13.3-wps-plugin.zip -d /var/lib/tomcat8/webapps/geoserver/WEB-INF/lib
 exit
-service tomcat8 start
+sudo service tomcat8 start
 cd ../esws
 ;;
 

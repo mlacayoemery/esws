@@ -17,3 +17,5 @@ libblas-dev
 liblapack-dev
 libatlas-base-dev
 gfortran
+tomcat8
+openjdk-8-jdk

@@ -106,8 +106,11 @@ fi
 unzip -p geoserver-2.13.3-war.zip geoserver.war > gs213.war
 sudo service tomcat8 stop
 sudo mv gs213.war /var/lib/tomcat8/webapps
+sudo service tomcat8 start
+sleep 10
+sudo service tomcat8 stop
 sudo su tomcat8
-unzip geoserver-2.13.3-wps-plugin.zip -d /var/lib/tomcat8/webapps/geoserver/WEB-INF/lib
+unzip geoserver-2.13.3-wps-plugin.zip -d /var/lib/tomcat8/webapps/gs213/WEB-INF/lib
 exit
 sudo service tomcat8 start
 cd ../esws

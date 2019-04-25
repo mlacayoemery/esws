@@ -12,3 +12,8 @@ g++
 unzip
 libspatialindex-dev
 python-dev
+libgeos-dev
+libblas-dev
+liblapack-dev
+libatlas-base-dev
+gfortran

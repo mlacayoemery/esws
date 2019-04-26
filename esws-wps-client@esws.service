@@ -5,8 +5,7 @@ After=network-online.target
 [Service]
 Type=simple
 User=esws
-ExecStart=/bin/bash /home/user/esws/run_wps_client.sh
-StandardInput=tty-force
+ExecStart=/usr/bin/python3 /home/user/esws/tools/wpsclient/manage.py runserver
 
 [Install]
 WantedBy=multi-user.target

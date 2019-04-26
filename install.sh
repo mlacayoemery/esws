@@ -13,7 +13,8 @@ OPTIONS=(1 "Install system requirements"
          3 "Install PROJ.4 from source for Shapely Python library"
          4 "Install Python requirements"
          5 "Install GeoServer"
-         6 "Quit setup")
+         6 "Install systemd services"
+         7 "Quit setup")
 
 while true; do 
 CHOICE=$(dialog --clear \
@@ -117,6 +118,12 @@ read -p "Press [Enter] key to continue..."
 ;;
 
 6)
+cp esws-wps-client@esws.service /etc/systemd/system
+sudo systemctl start esws-wps-client
+sudo systemctl enable esws-wps-client
+read -p "Press [Enter] key to continue..."
+;;
+7)
 #quit installer
 break
 ;;

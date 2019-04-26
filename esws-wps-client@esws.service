@@ -4,7 +4,7 @@ After=network-online.target
 
 [Service]
 Type=simple
-User=%i
+User=esws
 ExecStart=/bin/bash /home/user/esws/run_wps_client.sh
 
 [Install]

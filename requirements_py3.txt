@@ -2,6 +2,7 @@
 -e git+https://github.com/mlacayoemery/django-SplitJSONWidget-form.git@77c458d3fd17a97d8bb4753baaed71b3a6f1028c#egg=django-split-json-widget
 django==2.0.12
 jsonfield
+bs4
 
 ##wpsserver
 flask

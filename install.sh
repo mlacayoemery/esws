@@ -3,7 +3,7 @@ sudo apt-get install -y dialog
 
 HEIGHT=15
 WIDTH=40
-CHOICE_HEIGHT=6
+CHOICE_HEIGHT=8
 BACKTITLE="Ecosystem Service Web Services (ESWS)"
 TITLE="ESWS"
 MENU="Choose one of the following options:"
@@ -12,9 +12,10 @@ OPTIONS=(1 "Install system requirements"
          2 "Install GDAL from source with Python 2 and 3 bindings"
          3 "Install PROJ.4 from source for Shapely Python library"
          4 "Install Python requirements"
-         5 "Install GeoServer"
-         6 "Install systemd services"
-         7 "Quit setup")
+         5 "Setup WPS client"
+         6 "Install GeoServer"
+         7 "Install systemd services"
+         8 "Quit setup")
 
 while true; do 
 CHOICE=$(dialog --clear \
@@ -91,6 +92,13 @@ read -p "Press [Enter] key to continue..."
 ;;
 
 5)
+#setup wps client
+cd tools/wpsclient
+sh setup.sh
+cd ../..
+;;
+
+6)
 #install GeoServer
 cd ..
 if [ -f "geoserver-2.13.3-war.zip" ]; then
@@ -116,13 +124,13 @@ cd esws
 read -p "Press [Enter] key to continue..."
 ;;
 
-6)
+7)
 sudo cp esws-wps-client@esws.service /etc/systemd/system
 sudo systemctl start esws-wps-client@esws
 sudo systemctl enable esws-wps-client@esws
 read -p "Press [Enter] key to continue..."
 ;;
-7)
+8)
 #quit installer
 git pull
 break

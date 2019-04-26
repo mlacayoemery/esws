@@ -6,8 +6,8 @@ After=network-online.target
 Type=simple
 User=%i
 ExecStart=/bin/bash /home/user/esws/run_wps_client.sh
-#StandardOutput=/home/user/esws/out.log
-#StandardError=/home/user/esws/error.log
+StandardOutput=/home/user/esws/out.log
+StandardError=/home/user/esws/error.log
 
 [Install]
 WantedBy=multi-user.target

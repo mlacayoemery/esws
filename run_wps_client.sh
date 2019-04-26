@@ -1,2 +1,4 @@
-DIR=`realpath $0`
-python3 $DIR/tools/wpsclient/manage.py runserver
+thisScriptPath=`realpath $0`
+thisDirPath=`dirname $thisScriptPath`
+
+python3 $thisDirPath/tools/wpsclient/manage.py runserver

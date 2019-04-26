@@ -1,1 +1,2 @@
-python3 tools/wpsclient/manage.py runserver
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+python3 $DIR/tools/wpsclient/manage.py runserver

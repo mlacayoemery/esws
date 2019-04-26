@@ -118,8 +118,8 @@ read -p "Press [Enter] key to continue..."
 
 6)
 sudo ln -s esws-wps-client@esws.service /etc/systemd/system
-sudo systemctl start esws-wps-client
-sudo systemctl enable esws-wps-client
+sudo systemctl start esws-wps-client@esws
+sudo systemctl enable esws-wps-client@esws
 read -p "Press [Enter] key to continue..."
 ;;
 7)

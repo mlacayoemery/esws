@@ -126,6 +126,7 @@ read -p "Press [Enter] key to continue..."
 
 7)
 sudo systemctl stop esws-wps-client@esws
+sudo systemctl disable esws-wps-client@esws
 sudo cp esws-wps-client@esws.service /etc/systemd/system
 sudo systemctl start esws-wps-client@esws
 sudo systemctl enable esws-wps-client@esws

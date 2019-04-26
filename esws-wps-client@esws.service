@@ -5,7 +5,7 @@ After=network-online.target
 [Service]
 Type=simple
 User=%i
-ExecStart=/home/user/esws/run_wps_client.sh
+ExecStart=./home/user/esws/run_wps_client.sh
 StandardOutput=/home/user/esws/out.log
 StandardError=/home/user/esws/error.log
 

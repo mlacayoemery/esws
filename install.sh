@@ -26,7 +26,6 @@ CHOICE=$(dialog --clear \
                 2>&1 >/dev/tty)
 
 clear
-git pull
 case $CHOICE in
 1)
 #install system requirements
@@ -118,13 +117,14 @@ read -p "Press [Enter] key to continue..."
 ;;
 
 6)
-cp esws-wps-client@esws.service /etc/systemd/system
+sudo ln -s esws-wps-client@esws.service /etc/systemd/system
 sudo systemctl start esws-wps-client
 sudo systemctl enable esws-wps-client
 read -p "Press [Enter] key to continue..."
 ;;
 7)
 #quit installer
+git pull
 break
 ;;
 esac

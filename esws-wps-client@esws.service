@@ -6,6 +6,7 @@ After=network-online.target
 Type=simple
 User=esws
 ExecStart=/bin/bash /home/user/esws/run_wps_client.sh
+StandardInput=tty-force
 
 [Install]
 WantedBy=multi-user.target

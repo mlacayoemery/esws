@@ -4,7 +4,7 @@ After=network-online.target
 
 [Service]
 Type=simple
-User=esws
+User=user
 ExecStart=/usr/bin/python3 /home/user/esws/tools/wpsclient/manage.py runserver
 
 [Install]

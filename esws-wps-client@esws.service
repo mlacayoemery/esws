@@ -1,0 +1,8 @@
+[Unit]
+Description=ESWS WPS Client
+
+[Service]
+ExecStart=/home/user/esws/run_wps_client.sh
+
+[Install]
+WantedBy=multi-user.target

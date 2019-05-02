@@ -1,0 +1,10 @@
+[Unit]
+Description=ESWS WPS InVEST
+After=multi-user.target
+
+[Service]
+Type=idle
+ExecStart=/usr/bin/python2 /home/user/esws/tools/wpsserver/wpsserver.py
+
+[Install]
+WantedBy=multi-user.target

@@ -132,6 +132,22 @@ sudo chmod 644 /etc/systemd/system/esws-dashboard.service
 sudo systemctl reload esws-dashboard
 sudo systemctl start esws-dashboard
 sudo systemctl enable esws-dashboard
+
+sudo systemctl stop esws-wps-invest
+sudo systemctl disable esws-wps-invest
+sudo cp esws-wps-invest.service /etc/systemd/system
+sudo chmod 644 /etc/systemd/system/esws-wps-invest.service
+sudo systemctl reload esws-wps-invest
+sudo systemctl start esws-wps-invest
+sudo systemctl enable esws-wps-invest
+
+sudo systemctl stop esws-file-server
+sudo systemctl disable esws-file-server
+sudo cp esws-file-server.service /etc/systemd/system
+sudo chmod 644 /etc/systemd/system/esws-file-server.service
+sudo systemctl reload esws-file-server
+sudo systemctl start esws-file-server
+sudo systemctl enable esws-file-server
 read -p "Press [Enter] key to continue..."
 ;;
 8)

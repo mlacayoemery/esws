@@ -1,0 +1,10 @@
+[Unit]
+Description=ESWS File Server
+After=multi-user.target
+
+[Service]
+Type=idle
+ExecStart=/usr/bin/python3 /home/user/esws/tools/http_server.py
+
+[Install]
+WantedBy=multi-user.target

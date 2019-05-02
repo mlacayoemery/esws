@@ -1,10 +1,13 @@
 [Unit]
 Description=ESWS Data Gala
-After=multi-user.target
+After=network.target
 
 [Service]
 Type=idle
-ExecStart=/usr/bin/ssh -f -N -T esws@gala.unige.ch -L8081:127.0.0.1:8080
+ExecStart=/usr/bin/ssh -f -N -T ServerAliveInterval=60 -o ExitOnForwardFailure=yes esws@gala.unige.ch -L8081:127.0.0.1:8080
+
+RestartSec=5
+Restart=always
 
 [Install]
 WantedBy=multi-user.target

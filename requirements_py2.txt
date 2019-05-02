@@ -11,3 +11,6 @@ natcap.invest==3.6.0
 #natcap.invest==3.5.0.post104+hc0048a13fe66.d20180827
 #pygeoprocessing
 #natcap.invest
+
+flask
+pywps

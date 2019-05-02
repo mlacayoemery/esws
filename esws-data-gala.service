@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 Type=idle
-ExecStart=/usr/bin/ssh -f -N -T ServerAliveInterval=60 -o ExitOnForwardFailure=yes esws@gala.unige.ch -L8081:127.0.0.1:8080
+ExecStart=/usr/bin/ssh -f -N -T -o ServerAliveInterval=60 -o ExitOnForwardFailure=yes esws@gala.unige.ch -L8081:127.0.0.1:8080
 
 RestartSec=5
 Restart=always

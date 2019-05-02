@@ -1,0 +1,10 @@
+[Unit]
+Description=ESWS Data Gala
+After=multi-user.target
+
+[Service]
+Type=idle
+ExecStart=ssh -f -N -T esws@gala.unige.ch -L8081:127.0.01:8080
+
+[Install]
+WantedBy=multi-user.target

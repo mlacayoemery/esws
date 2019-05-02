@@ -708,8 +708,8 @@ def water_yield(request):
         data = copy.copy(form.data)
         del data["csrfmiddlewaretoken"]
 
-        keys = list(data.keys())
-        keys.pop(-1)
+        keys = set(data.keys())
+        keys.remove("seasonality_constant")
 
         for k in keys:
             element = get_server_element(data[k])

@@ -5,8 +5,8 @@ numpy>=1.11.0
 #-e /data/share/gdal-2.3.1/swig/python
 GDAL==2.3.1
 
-natcap.invest==3.6.0
-#-e git+https://bitbucket.org/mlacayoemery/invest#egg=natcap
+#natcap.invest==3.6.0
+-e hg+https://bitbucket.org/natcap/invest@3.6.0#egg=natcap.invest
 #-e /data/share/invest
 #natcap.invest==3.5.0.post104+hc0048a13fe66.d20180827
 #pygeoprocessing

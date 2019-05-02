@@ -1,1 +1,4 @@
-python3 manage.py makemigrations $1
+thisScriptPath=`realpath $0`
+thisDirPath=`dirname $thisScriptPath`
+
+python3 $thisDirPath/manage.py makemigrations $1

@@ -154,6 +154,15 @@ sudo chmod 644 /etc/systemd/system/esws-file-server.service
 sudo systemctl reload esws-file-server
 sudo systemctl start esws-file-server
 sudo systemctl enable esws-file-server
+
+sudo systemctl stop esws-data-gala
+sudo systemctl disable esws-data-gala
+sudo cp esws-data-gala.service /etc/systemd/system
+sudo chmod 644 /etc/systemd/system/esws-data-gala.service
+sudo systemctl reload esws-data-gala
+sudo systemctl start esws-data-gala
+sudo systemctl enable esws-data-gala
+
 read -p "Press [Enter] key to continue..."
 ;;
 8)

@@ -1,10 +1,9 @@
 [Unit]
-Description=ESWS WPS Client
-After=network-online.target
+Description=ESWS Dashboard
+After=multi-user.target
 
 [Service]
-Type=simple
-User=user
+Type=idle
 ExecStart=/usr/bin/python3 /home/user/esws/tools/wpsclient/manage.py runserver
 
 [Install]

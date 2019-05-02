@@ -1,11 +1,11 @@
 import geoserver.catalog
 import os.path
 
-rest_url = "http://localhost:8080/geoserver/rest"
+rest_url = "http://localhost:8080/gs215/rest"
 username = "admin"
 password = "geoserver"
 
-data_path = "/home/mlacayo/workspace/data"
+data_path = "/home/esws/data"
 data_stores = [("scenario_override", os.path.join(data_path, "ScenarioGenerator/input/override")),
                ("scenario_elevation", os.path.join(data_path, "ScenarioGenerator/input/elevation")),
                ("scenario_roads", os.path.join(data_path, "ScenarioGenerator/input/roads")),

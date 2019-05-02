@@ -84,6 +84,9 @@ read -p "Press [Enter] key to continue..."
 
 4)
 #install Python requirements
+sudo pip2 install --upgrade pip
+sudo pip3 install --upgrade pip
+
 sudo pip2 install --upgrade Cython
 sudo pip2 install --upgrade numpy>=1.11.0
 sudo pip2 install --upgrade flask

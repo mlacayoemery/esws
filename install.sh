@@ -8,7 +8,8 @@ BACKTITLE="Ecosystem Service Web Services (ESWS)"
 TITLE="ESWS"
 MENU="Choose one of the following options:"
 
-OPTIONS=(1 "Install system requirements"
+OPTIONS=(0 "Clone ESWS repository"
+         1 "Install system requirements"
          2 "Install GDAL from source with Python 2 and 3 bindings"
          3 "Install PROJ.4 from source for Shapely Python library"
          4 "Install Python requirements"
@@ -29,6 +30,18 @@ CHOICE=$(dialog --clear \
 
 clear
 case $CHOICE in
+0)
+sudo apt-get install -y git
+
+if [ -f "/home/esws/esws/requirements.system" ]; then
+    echo "ESWS already downloaded"
+else 
+    git clone https://github.com/mlacayoemery/esws.git /home/esws/esws
+fi
+
+read -p "Press [Enter] key to continue..."
+;;
+
 1)
 #install system requirements
 sudo xargs apt-get install -y < requirements.system

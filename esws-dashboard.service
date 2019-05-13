@@ -4,7 +4,7 @@ After=multi-user.target
 
 [Service]
 Type=idle
-ExecStart=/usr/bin/python3 /home/user/esws/tools/wpsclient/manage.py runserver
+ExecStart=/usr/bin/python3 /home/esws/esws/tools/wpsclient/manage.py runserver
 
 [Install]
 WantedBy=multi-user.target

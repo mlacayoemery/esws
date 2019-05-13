@@ -180,7 +180,7 @@ read -p "Press [Enter] key to continue..."
 ;;
 
 8)
-
+sudo iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 sudo iptables -A INPUT -p tcp --dport 8000 -j ACCEPT
 sudo iptables-save > /etc/iptables/rules.v4
 

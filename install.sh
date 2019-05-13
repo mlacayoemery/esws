@@ -3,7 +3,7 @@ sudo apt-get install -y dialog
 
 HEIGHT=15
 WIDTH=40
-CHOICE_HEIGHT=8
+CHOICE_HEIGHT=9
 BACKTITLE="Ecosystem Service Web Services (ESWS)"
 TITLE="ESWS"
 MENU="Choose one of the following options:"
@@ -15,7 +15,8 @@ OPTIONS=(1 "Install system requirements"
          5 "Setup WPS client"
          6 "Install GeoServer"
          7 "Install systemd services"
-         8 "Quit setup")
+         8 "Configure firewall"
+         9 "Quit setup")
 
 while true; do 
 CHOICE=$(dialog --clear \
@@ -99,9 +100,7 @@ read -p "Press [Enter] key to continue..."
 
 5)
 #setup wps client
-cd tools/wpsclient
-sh setup.sh
-cd ../..
+sh tools/wpsclient/setup.sh
 ;;
 
 6)
@@ -166,7 +165,16 @@ sudo systemctl enable esws-data-gala
 
 read -p "Press [Enter] key to continue..."
 ;;
+
 8)
+
+sudo iptables -A INPUT -p tcp --dport 8000 -j ACCEPT
+sudo iptables-save > /etc/iptables/rules.v4
+
+read -p "Press [Enter] key to continue..."
+;;
+
+9)
 #quit installer
 git pull
 break

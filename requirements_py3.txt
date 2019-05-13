@@ -9,4 +9,5 @@ flask
 pywps
 
 ##miscellaneous
+requests>=2.14.0
 -e git+https://github.com/boundlessgeo/gsconfig.git@d05a4dc152aa3fb97171f418d7dc09f5f45445a5#egg=gsconfig-py

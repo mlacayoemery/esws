@@ -1,11 +1,12 @@
 d-i debian-installer/locale string en_US
 d-i keyboard-configuration/xkb-keymap select us
 
+d-i netcfg/hostname string esws
 d-i netcfg/choose_interface select auto
 
 d-i mirror/country string manual
-d-i mirror/http/hostname string mirror.switch.ch
-d-i mirror/http/directory string /ftp/mirror/debian
+d-i mirror/http/hostname string debian.ethz.ch
+d-i mirror/http/directory string /debian
 d-i mirror/http/proxy string
 
 d-i passwd/root-password password esws
@@ -33,3 +34,4 @@ d-i grub-installer/only_debian boolean true
 d-i grub-installer/bootdev string default
 
 d-i finish-install/reboot_in_progress note
+d-i debian-installer/exit/poweroff boolean true

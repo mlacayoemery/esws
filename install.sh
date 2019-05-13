@@ -1,7 +1,7 @@
 #!/bin/bash
 sudo apt-get install -y dialog
 
-HEIGHT=15
+HEIGHT=20
 WIDTH=40
 CHOICE_HEIGHT=9
 BACKTITLE="Ecosystem Service Web Services (ESWS)"

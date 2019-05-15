@@ -236,7 +236,7 @@ def get_csv_identifiers(server_url):
 
     links = []
  
-    for link in soup.findAll('a', attrs={'href': re.compile(".csv|.CSV$")}):
+    for link in soup.findAll('a', attrs={'href': re.compile(".csv|.CSV|.zip|.ZIP$")}):
         links.append(link.get('href'))
  
     return links

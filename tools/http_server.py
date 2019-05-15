@@ -5,7 +5,7 @@ import http.server
 import socketserver
 
 PORT = 8001
-HOST = "127.0.0.1"
+HOST = "0.0.0.0"
 DIR = os.path.dirname(os.path.dirname(os.path.realpath(__main__.__file__)))
 DIR = os.path.join(DIR, "data")
 

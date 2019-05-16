@@ -15,6 +15,9 @@ else:
 import tempfile
 import zipfile
 
+import os
+import shutil.copyfile
+
 class WebProcess(pywps.Process):
     def __init__(self):
         inputs = [pywps.LiteralInput('message',
@@ -40,6 +43,10 @@ class WebProcess(pywps.Process):
     def _handler(self, request, response):
         prefix = "esws"
         value = unquote(request.inputs['message'][0].data)
+
+        swat_exe = "swat.exe"
+        swat_path = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
+                                 swat_exe)
         
         _, tmp_path = tempfile.mkstemp(suffix=".zip", prefix=prefix)
         urllib.URLopener().retrieve(value, tmp_path)
@@ -49,10 +56,11 @@ class WebProcess(pywps.Process):
         try:
             zipfile.ZipFile(tmp_path, 'r').extractall(tmp_dir)
             msg = str(tmp_dir)
+            shutil.copyfile(swat_path, tmp_dir)
+            os.system(os.path.join(tmp_dir, swat_exe))
 
         except zipfile.BadZipfile:
             msg = "Invalid inputs"
-
         
         response.outputs['response'].data = msg
         response.outputs['response'].uom = pywps.UOM('unity')

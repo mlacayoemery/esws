@@ -55,10 +55,11 @@ class WebProcess(pywps.Process):
 
         try:
             zipfile.ZipFile(tmp_path, 'r').extractall(tmp_dir)
-            msg = str(tmp_dir)
             shutil.copyfile(swat_path, tmp_dir)
             os.system(os.path.join(tmp_dir, swat_exe))
 
+            msg = swat_path
+            
         except zipfile.BadZipfile:
             msg = "Invalid inputs"
         

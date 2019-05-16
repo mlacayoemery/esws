@@ -41,7 +41,7 @@ class WebProcess(pywps.Process):
         )
 
     def _handler(self, request, response):
-        prefix = "esws"
+        prefix = "esws-"
         value = unquote(request.inputs['message'][0].data)
 
         swat_exe = "swat.exe"

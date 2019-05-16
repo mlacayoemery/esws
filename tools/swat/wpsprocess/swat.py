@@ -55,9 +55,10 @@ class WebProcess(pywps.Process):
 
         try:
             zipfile.ZipFile(tmp_path, 'r').extractall(tmp_dir)
-            swat_call = os.path.join(tmp_dir, swat_exe)            
-            copyfile(swat_path, swat_call)
-            os.system(swat_call)
+            swat_dst = os.path.join(tmp_dir, swat_exe)            
+            copyfile(swat_path, swat_dst)
+            os.chdir(tmp_dir)
+            os.system(swat_exe)
 
             msg = tmp_dir
             

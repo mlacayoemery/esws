@@ -629,6 +629,12 @@ def job_new(request, server_pk, process_id):
             
         args= collections.OrderedDict(key_values)
         process = Job(server=server,identifier=process_id,args=args)
+
+        process.status = "Run"
+        status_url = server.url + "?service=wps&version=1.0.0&request=Execute&IDENTIFIER=" + process.identifier + "&datainputs="
+        status_url = status_url + ";".join(["%s=%s" % (k, quote(quote(process.args[k]))) for k in process.args.keys()])
+        process.status_url = status_url
+        
         process.save()
 
         server.jobs = server.jobs + 1

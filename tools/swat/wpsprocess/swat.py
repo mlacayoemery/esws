@@ -16,7 +16,7 @@ import tempfile
 import zipfile
 
 import os
-import shutil.copyfile
+from shutil import copyfile
 
 class WebProcess(pywps.Process):
     def __init__(self):
@@ -55,7 +55,7 @@ class WebProcess(pywps.Process):
 
         try:
             zipfile.ZipFile(tmp_path, 'r').extractall(tmp_dir)
-            shutil.copyfile(swat_path, tmp_dir)
+            copyfile(swat_path, tmp_dir)
             os.system(os.path.join(tmp_dir, swat_exe))
 
             msg = swat_path

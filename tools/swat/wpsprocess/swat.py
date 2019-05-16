@@ -39,7 +39,7 @@ class WebProcess(pywps.Process):
 
     def _handler(self, request, response):
         prefix = "esws"
-        value = request.inputs['message'][0].data
+        value = unquote(request.inputs['message'][0].data)
         
         _, tmp_path = tempfile.mkstemp(suffix=".zip", prefix=prefix)
         urllib.URLopener().retrieve(value, tmp_path)

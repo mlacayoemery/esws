@@ -32,5 +32,5 @@ wget "http://127.0.0.1:8000/server/WFS/3/register/invest:fresh_ws" -O /dev/null
 wget "http://127.0.0.1:8000/server/WPS/4/register/natcap.invest.hydropower.hydropower_water_yield"  -O /dev/null
 
 #SWAT registratons
-wget "http://127.0.0.1:8000/server/CSV/5/register/wy.csv" -O /dev/null
+wget "http://127.0.0.1:8000/server/CSV/5/register/esws_swat.zip" -O /dev/null
 wget "http://127.0.0.1:8000/server/WPS/6/register/swat"  -O /dev/null

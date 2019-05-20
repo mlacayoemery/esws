@@ -1,1 +1,4 @@
-python3 manage.py runserver
+thisScriptPath=`realpath $0`
+thisDirPath=`dirname $thisScriptPath`
+
+python3 $thisDirPath/manage.py runserver

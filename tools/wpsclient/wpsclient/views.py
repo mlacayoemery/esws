@@ -443,7 +443,7 @@ def job_detail(request, job_pk):
     l = logging.getLogger('django.request')
     l.warning(inspect.stack()[0][3])    
     #detail of an existing process with parameters
-    process = get_object_or_404(Job, pk=job_pk)
+    job = get_object_or_404(Job, pk=job_pk)
     return render(request, 'wpsclient/job_detail.html', {'job': job})
 
 ##def job_new(request, server_pk, process_id):

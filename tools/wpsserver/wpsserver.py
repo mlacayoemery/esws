@@ -38,5 +38,5 @@ service = pywps.Service(wps_processes)
 def wps():
     return service
 
-bind_host='127.0.0.1'
+bind_host='0.0.0.0'
 app.run(threaded=True,host=bind_host)

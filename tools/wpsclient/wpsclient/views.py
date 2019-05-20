@@ -645,6 +645,9 @@ def job_edit(request, job_pk):
         form = testForm(request.POST)        
 ##        l.warning(str(dir(form)))
 ##        l.warning(str(form.data))
+
+        form.data["csrfmiddlewaretoken"].delete()        
+
         keys=list(form.data.keys())
         keys.pop(0)
         key_values = []
@@ -661,7 +664,6 @@ def job_edit(request, job_pk):
 ##        for k in keys:
 ##            json[
 
-        form.data["csrfmiddlewaretoken"].delete()
         #l.warning(key_values)
         job.args= collections.OrderedDict(key_values)
         job.save()

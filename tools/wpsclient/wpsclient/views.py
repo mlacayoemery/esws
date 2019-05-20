@@ -760,7 +760,9 @@ def job_run(request, job_pk):
         #xml = urlretrieve(job.status_url)
         response = urllib.request.urlopen("http://127.0.0.1:5000/wps?service=wps&version=1.0.0&request=GetCapabilities")
 
-        return render(request, "wpsclient/job_run.html", {"xml" : response.read()})
+        xml = parseString(response.read()).toprettyxml()
+
+        return render(request, "wpsclient/job_run.html", {"xml" : xml})
 
 
     

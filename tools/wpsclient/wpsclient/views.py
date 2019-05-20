@@ -545,8 +545,8 @@ def job_new_dynamic(request, server_pk, process_id, args):
 
     args = json.loads(unquote(unquote(args)),
                       object_pairs_hook=collections.OrderedDict)
-    print(args)
-    print(request.method)
+    #print(args)
+    #print(request.method)
 
     if request.method == "GET":
         process = Job(server=server,identifier=process_id,args=args)

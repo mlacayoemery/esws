@@ -34,7 +34,7 @@ urlpatterns = [
     
     url(r'^server/(?P<server_pk>\d+)/execute/(?P<process_id>[a-zA-Z0-9_:]+)/$', views.job_new, name='job_new'),
 
-    url(r'^server/(?P<server_pk>\d+)/job/(?P<process_id>[a-zA-Z0-9_:]+)/new/(?P<args>*)$', views.job_new_dynamic, name='job_new_dynamic'),
+    url(r'^server/(?P<server_pk>\d+)/job/(?P<process_id>[a-zA-Z0-9_:]+)/new/(?P<args>.*)$', views.job_new_dynamic, name='job_new_dynamic'),
     
     #url(r'^server/(?P<server_pk>\d+)/execute/(?P<process_id>[a-zA-Z0-9_:]+)/edit/(?P<process_pk>[a-zA-Z0-9_:]+)/$', views.job_edit, name='job_edit'),
 

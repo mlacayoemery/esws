@@ -62,9 +62,10 @@ import sys
 import urllib
 if sys.version_info.major == 2:
     quote = urllib.quote
+    unquote = urllib.unquote
 else:
     quote = urllib.parse.quote
-    
+    unquote = urllib.parse.unquote    
  
 # Create your views here.
 def dashboard(request):
@@ -536,39 +537,15 @@ def get_wps_input_fields(server_pk, process_id):
 ##
 ##    return render_to_response("wpsclient/job_edit.html", {"form" : form})
 
-def job_new_dynamic(request, server_pk, process_id):
+def job_new_dynamic(request, server_pk, process_id, args):
     l = logging.getLogger('django.request')
     l.warning(inspect.stack()[0][3])
     
     server = get_object_or_404(ServerWPS, pk=server_pk)
 
-    args = collections.OrderedDict()
-
-    wps = owslib.wps.WebProcessingService(server.url, verbose=False, skip_caps=True)
-    process = wps.describeprocess(process_id)
-
-    for parameter in process.dataInputs:            
-        if parameter.dataType == "double":
-            args[parameter.identifier] = float(0)
-        elif parameter.dataType == "int":
-            args[parameter.identifier] = int(0)                
-        else:
-            print(parameter.dataType)
-            args[parameter.identifier] = ""
+    args = json.loads(unquote(args))
 
     if request.method == "POST":
-        form = testForm(request.POST)
-
-        data = copy.copy(form.data)
-        del data["csrfmiddlewaretoken"]
-        keys=list(data.keys())
-        key_values = []
-        strip_index=len("data__")
-        for k in keys:
-            print(k)
-            key_values.append((k[strip_index:], type(args[k[strip_index:]])(data[k])))
-                   
-        args= collections.OrderedDict(key_values)
         process = Job(server=server,identifier=process_id,args=args)
         process.save()
 
@@ -577,9 +554,9 @@ def job_new_dynamic(request, server_pk, process_id):
         
         return redirect('job_detail', process_pk=process.pk)
     else:        
-        form = testForm(request.POST or None, initial={'data': args})
+        pass
         
-    return render(request, 'wpsclient/job_dynamic.html', {'form': form})
+    return dashboard(request)
 
   
 def job_new(request, server_pk, process_id):

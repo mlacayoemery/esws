@@ -2,11 +2,11 @@
 ##1
 wget "http://127.0.0.1:8000/server/CSV/register/ESWS HTTP/url/http://192.168.122.22:8001" -O /dev/null
 
-#Gala
+#Data VM
 ##2
-wget "http://127.0.0.1:8000/server/WCS/register/Gala WCS/url/http://gala.unige.ch:8080/gs215/ows" -O /dev/null
+wget "http://127.0.0.1:8000/server/WCS/register/Gala WCS/url/http://192.168.122.21:8080/gs215/ows" -O /dev/null
 ##3
-wget "http://127.0.0.1:8000/server/WFS/register/Gala WFS/url/http://gala.unige.ch:8080/gs215/ows" -O /dev/null
+wget "http://127.0.0.1:8000/server/WFS/register/Gala WFS/url/http://192.168.122.21:8080/gs215/ows" -O /dev/null
 
 #ESWS VM
 ##4

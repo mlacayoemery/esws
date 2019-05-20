@@ -646,10 +646,10 @@ def job_edit(request, job_pk):
 ##        l.warning(str(dir(form)))
 ##        l.warning(str(form.data))
 
-        form.data["csrfmiddlewaretoken"].delete()        
+        #form.data["csrfmiddlewaretoken"].delete()        
 
-        keys=list(form.data.keys())
-        keys.pop(0)
+        form.data.pop("csrfmiddlewaretoken")
+        keys = list(form.data.keys())        
         key_values = []
         for k in keys:
             #get values and preserve data types

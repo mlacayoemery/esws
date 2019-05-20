@@ -730,9 +730,9 @@ def water_yield(request):
         job.status = "Run"
         status_url = server.url + "?service=wps&version=1.0.0&request=Execute&IDENTIFIER=natcap.invest.hydropower.hydropower_water_yield&datainputs="
         status_url = status_url + ";".join(["%s=%s" % (k, quote(quote(job.args[k]))) for k in job.args.keys()])
-        process.status_url = status_url
+        job.status_url = status_url
         
-        process.save()               
+        job.save()               
 
         server.jobs = server.jobs + 1
         server.save()

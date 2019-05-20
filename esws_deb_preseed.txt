@@ -39,5 +39,6 @@ d-i finish-install/reboot_in_progress note
 #d-i debian-installer/exit/poweroff boolean true
 d-i finish-install/keep-consoles boolean true
 
-d-i preseed/late_command string in-target wget --output-document=/tmp/install.sh https://raw.githubusercontent.com/mlacayoemery/esws/master/install.sh; in-target /bin/sh /tmp/install.sh
+d-i pressed/late_command string\
+    in-target /bin/bash -c 'echo esws > /etc/hostname'
 

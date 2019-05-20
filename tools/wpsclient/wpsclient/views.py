@@ -648,8 +648,8 @@ def job_edit(request, job_pk):
 
         #form.data["csrfmiddlewaretoken"].delete()        
 
-        form.data.pop("csrfmiddlewaretoken")
-        keys = list(form.data.keys())        
+        keys = list(form.data.keys())
+        keys.remove("csrfmiddlewaretoken")
         key_values = []
         for k in keys:
             #get values and preserve data types

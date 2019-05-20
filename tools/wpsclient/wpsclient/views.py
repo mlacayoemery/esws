@@ -661,7 +661,7 @@ def job_edit(request, job_pk):
 ##        for k in keys:
 ##            json[
 
-        #form.data["csrfmiddlewaretoken"].delete()
+        form.data["csrfmiddlewaretoken"].delete()
         #l.warning(key_values)
         job.args= collections.OrderedDict(key_values)
         job.save()

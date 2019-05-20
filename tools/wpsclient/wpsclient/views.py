@@ -67,7 +67,7 @@ if sys.version_info.major == 2:
 else:
     quote = urllib.parse.quote
     unquote = urllib.parse.unquote
-    urlretreive = urllib.request.urlretrieve
+    from urllib.request import urlretrieve
  
 # Create your views here.
 def dashboard(request):

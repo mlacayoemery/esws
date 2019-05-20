@@ -670,7 +670,9 @@ def job_edit(request, job_pk):
     else:
         form = testForm(request.POST or None, initial={'data': job.args})
 
-    return render(request, 'wpsclient/job_edit.html', {'form': form})
+    return render(request, 'wpsclient/job_edit.html', {"server_title" : job.server.title,
+                                                       "process_id" : job.identifier,
+                                                       'form': form})
 
 def get_server_element(pk):
     element_types = [ElementCSV,

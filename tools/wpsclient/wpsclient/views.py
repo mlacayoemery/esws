@@ -547,7 +547,7 @@ def job_new_dynamic(request, server_pk, process_id, args):
     print(args)
     print(request.method)
 
-    if request.method == "POST":
+    if request.method == "GET":
         process = Job(server=server,identifier=process_id,args=args)
         process.save()
 

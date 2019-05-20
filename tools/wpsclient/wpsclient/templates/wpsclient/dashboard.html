@@ -112,7 +112,7 @@ Total: {{ servers_wps.count }}<p>
 <td><a href="{% url 'server_element_list' server_type='WPS' server_pk=p.server.pk %}">{{ p.server.title }}</a></td>
 <td><a href="{% url 'server_element_detail' server_type='WPS' server_pk=p.server.pk element_id=p.identifier %}">{{ p.identifier }}</a></td>
 <td><center><a href="{% url 'job_detail' job_pk=p.pk %}">{{ p.pk }}</a></center></td>
-<td><a href="{{ p.status_url}}">{{ p.status }}</a></td>
+<td><a href="{% url 'job_run' job_pk=p.pk %}">{{ p.status }}</a></td>
 <td width=50%>{{ p.args }}</td></tr>
 {% endfor %}
 </table>

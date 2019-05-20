@@ -744,12 +744,18 @@ def water_yield(request):
 
     return render(request, 'wpsclient/water_yield.html', {'form': form})
 
-def water_yield_run(request, job_pk):
+def job_run(request, job_pk):
     job = get_object_or_404(Job, pk=job_pk)
 
-    msg = job.status_url
+    if job.status = "Validate":
+        job.status = "Run"
+        job.save()
 
-    return render(request, "wpsclient/water_yield_run.html", {"msg" : msg})
+        return dashboard(request)    
+
+    elif job.status = "Run":
+        msg = job.status_url
+        return render(request, "wpsclient/job_run.html", {"msg" : msg})
 
 
     

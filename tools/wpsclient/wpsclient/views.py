@@ -439,12 +439,12 @@ def job_list(request):
     return render(request, 'wpsclient/job_list.html', {'process_list' : process_jobs})
 
 
-def job_detail(request, process_pk):
+def job_detail(request, job_pk):
     l = logging.getLogger('django.request')
     l.warning(inspect.stack()[0][3])    
     #detail of an existing process with parameters
-    process = get_object_or_404(Job, pk=process_pk)
-    return render(request, 'wpsclient/job_detail.html', {'process': process})
+    process = get_object_or_404(Job, pk=job_pk)
+    return render(request, 'wpsclient/job_detail.html', {'job': job})
 
 ##def job_new(request, server_pk, process_id):
 ##    server = get_object_or_404(ServerWPS, pk=server_pk)

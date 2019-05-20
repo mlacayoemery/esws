@@ -125,20 +125,20 @@ if [ -f "geoserver-2.15.1-war.zip" ]; then
 else 
     wget http://sourceforge.net/projects/geoserver/files/GeoServer/2.15.1/geoserver-2.15.1-war.zip
 fi
-if [ -f "geoserver-2.15.1-wps-plugin.zip" ]; then
-    echo "GeoServer WPS plugin already downloaded"
-else 
-    wget http://sourceforge.net/projects/geoserver/files/GeoServer/2.15.1/extensions/geoserver-2.15.1-wps-plugin.zip
-fi
+#if [ -f "geoserver-2.15.1-wps-plugin.zip" ]; then
+#    echo "GeoServer WPS plugin already downloaded"
+#else 
+#    wget http://sourceforge.net/projects/geoserver/files/GeoServer/2.15.1/extensions/geoserver-2.15.1-wps-plugin.zip
+#fi
 unzip -p geoserver-2.15.1-war.zip geoserver.war > gs215.war
 sudo service tomcat8 stop
 sudo mv gs215.war /var/lib/tomcat8/webapps
 sudo service tomcat8 start
-echo "Waiting 10 seconds for Tomcat setup"
-sleep 10
-sudo service tomcat8 stop
-sudo -u tomcat8 unzip geoserver-2.15.1-wps-plugin.zip -d /var/lib/tomcat8/webapps/gs215/WEB-INF/lib
-sudo service tomcat8 start
+#echo "Waiting 10 seconds for Tomcat setup"
+#sleep 10
+#sudo service tomcat8 stop
+#sudo -u tomcat8 unzip geoserver-2.15.1-wps-plugin.zip -d /var/lib/tomcat8/webapps/gs215/WEB-INF/lib
+#sudo service tomcat8 start
 cd esws
 read -p "Press [Enter] key to continue..."
 ;;

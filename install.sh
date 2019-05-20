@@ -151,6 +151,7 @@ sudo chmod 644 /etc/systemd/system/esws-dashboard.service
 sudo systemctl reload esws-dashboard
 sudo systemctl start esws-dashboard
 sudo systemctl enable esws-dashboard
+alias dashboard="sudo systemctl status esws-dashboard"
 
 sudo systemctl stop esws-wps-invest
 sudo systemctl disable esws-wps-invest
@@ -159,6 +160,7 @@ sudo chmod 644 /etc/systemd/system/esws-wps-invest.service
 sudo systemctl reload esws-wps-invest
 sudo systemctl start esws-wps-invest
 sudo systemctl enable esws-wps-invest
+alias invest="sudo systemctl status esws-wps-invest"
 
 sudo systemctl stop esws-file-server
 sudo systemctl disable esws-file-server
@@ -167,14 +169,15 @@ sudo chmod 644 /etc/systemd/system/esws-file-server.service
 sudo systemctl reload esws-file-server
 sudo systemctl start esws-file-server
 sudo systemctl enable esws-file-server
+alias http="sudo systemctl status esws-file-server"
 
-sudo systemctl stop esws-data-gala
-sudo systemctl disable esws-data-gala
-sudo cp esws-data-gala.service /etc/systemd/system
-sudo chmod 644 /etc/systemd/system/esws-data-gala.service
-sudo systemctl reload esws-data-gala
-sudo systemctl start esws-data-gala
-sudo systemctl enable esws-data-gala
+#sudo systemctl stop esws-data-gala
+#sudo systemctl disable esws-data-gala
+#sudo cp esws-data-gala.service /etc/systemd/system
+#sudo chmod 644 /etc/systemd/system/esws-data-gala.service
+#sudo systemctl reload esws-data-gala
+#sudo systemctl start esws-data-gala
+#sudo systemctl enable esws-data-gala
 
 read -p "Press [Enter] key to continue..."
 ;;

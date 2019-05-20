@@ -543,9 +543,9 @@ def job_new_dynamic(request, server_pk, process_id, args):
     
     server = get_object_or_404(ServerWPS, pk=server_pk)
 
-    args = unquote(unquote(args))
+    args = json.loads(unquote(unquote(args)))
     print(args)
-    args = json.loads(args)
+    print(request.method)
 
     if request.method == "POST":
         process = Job(server=server,identifier=process_id,args=args)

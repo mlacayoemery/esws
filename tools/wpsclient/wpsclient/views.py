@@ -756,6 +756,7 @@ def job_run(request, job_pk):
         return dashboard(request)    
 
     elif job.status == "Run":
+        print(job.status_url)
         msg = urlretrieve(job.status_url)
         return render(request, "wpsclient/job_run.html", {"xml" : xml})
 

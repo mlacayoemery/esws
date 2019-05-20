@@ -550,6 +550,7 @@ def job_new_dynamic(request, server_pk, process_id, args):
 
     if request.method == "GET":
         process = Job(server=server,identifier=process_id,args=args)
+        process.status = "Validate"
         process.save()
 
         server.jobs = server.jobs + 1

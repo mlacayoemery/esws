@@ -63,9 +63,11 @@ import urllib
 if sys.version_info.major == 2:
     quote = urllib.quote
     unquote = urllib.unquote
+    urlretrieve = urllib.URLopener().retrieve
 else:
     quote = urllib.parse.quote
-    unquote = urllib.parse.unquote    
+    unquote = urllib.parse.unquote
+    urlretreive = urllib.request.urlretrieve
  
 # Create your views here.
 def dashboard(request):
@@ -754,8 +756,8 @@ def job_run(request, job_pk):
         return dashboard(request)    
 
     elif job.status == "Run":
-        msg = job.status_url
-        return render(request, "wpsclient/job_run.html", {"msg" : msg})
+        msg = urlretrieve(job.status_url)
+        return render(request, "wpsclient/job_run.html", {"xml" : xml})
 
 
     

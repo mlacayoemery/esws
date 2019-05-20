@@ -620,8 +620,8 @@ def job_new(request, server_pk, process_id):
         job = Job(server=server,identifier=process_id,args=args)
 
         job.status = "Run"
-        status_url = server.url + "?service=wps&version=1.0.0&request=Execute&IDENTIFIER=" + process.identifier + "&datainputs="
-        status_url = status_url + ";".join(["%s=%s" % (k, quote(quote(process.args[k]))) for k in process.args.keys()])
+        status_url = server.url + "?service=wps&version=1.0.0&request=Execute&IDENTIFIER=" + job.identifier + "&datainputs="
+        status_url = status_url + ";".join(["%s=%s" % (k, quote(quote(job.args[k]))) for k in job.args.keys()])
         job.status_url = status_url
         
         job.save()
@@ -650,7 +650,7 @@ def job_edit(request, job_pk):
         key_values = []
         for k in keys:
             #get values and preserve data types
-            key_values.append((k[6:], type(process.args[k[6:]])(form.data[k])))
+            key_values.append((k[6:], type(job.args[k[6:]])(form.data[k])))
         
         #form.data.pop('QueryDict')
 
@@ -721,11 +721,11 @@ def water_yield(request):
         #cat.gs_cat.create_workspace(name)
         args["workspace_dir"] = name
         
-        process = Job(server=server,identifier=process_id,args=args)
+        job = Job(server=server,identifier=process_id,args=args)
 
-        process.status = "Run"
-        status_url = "http://127.0.0.1:5000/wps?service=wps&version=1.0.0&request=Execute&IDENTIFIER=natcap.invest.hydropower.hydropower_water_yield&datainputs="
-        status_url = status_url + ";".join(["%s=%s" % (k, quote(quote(process.args[k]))) for k in process.args.keys()])
+        job.status = "Run"
+        status_url = server.url + "?service=wps&version=1.0.0&request=Execute&IDENTIFIER=natcap.invest.hydropower.hydropower_water_yield&datainputs="
+        status_url = status_url + ";".join(["%s=%s" % (k, quote(quote(job.args[k]))) for k in job.args.keys()])
         process.status_url = status_url
         
         process.save()               
@@ -733,18 +733,17 @@ def water_yield(request):
         server.jobs = server.jobs + 1
         server.save()
         
-        return redirect('job_detail', process_pk=process.pk)        
+        return redirect('job_detail', job_pk=job.pk)        
             
     else: #elif request.method == "GET"
         form = WaterYieldForm()
 
     return render(request, 'wpsclient/water_yield.html', {'form': form})
 
-def water_yield_run(request, process_pk):
-    process = get_object_or_404(Job, pk=process_pk)
+def water_yield_run(request, job_pk):
+    job = get_object_or_404(Job, pk=job_pk)
 
-    msg = "http://127.0.0.1:5000/wps?service=wps&version=1.0.0&request=Execute&IDENTIFIER=natcap.invest.hydropower.hydropower_water_yield&datainputs="
-    msg = msg + ";".join(["%s=%s" % (k, quote(quote(process.args[k]))) for k in process.args.keys()])
+    msg = job.status_url
 
     return render(request, "wpsclient/water_yield_run.html", {"msg" : msg})
 

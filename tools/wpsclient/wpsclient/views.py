@@ -562,6 +562,14 @@ def job_new_dynamic(request, server_pk, process_id, args):
         
     return dashboard(request)
 
+def job_validate(request, job_pk):
+
+    job = get_object_or_404(Job, pk=job_pk)
+    job.status = "Pending"
+    job.save()
+
+    return dashboard(request)
+
   
 def job_new(request, server_pk, process_id):
     l = logging.getLogger('django.request')
@@ -609,29 +617,29 @@ def job_new(request, server_pk, process_id):
         #form.data["csrfmiddlewaretoken"].delete()
             
         args= collections.OrderedDict(key_values)
-        process = Job(server=server,identifier=process_id,args=args)
+        job = Job(server=server,identifier=process_id,args=args)
 
-        process.status = "Run"
+        job.status = "Run"
         status_url = server.url + "?service=wps&version=1.0.0&request=Execute&IDENTIFIER=" + process.identifier + "&datainputs="
         status_url = status_url + ";".join(["%s=%s" % (k, quote(quote(process.args[k]))) for k in process.args.keys()])
-        process.status_url = status_url
+        job.status_url = status_url
         
-        process.save()
+        job.save()
 
         server.jobs = server.jobs + 1
         server.save()
         
-        return redirect('job_detail', process_pk=process.pk)
+        return redirect('job_detail', job_pk=job.pk)
     else:        
         form = testForm(request.POST or None, initial={'data': args})
         
     return render(request, 'wpsclient/job_edit.html', {'form': form})
 
-def job_edit(request, process_pk):
+def job_edit(request, job_pk):
     l = logging.getLogger('django.request')
     l.warning(inspect.stack()[0][3])
     
-    process = get_object_or_404(Job, pk=process_pk)
+    job = get_object_or_404(Job, pk=job_pk)
 
     if request.method == "POST":
         form = testForm(request.POST)        
@@ -655,12 +663,12 @@ def job_edit(request, process_pk):
 
         #form.data["csrfmiddlewaretoken"].delete()
         #l.warning(key_values)
-        process.args= collections.OrderedDict(key_values)
-        process.save()
-        return redirect('job_detail', process_pk=process.pk)
+        job.args= collections.OrderedDict(key_values)
+        job.save()
+        return redirect('job_detail', job_pk=job.pk)
 
     else:
-        form = testForm(request.POST or None, initial={'data': process.args})
+        form = testForm(request.POST or None, initial={'data': job.args})
 
     return render(request, 'wpsclient/job_edit.html', {'form': form})
 

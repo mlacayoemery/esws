@@ -543,7 +543,8 @@ def job_new_dynamic(request, server_pk, process_id, args):
     
     server = get_object_or_404(ServerWPS, pk=server_pk)
 
-    args = json.loads(unquote(unquote(args)))
+    args = json.loads(unquote(unquote(args)),
+                      object_pairs_hook=collections.OrderedDict)
     print(args)
     print(request.method)
 

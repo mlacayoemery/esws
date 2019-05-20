@@ -28,8 +28,8 @@ urlpatterns = [
     #add server specific job list
     url(r'^server/(?P<server_pk>\d+)/job/$', views.server_job_list, name='server_job_list'),
     
-    url(r'^job/(?P<process_pk>[a-zA-Z0-9_\.:]+)/$', views.job_detail, name='job_detail'),
-    url(r'^job/(?P<process_pk>[a-zA-Z0-9_\.:]+)/edit/$', views.job_edit, name='job_edit'),
+    url(r'^job/(?P<job_pk>[a-zA-Z0-9_\.:]+)/$', views.job_detail, name='job_detail'),
+    url(r'^job/(?P<job_pk>[a-zA-Z0-9_\.:]+)/edit/$', views.job_edit, name='job_edit'),
 
     
     url(r'^server/(?P<server_pk>\d+)/execute/(?P<process_id>[a-zA-Z0-9_\.:]+)/$', views.job_new, name='job_new'),

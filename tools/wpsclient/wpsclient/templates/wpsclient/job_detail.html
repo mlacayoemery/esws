@@ -8,7 +8,7 @@
         <p><b>Server: </b><a href="{% url 'server_element_list' server_type='WPS' server_pk=process.server.pk %}">{{ process.server.title }}</a></p>
         <p><b>Process: </b><a href="{% url 'server_element_detail' server_type='WPS' server_pk=process.server.pk element_id=process.identifier %}">{{ process.identifier }}</a></p>        
         <p><b>Job Id: </b>{{process.pk}}<p/>
-        <p><b><a href="{% url 'job_edit' process_pk=process.pk %}">Edit Job</a></b></p>
+        <p><b><a href="{% url 'job_edit' job_pk=job.pk %}">Edit Job</a></b></p>
         <table border=1 frame=void rules=all>
         <tr><td><b>key</b></td><td><b>value</b></td></tr>
         {% for k, v in process.args.items  %}

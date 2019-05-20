@@ -118,7 +118,7 @@ sh tools/wpsclient/setup.sh
 
 6)
 #install GeoServer
-sudo apt-get install -y openjdk-8-jdk tomcat8
+sudo apt-get install -y openjdk-8-jdk tomcat8 unzip
 cd ..
 if [ -f "geoserver-2.13.3-war.zip" ]; then
     echo "GeoServer already downloaded"

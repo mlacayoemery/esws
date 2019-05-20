@@ -757,8 +757,8 @@ def job_run(request, job_pk):
 
     elif job.status == "Run":
         print(job.status_url)
-        #msg = urlretrieve(job.status_url)
-        msg = urlretrieve("http://127.0.0.1:5000/wps?service=wps&version=1.0.0&request=GetCapabilities")
+        #xml = urlretrieve(job.status_url)
+        xml = urlretrieve("http://127.0.0.1:5000/wps?service=wps&version=1.0.0&request=GetCapabilities")
         return render(request, "wpsclient/job_run.html", {"xml" : xml})
 
 

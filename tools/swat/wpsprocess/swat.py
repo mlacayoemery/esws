@@ -20,7 +20,7 @@ from shutil import copyfile
 
 class WebProcess(pywps.Process):
     def __init__(self):
-        inputs = [pywps.LiteralInput('message',
+        inputs = [pywps.LiteralInput('model',
                                      'SWAT ZIP',
                                      data_type='string')]
 
@@ -42,7 +42,7 @@ class WebProcess(pywps.Process):
 
     def _handler(self, request, response):
         prefix = "esws-"
-        value = unquote(request.inputs['message'][0].data)
+        value = unquote(request.inputs['model'][0].data)
 
         swat_exe = "swat.exe"
         swat_path = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))),

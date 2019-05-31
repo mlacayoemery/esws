@@ -551,14 +551,14 @@ def job_new_dynamic(request, server_pk, process_id, args):
     #print(request.method)
 
     if request.method == "GET":
-        process = Job(server=server,identifier=process_id,args=args)
-        process.status = "Validate"
-        process.save()
+        job = Job(server=server,identifier=process_id,args=args)
+        job.status = "Validate"
+        job.save()
 
         server.jobs = server.jobs + 1
         server.save()
         
-        return redirect('job_detail', process_pk=process.pk)
+        return redirect('job_detail', job_pk=job.pk)
     else:        
         pass
         

@@ -1,0 +1,32 @@
+{
+  "name": "esws",
+  "version": "1.0.0",
+  "description": "GUI for ESWS client",
+  "main": "",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mlacayoemery/esws.git"
+  },
+  "keywords": [
+    "GIS",
+    "ESWS",
+    "OGC",
+    "WFS",
+    "WCS",
+    "WPS"
+  ],
+  "author": "Martin Lacayo",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mlacayoemery/esws/issues"
+  },
+  "homepage": "https://github.com/mlacayoemery/esws#readme",
+  "node-red": {
+    "nodes": {
+      "lower-case": "lower-case.js"
+    }
+  }
+}

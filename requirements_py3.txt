@@ -4,6 +4,10 @@ django==2.0.12
 jsonfield
 bs4
 
+pygraphviz
+pyparsing
+pydot
+
 ##wpsserver
 flask
 pywps

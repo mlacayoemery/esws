@@ -19,9 +19,78 @@ def invest_model(path,
       
     dwg.save()
 
+def connector_table(insert=(0,0),
+                    unit=1):
+
+    t="M0,0 l0,-%i l0,-%i l%i,0 l0,%i l%i,0 l0,-%i l0,-%i l0,-%i l-%i,0 l0,%i l-%i,0 l0,-%i l0,-%i"
+    p = t % tuple([unit]*t.count("%i"))
+
+    print(p)
+
+    return svgwrite.path.Path(d=p,
+             fill="none", 
+             stroke="#000000", stroke_width=unit/40.0)
+
+
+def connector_raster(insert=(0,0),
+                    unit=1):
+
+    t="M0,0 l0,-%i l0,-%i l%i,0 l0,%i l%i,0 l%i,0 l%i,0 l0,-%i l0,-%i l0,-%i l-%i,0 l-%i,0 l-%i,0 l0,%i l-%i,0 l0,-%i l0,-%i"
+    p = t % tuple([unit]*t.count("%i"))
+
+    print(p)
+
+    return svgwrite.path.Path(d=p,
+             fill="none", 
+             stroke="#000000", stroke_width=unit/40.0)
+    
+    
+def connector_vector(insert=(0,0),
+                     unit=1):
+
+    r = 1.0
+    dx = r * 0.5
+    dy = r * .75**0.5
+
+    p=""
+    
+    t="M0,0 l0,-%i l0,-%i l%i,0"
+    p = p + (t % tuple([unit]*t.count("%i")))
+
+    t=" l%f,%f l%f,-%f"
+    p = p + (t % (dx, dy, dx, dy))
+
+    t=" l0,-%i"
+    p = p + (t % tuple([unit]*t.count("%i")))
+
+    t=" l-%f,-%f l-%f,%f"
+    p = p + (t % (dx, dy, dx, dy))
+
+    t="l-%i,0 l0,-%i l0,-%i"
+    p = p + (t % tuple([unit]*t.count("%i")))   
+
+    print(p)
+
+    return svgwrite.path.Path(d=p,
+             fill="none", 
+             stroke="#000000", stroke_width=unit/40.0)
+
+
 if __name__ == "__main__":
-    invest_model('test.svg',
-                 'tiny',
-                 "Water Yield",
-                 [],
-                 [])
+
+    path = "test.svg"
+    profile = "tiny"
+
+    dwg = svgwrite.Drawing(path, profile=profile)
+
+    #dwg.add(dwg.text("your text", insert=(10,30)))
+    
+    dwg.add(connector_vector())
+
+    dwg.save()
+
+##    invest_model('test.svg',
+##                 'tiny',
+##                 "Water Yield",
+##                 [],
+##                 [])

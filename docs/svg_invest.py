@@ -39,7 +39,7 @@ def connector_table(insert=(0,0),
 
     return svgwrite.path.Path(d=p,
              fill="none", 
-             stroke="#000000", stroke_width=unit/40.0)
+             stroke="#000000", stroke_width=unit/2.0)
 
 
 def connector_raster(insert=(0,0),
@@ -61,7 +61,7 @@ def connector_raster(insert=(0,0),
 
     return svgwrite.path.Path(d=p,
              fill="none", 
-             stroke="#000000", stroke_width=unit/40.0)
+             stroke="#000000", stroke_width=unit/2.0)
     
     
 def connector_vector(insert=(0,0),
@@ -92,9 +92,45 @@ def connector_vector(insert=(0,0),
 
     return svgwrite.path.Path(d=p,
              fill="none", 
-             stroke="#000000", stroke_width=unit/40.0)
+             stroke="#000000", stroke_width=unit/2.0)
 
 
+def knob_path(x,y, h, r):
+
+    nudge = math.pi / 180.0
+
+    radiansd = math.asin((0.5 * h)/r)
+
+    radians1 = math.pi + radiansd
+    radians2 = 0
+    radians3 = math.pi - radiansd
+
+    dx1 = r*(math.sin(radians1))
+    dy1 = r*(math.cos(radians1))
+    dx2 = r*(math.sin(radians2))
+    dy2 = r*(math.cos(radians2))
+    dx3 = r*(math.sin(radians3))
+    dy3 = r*(math.cos(radians3))
+
+    m1 = dy1
+    n1 = -dx1 
+    m2 = -dy1 + dy2 
+    n2 = dx1 - dx2
+    m3 = -dy2 + dy3 
+    n3 = dx2 - dx3
+
+    t = "a%f,%f 0 0,0 %f,%f"
+
+    if x is None or y is None:
+        p = "m0,0"
+    else:
+        p = "M%f,%f" % (x,y)
+
+    p = p + " " + t % (r, r, m2, n2)
+    p = p + " " + t % (r, r, m3, n3)            
+
+    return p  
+    
 def eliptical_arc(start_x=0,
                   start_y=0,
                   stop_y=1,
@@ -106,8 +142,10 @@ def eliptical_arc(start_x=0,
     degree1 = stop_deg
     radians0 = math.radians(degree0)
     radians1 = math.radians(degree1)
+
     dx0 = radius*(math.sin(radians0))
     dy0 = radius*(math.cos(radians0))
+
     dx1 = radius*(math.sin(radians1))
     dy1 = radius*(math.cos(radians1))
 
@@ -132,7 +170,7 @@ def eliptical_arc(start_x=0,
 
     return svgwrite.path.Path(d=p,
              fill="none", 
-             stroke="#000000", stroke_width=1/40.0)
+             stroke="#000000", stroke_width=1/2.0)
 
 def connector_misc(insert=(0,0),
                     unit=1):
@@ -145,14 +183,13 @@ def connector_misc(insert=(0,0),
 
     t="M0,0"\
        " l0,-%i l0,-%i l0,-%i l0,-%i l0,-%i l0,-%i l0,-%i"\
-       " l%i,0 l%i,0 l%i,0 l%i,0 l%i,0"
+       " l%i,0 l%i,0 l%i,0"
 
-    #t = t + " a%f,%f 0 0,0 %f,%f" %  (n0, radius_c, m1, n1)
 
-    #t = t + " a0.05,0.05 0 0,0 0,-1"
-    t = t + " m0,-%i"
+    #t = t + " m0,-%i"
+    t = t + knob_path(None, None, unit, unit * 2.5)
 
-    t = t + " l-%i,0 l-%i,0 l-%i,0 l-%i,0 l-%i,0"\
+    t = t + " l-%i,0 l-%i,0 l-%i,0"\
        " l0,-%i l0,-%i l0,-%i l0,-%i l0,-%i l0,-%i"
     p = t % tuple([unit]*t.count("%i"))
 
@@ -161,7 +198,19 @@ def connector_misc(insert=(0,0),
 
     return svgwrite.path.Path(d=p,
              fill="none", 
-             stroke="#000000", stroke_width=unit/40.0)
+             stroke="#000000", stroke_width=unit/2.0)
+
+def add_connector_misc_labeled(dwg,
+                               r_label=None,
+                               l_label=None):
+
+    dwg.add(connector_misc())
+
+##    g = svgwrite.Drawing().g(style="font-size:5;font-family:Corrier;stroke:black")
+##    g.add(dwg.text(r_label))
+##    dwg.add(g)
+
+    
 
 
 if __name__ == "__main__":
@@ -171,25 +220,13 @@ if __name__ == "__main__":
 
     dwg = svgwrite.Drawing(path, profile=profile)
 
-    #dwg.add(dwg.text("your text", insert=(10,30)))
+    #dwg.add()
 
     #dwg.add(connector_table())
-    #dwg.add(connector_raster())    
-    #dwg.add(connector_vector())
+    dwg.add(connector_raster())    
+    dwg.add(connector_vector())
 
-    dwg.add(eliptical_arc(start_x=None,
-                          start_y=None,
-                          stop_y=1,
-                          radius=1,
-                          start_deg=0,
-                          stop_deg=180))
-
-    dwg.add(eliptical_arc(start_x=None,
-                          start_y=None,
-                          stop_y=1,
-                          radius=1,
-                          start_deg=180,
-                          stop_deg=270))
+    add_connector_misc_labeled(dwg,"Input")
 
     dwg.save()
 

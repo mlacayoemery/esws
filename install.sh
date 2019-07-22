@@ -137,7 +137,7 @@ sudo service tomcat9 start
 echo "Waiting 10 seconds for Tomcat setup"
 sleep 10
 sudo service tomcat9 stop
-sudo -u tomcat9 unzip geoserver-2.15.1-wps-plugin.zip -d /var/lib/tomcat8/webapps/gs215/WEB-INF/lib
+sudo -u tomcat unzip geoserver-2.15.1-wps-plugin.zip -d /var/lib/tomcat8/webapps/gs215/WEB-INF/lib
 sudo service tomcat9 start
 cd esws
 read -p "Press [Enter] key to continue..."

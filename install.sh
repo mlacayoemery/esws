@@ -10,7 +10,7 @@ MENU="Choose one of the following options:"
 
 OPTIONS=(0 "Clone ESWS repository"
          1 "Install system requirements"
-         2 "Install GDAL from source with Python 2 and 3 bindings"
+#         2 "Install GDAL from source with Python 2 and 3 bindings"
          3 "Install PROJ.4 from source for Shapely Python library"
          4 "Install Python requirements"
          5 "Setup WPS client"

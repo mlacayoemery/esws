@@ -118,7 +118,7 @@ sh tools/wpsclient/setup.sh
 
 6)
 #install GeoServer
-sudo apt-get install -y openjdk-8-jdk tomcat8 unzip
+sudo apt-get install -y openjdk-11-jdk tomcat9 unzip
 cd ..
 if [ -f "geoserver-2.15.1-war.zip" ]; then
     echo "GeoServer already downloaded"
@@ -131,14 +131,14 @@ else
     wget http://sourceforge.net/projects/geoserver/files/GeoServer/2.15.1/extensions/geoserver-2.15.1-wps-plugin.zip
 fi
 unzip -p geoserver-2.15.1-war.zip geoserver.war > gs215.war
-sudo service tomcat8 stop
-sudo mv gs215.war /var/lib/tomcat8/webapps
-sudo service tomcat8 start
+sudo service tomcat9 stop
+sudo mv gs215.war /var/lib/tomcat9/webapps
+sudo service tomcat9 start
 echo "Waiting 10 seconds for Tomcat setup"
 sleep 10
-sudo service tomcat8 stop
-sudo -u tomcat8 unzip geoserver-2.15.1-wps-plugin.zip -d /var/lib/tomcat8/webapps/gs215/WEB-INF/lib
-sudo service tomcat8 start
+sudo service tomcat9 stop
+sudo -u tomcat9 unzip geoserver-2.15.1-wps-plugin.zip -d /var/lib/tomcat8/webapps/gs215/WEB-INF/lib
+sudo service tomcat9 start
 cd esws
 read -p "Press [Enter] key to continue..."
 ;;

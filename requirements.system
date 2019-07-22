@@ -21,3 +21,4 @@ libatlas-base-dev
 gfortran
 python-pygraphviz
 python-gdal
+python-pyproj

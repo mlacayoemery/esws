@@ -7,11 +7,11 @@ numpy>=1.11.0
 
 #natcap.invest==3.6.0
 #-e hg+https://bitbucket.org/natcap/invest@3.6.0#egg=natcap.invest
--e hg+https://bitbucket.org/natcap/invest@develop#egg=natcap.invest
+#-e hg+https://bitbucket.org/natcap/invest@develop#egg=natcap.invest
 #-e /data/share/invest
 #natcap.invest==3.5.0.post104+hc0048a13fe66.d20180827
 #pygeoprocessing
-#natcap.invest
+natcap.invest
 
 flask
 pywps

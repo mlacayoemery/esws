@@ -102,13 +102,13 @@ class JobDynamic(forms.ModelForm):
 class WaterYieldForm(forms.ModelForm):
     class Meta:
         model = WaterYieldModel
-        fields = ("precipitation_uri",
-                  "eto_uri",
-                  "depth_to_root_rest_layer_uri",
-                  "pawc_uri",
-                  "lulc_uri",
-                  "watersheds_uri",
-                  "biophysical_table_uri",
+        fields = ("precipitation_path",
+                  "eto_path",
+                  "depth_to_root_rest_layer_path",
+                  "pawc_path",
+                  "lulc_path",
+                  "watersheds_path",
+                  "biophysical_table_path",
                   "seasonality_constant")
 
     def __init__(self, *args, **kwargs):

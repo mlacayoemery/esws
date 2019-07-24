@@ -109,7 +109,7 @@ class WebProcess(pywps.Process):
             cat.clean_named_workspace()
 
         except:
-            raise pywps.exceptions.InvalidParameterValue("Could not clean workspace(s)")
+            raise pywps.exceptions.NoApplicableCode("Could not clean workspace(s)")
 
         logger.info("Making output workspace")
         ws = cat.make_named_workspace(workspace_uuid)

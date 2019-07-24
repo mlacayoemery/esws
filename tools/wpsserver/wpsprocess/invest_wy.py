@@ -105,7 +105,11 @@ class WebProcess(pywps.Process):
                               logger = logger)
 
         logger.info("Removing workspace(s)")
-        cat.clean_named_workspace()
+        try:
+            cat.clean_named_workspace()
+
+        except:
+            raise pywps.exceptions.NoApplicableCode("Could not clean workspace(s)")
 
         logger.info("Making output workspace")
         ws = cat.make_named_workspace(workspace_uuid)

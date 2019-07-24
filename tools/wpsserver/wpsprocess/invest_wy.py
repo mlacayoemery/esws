@@ -16,31 +16,31 @@ class WebProcess(pywps.Process):
                                      'GeoServer workspace',
                                      data_type='string'),
 
-                  pywps.LiteralInput('precipitation_uri',
+                  pywps.LiteralInput('precipitation_path',
                                      'Precipitation',
                                      data_type='string'),
 
-                  pywps.LiteralInput('eto_uri',
+                  pywps.LiteralInput('eto_path',
                                      'Evapotranspiration',
                                      data_type='string'),
 
-                  pywps.LiteralInput('depth_to_root_rest_layer_uri',
+                  pywps.LiteralInput('depth_to_root_rest_layer_path',
                                      'Root depth',
                                      data_type='string'),
 
-                  pywps.LiteralInput('pawc_uri',
+                  pywps.LiteralInput('pawc_path',
                                      'Plant available water content',
                                      data_type='string'),
 
-                  pywps.LiteralInput('lulc_uri',
+                  pywps.LiteralInput('lulc_path',
                                      'Land use land cover',
                                      data_type='string'),
 
-                  pywps.LiteralInput('watersheds_uri',
+                  pywps.LiteralInput('watersheds_path',
                                      'Watersheds',
                                      data_type='string'),
                   
-                  pywps.LiteralInput('biophysical_table_uri',
+                  pywps.LiteralInput('biophysical_table_path',
                                      'Biophysical table',
                                      data_type='string'),
                   
@@ -76,13 +76,13 @@ class WebProcess(pywps.Process):
         workspace_uuid = request.inputs["workspace_dir"][0].data
 
         args = {}
-        args_list = ['precipitation_uri',
-                     'eto_uri',
-                     'depth_to_root_rest_layer_uri',
-                     'pawc_uri',
-                     'lulc_uri',
-                     'watersheds_uri',
-                     'biophysical_table_uri',
+        args_list = ['precipitation_path',
+                     'eto_path',
+                     'depth_to_root_rest_layer_path',
+                     'pawc_path',
+                     'lulc_path',
+                     'watersheds_path',
+                     'biophysical_table_path',
                      'seasonality_constant']        
 
         for a in args_list:
@@ -137,7 +137,7 @@ class WebProcess(pywps.Process):
 
 
         gs_url = "http://127.0.0.1:8080/geoserver"
-        result_layers = ",".join([cat.cover_name_from_url(args["lulc_uri"]),layer_name])
+        result_layers = ",".join([cat.cover_name_from_url(args["lulc_path"]),layer_name])
         bbox = "453436.69380764756,4918220.405289317,468316.69380764384,4952570.405289317"
         width = "332"
         height = "768"

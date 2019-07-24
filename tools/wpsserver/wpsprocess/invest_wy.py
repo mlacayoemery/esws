@@ -98,7 +98,7 @@ class WebProcess(pywps.Process):
             except AttributeError:
                 continue
 
-        cat = easyows.Catalog(gs_url = "http://localhost:8080/geoserver",
+        cat = easyows.Catalog(gs_url = "http://localhost:8080/gs215",
                               username = "admin",
                               password = "geoserver",
                               ws_prefix = "esws-",

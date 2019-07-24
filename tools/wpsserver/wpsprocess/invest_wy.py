@@ -107,15 +107,17 @@ class WebProcess(pywps.Process):
         logger.info("Removing workspace(s)")
         cat.clean_named_workspace()
 
-    
+        logger.info("Making output workspace")
         ws = cat.make_named_workspace(workspace_uuid)
 
         layer_name = ":".join([ws, "wy"])
-
+        
+        logger.info("Constructing upload template")
         uploads = {
             layer_name : os.path.join(args[u'workspace_dir'], "output", u'watershed_results_wyield.shp')
         }
 
+        logger.info("Constructing WPS job")
         j = easyows.Job(natcap.invest.hydropower.hydropower_water_yield.execute,
                         args,
                         uploads,
@@ -139,6 +141,7 @@ class WebProcess(pywps.Process):
         result_template="%s/wms?service=WMS&version=1.1.0&request=GetMap&layers=%s&styles=&bbox=%s&width=%s&height=%s&srs=%s&format=application/openlayers"
         result_url = result_template % (gs_url, result_layers, bbox, width, height, srs)
 
+        logger.info("Running job")
         while j.priority < 3:
             if j.run():
                 response.outputs['response'].data = result_url

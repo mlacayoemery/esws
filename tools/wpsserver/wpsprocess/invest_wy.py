@@ -136,7 +136,7 @@ class WebProcess(pywps.Process):
 ##        return response
 
 
-        gs_url = "http://127.0.0.1:8080/geoserver"
+        gs_url = "http://127.0.0.1:8080/gs215"
         result_layers = ",".join([cat.cover_name_from_url(args["lulc_path"]),layer_name])
         bbox = "453436.69380764756,4918220.405289317,468316.69380764384,4952570.405289317"
         width = "332"

@@ -21,6 +21,8 @@ import re
 import tempfile
 import zipfile
 
+#import ogr
+
 class MissingResource(Exception):
     pass
 
@@ -97,6 +99,12 @@ class Catalog:
         shapefile_plus_sidecars = {}
         for key in ["shp", "shx", "prj", "dbf"]:
             shapefile_plus_sidecars[key] = ".".join([data_store_path, key])
+
+##        driver = ogr.GetDriverByName("ESRI Shapefile")
+##        data = driver.Open(shp_path, 1)
+##        layer = data.GetLayer()
+##        for feature in layer:
+##            feature.GetGeomRef().GetEnvelope()
 
         return self.gs_cat.create_featurestore(shp_name,
                                                workspace = gs_workspace,

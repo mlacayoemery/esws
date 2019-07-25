@@ -3,15 +3,15 @@ Cython
 numpy>=1.11.0
 #GDAL>=2.0,<3.0
 #-e /data/share/gdal-2.3.1/swig/python
-#GDAL==2.3.1
+GDAL==2.3.1
 
 #natcap.invest==3.6.0
 #-e hg+https://bitbucket.org/natcap/invest@3.6.0#egg=natcap.invest
-#-e hg+https://bitbucket.org/natcap/invest@develop#egg=natcap.invest
+-e hg+https://bitbucket.org/natcap/invest@develop#egg=natcap.invest
 #-e /data/share/invest
 #natcap.invest==3.5.0.post104+hc0048a13fe66.d20180827
 #pygeoprocessing
-natcap.invest
+#natcap.invest
 
 flask
 pywps

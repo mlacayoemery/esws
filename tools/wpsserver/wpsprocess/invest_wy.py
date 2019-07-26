@@ -155,4 +155,4 @@ class WebProcess(pywps.Process):
                        
                 return response
 
-        raise IOError, "Job timed out."
+        raise IOError, "Job timed out, perhaps some remote data cannot be retrieved."

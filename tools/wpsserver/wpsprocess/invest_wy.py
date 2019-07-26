@@ -66,8 +66,16 @@ class WebProcess(pywps.Process):
 
     def _handler(self, request, response):
         logger = logging.getLogger("wps_invest_wy")
-        fh = logging.FileHandler('/tmp/esws.log')
-        logger.addHandler(fh)
+
+        file_logging = False
+        for h in logger.handlers:
+            if isinstance(h, logging.FileHandler):
+                file_logging = True
+
+        if not file_logging:
+            fh = logging.FileHandler('/tmp/esws.log')
+            logger.addHandler(fh)
+
         logger.setLevel(logging.DEBUG)
         
         logger.info("BEGIN CALL TO WPS INVEST_WY")

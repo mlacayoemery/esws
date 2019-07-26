@@ -50,6 +50,8 @@ read -p "Press [Enter] key to continue..."
 ;;
 
 2)
+sudo pip2 install numpy
+sudo pip3 install numpy
 #install GDAL with Python 2 and 3 bindings
 cd ..
 if [[ $LD_LIBRARY_PATH == *"/usr/local/lib"* ]]; then

@@ -17,7 +17,8 @@ OPTIONS=(0 "Clone ESWS repository"
          6 "Install GeoServer"
          7 "Install systemd services"
          8 "Configure firewall"
-         9 "Quit setup")
+         9 "Install InVEST Data"
+         10 "Quit setup")
 
 while true; do 
 CHOICE=$(dialog --clear \
@@ -191,6 +192,10 @@ read -p "Press [Enter] key to continue..."
 ;;
 
 9)
+python tools/invest/import_sample_data_wy.py 
+;;
+
+10)
 #quit installer
 git pull
 break

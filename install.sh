@@ -13,12 +13,13 @@ OPTIONS=(0 "Clone ESWS repository"
          2 "Install GDAL from source with Python 2 and 3 bindings"
          3 "Install PROJ.4 from source for Shapely Python library"
          4 "Install Python requirements"
-         5 "Setup WPS client"
-         6 "Install GeoServer"
-         7 "Install systemd services"
-         8 "Configure firewall"
-         9 "Install InVEST Data"
-         10 "Quit setup")
+         5 "Setup OneTjs"
+         6 "Setup WPS client"
+         7 "Install GeoServer"
+         8 "Install systemd services"
+         9 "Configure firewall"
+         10 "Install InVEST Data"
+         111 "Quit setup")
 
 while true; do 
 CHOICE=$(dialog --clear \
@@ -115,11 +116,22 @@ read -p "Press [Enter] key to continue..."
 ;;
 
 5)
+cd ..
+git clone https://github.com/mlacayoemery/OneTjs.git
+python3 -m venv tjs-venv
+source tjs-venv/bin/activate
+cd OneTjs
+pip3 install -r requirements.txt
+deactivate
+cd ../esws
+;;
+
+6)
 #setup wps client
 sh tools/wpsclient/setup.sh
 ;;
 
-6)
+7)
 #install GeoServer
 sudo apt-get install -y openjdk-8-jdk tomcat8 unzip
 cd ..
@@ -146,7 +158,7 @@ cd esws
 read -p "Press [Enter] key to continue..."
 ;;
 
-7)
+8)
 sudo systemctl stop esws-dashboard
 sudo systemctl disable esws-dashboard
 sudo cp esws-dashboard.service /etc/systemd/system
@@ -185,7 +197,7 @@ alias http="sudo systemctl status esws-file-server"
 read -p "Press [Enter] key to continue..."
 ;;
 
-8)
+9)
 sudo iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 sudo iptables -A INPUT -p tcp --dport 8000 -j ACCEPT
 sudo iptables-save > /etc/iptables/rules.v4
@@ -193,11 +205,11 @@ sudo iptables-save > /etc/iptables/rules.v4
 read -p "Press [Enter] key to continue..."
 ;;
 
-9)
+10)
 python tools/invest/import_sample_data_wy.py 
 ;;
 
-10)
+11)
 #quit installer
 git pull
 break

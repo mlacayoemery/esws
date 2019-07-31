@@ -19,7 +19,7 @@ OPTIONS=(0 "Clone ESWS repository"
          8 "Install systemd services"
          9 "Configure firewall"
          10 "Install InVEST Data"
-         111 "Quit setup")
+         Q "Quit setup")
 
 while true; do 
 CHOICE=$(dialog --clear \
@@ -209,7 +209,7 @@ read -p "Press [Enter] key to continue..."
 python tools/invest/import_sample_data_wy.py 
 ;;
 
-11)
+Q)
 #quit installer
 git pull
 break

@@ -20,3 +20,4 @@ liblapack-dev
 libatlas-base-dev
 gfortran
 python-pygraphviz
+python3-venv

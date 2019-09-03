@@ -72,8 +72,8 @@ if __name__ == "__main__":
   transform(wy_aoi_buffer, wy_aoi_buffer_4326, 4326)
 
   #preprocess rasters
-  cut_warp(depth_4326, depth_aoi, aoi, wkt)
-  cut_warp(eto_4326, eto_aoi, aoi, wkt)
-  cut_warp(lulc_4326, lulc_aoi, aoi, wkt)
-  cut_warp(pawc_4326, pawc_aoi, aoi, wkt)
-  cut_warp(precip_4326, precip_aoi, aoi, wkt)
+  cut_warp(depth_4326, depth_aoi, wy_aoi_buffer_4326, wkt)
+  cut_warp(eto_4326, eto_aoi, wy_aoi_buffer_4326, wkt)
+  cut_warp(lulc_4326, lulc_aoi, wy_aoi_buffer_4326, wkt)
+  cut_warp(pawc_4326, pawc_aoi, wy_aoi_buffer_4326, wkt)
+  cut_warp(precip_4326, precip_aoi, wy_aoi_buffer_4326, wkt)

@@ -3,20 +3,12 @@ import os
 import argparse
 import ogr2ogr
 import osgeo.ogr
+import osgeo.gdal
 
-
-def main(args):
-  print("Dissolving AOI")
-  name, ext = os.path.splitext(os.path.basename(args.aoi))  
-  ws = os.path.dirname(args.aoi)
-  aoi_dissolve = os.path.join(ws,"aoi_union.shp")
-  ogr2ogr_args = ["", aoi_dissolve, args.aoi, "-dialect", "sqlite", "-sql", "\"SELECT ST_Union(geometry) FROM " + name + "\""]
-
-  #ogr2ogr.main(["","--version"])
-
-  print("%s %s" % ("ogr2ogr", osgeo.ogr.GeneralCmdLineProcessor(ogr2ogr_args)))
-  ogr2ogr.main(ogr2ogr_args)
-
+def dissolve(in_path, out_path):
+  name, ext = os.path.splitext(os.path.basename(in_path))
+  srcDS = osgeo.gdal.OpenEx(in_path)
+  ds = osgeo.gdal.VectorTranslate(out_path, srcDS, SQLStatement="SELECT ST_Union(geometry) FROM " + name , SQLDialect='sqlite')
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser(description='Preprocessor for InVEST WY using global layers and a projected AOI')
@@ -25,8 +17,10 @@ if __name__ == "__main__":
 
   try:
     args = parser.parse_args()
+    aoi = args.aoi
   except SystemExit:
-    #print(sys.exc_info()[0])
-    args = argparse.Namespace(aoi="/home/mlacayo/workspace/data_esws/data/Base_Data/Freshwater/watersheds.shp")
+    aoi = "/home/mlacayo/workspace/data_esws/data/Base_Data/Freshwater/watersheds.shp"
 
-  main(args)
+  wy_aoi = os.path.join(os.path.dirname(aoi),"wy_aoi.shp")
+  assert wy_aoi != aoi
+  dissolve(aoi, wy_aoi)

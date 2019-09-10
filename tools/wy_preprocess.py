@@ -24,6 +24,9 @@ def select_touches(in_path, filter_path, out_path):
   pass
   
 def cut_warp(in_raster_path, out_raster_path, vector_path, wkt):
+##  gdal_template = "gdalwarp -t_srs %s -cutline %s -of GTiff -co \"COMPRESS=DEFLATE\" -crop_to_cutline %s %s"
+##  print(gdal_template % (wkt,vector_path,in_raster_path,out_raster_path))
+
   ds = osgeo.gdal.Warp(out_raster_path,
                        in_raster_path,
                        format='GTiff',
@@ -38,12 +41,13 @@ def raster_add(rasters=[]):
   #gdal_translate wc2.0_30s_prec_00.tif wc2.0_30s_prec.tif -co "COMPRESS=DEFLATE"
   osgeo.gdal.gdal_calc.doit()
 
-depth_4326 = "/home/mlacayo/workspace/data_esws/"
-eto_4326 = "/home/mlacayo/workspace/data_esws/et0_yr.tif"
-lulc_4326 = "/home/mlacayo/workspace/data_esws/GLOBCOVER_L4_200901_200912_V2.3.tif"
-pawc_4326 = "/home/mlacayo/workspace/data_esws/"
-precip_4326 = "/home/mlacayo/workspace/data_esws/demo/wc2.0_30s_prec.tif"
-soil_4326 = "/home/mlacayo/workspace/data_esws/hwsd.bil"
+global_path = "/home/mlacayo/workspace/data_esws/demo"
+depth_4326 = ""
+eto_4326 = os.path.join(global_path, "et0_yr_fix.tif")
+lulc_4326 = os.path.join(global_path, "GLOBCOVER_L4_200901_200912_V2.3.tif")
+pawc_4326 = ""
+precip_4326 = os.path.join(global_path, "wc2.0_30s_prec.tif")
+soil_4326 = os.path.join(global_path, "hwsd.bil")
  
 if __name__ == "__main__":
   parser = argparse.ArgumentParser(description='Preprocessor for InVEST WY using global layers and a projected AOI')
@@ -77,20 +81,27 @@ if __name__ == "__main__":
                      wy_aoi_buffer_4326]
 
   #preprocess AOI
-  print ("Dissolving AOI")
+  print("Dissolving AOI")
   dissolve(aoi, wy_aoi)
-  print ("Buffering AOI")
+  print("Buffering AOI")
   buffer(wy_aoi, wy_aoi_buffer, 5000)
-  print ("Creating AOI for clipping")
+  print("Creating AOI for clipping")
   transform(wy_aoi_buffer, wy_aoi_buffer_4326, 4326)
 
   #preprocess rasters
-  print ("Clipping rasters")
+  print("Clipping rasters")
+
+  #print ("Clipping soil depth")
   #cut_warp(depth_4326, depth_aoi, wy_aoi_buffer_4326, wkt)
-  print ("Clipping et0")
+
+  print("Clipping et0")
   cut_warp(eto_4326, eto_aoi, wy_aoi_buffer_4326, wkt)
-  print ("Clipping lulc")
+
+  print("Clipping lulc")
   cut_warp(lulc_4326, lulc_aoi, wy_aoi_buffer_4326, wkt)
+
+  #print("Clipping pawc")
   #cut_warp(pawc_4326, pawc_aoi, wy_aoi_buffer_4326, wkt)
-  print ("Clipping pawc")
+
+  print ("Clipping precip")
   cut_warp(precip_4326, precip_aoi, wy_aoi_buffer_4326, wkt)

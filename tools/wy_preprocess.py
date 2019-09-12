@@ -42,10 +42,10 @@ def raster_add(rasters=[]):
   osgeo.gdal.gdal_calc.doit()
 
 global_path = "/home/mlacayo/workspace/data_esws/demo"
-depth_4326 = ""
+depth_4326 = os.path.join(global_path, "roots.tif")
 eto_4326 = os.path.join(global_path, "et0_yr_fix.tif")
 lulc_4326 = os.path.join(global_path, "GLOBCOVER_L4_200901_200912_V2.3.tif")
-pawc_4326 = ""
+pawc_4326 = os.path.join(global_path, "pawc.tif")
 precip_4326 = os.path.join(global_path, "wc2.0_30s_prec.tif")
 soil_4326 = os.path.join(global_path, "hwsd.bil")
  
@@ -91,8 +91,8 @@ if __name__ == "__main__":
   #preprocess rasters
   print("Clipping rasters")
 
-  #print ("Clipping soil depth")
-  #cut_warp(depth_4326, depth_aoi, wy_aoi_buffer_4326, wkt)
+  print ("Clipping soil depth")
+  cut_warp(depth_4326, depth_aoi, wy_aoi_buffer_4326, wkt)
 
   print("Clipping et0")
   cut_warp(eto_4326, eto_aoi, wy_aoi_buffer_4326, wkt)
@@ -100,8 +100,8 @@ if __name__ == "__main__":
   print("Clipping lulc")
   cut_warp(lulc_4326, lulc_aoi, wy_aoi_buffer_4326, wkt)
 
-  #print("Clipping pawc")
-  #cut_warp(pawc_4326, pawc_aoi, wy_aoi_buffer_4326, wkt)
+  print("Clipping pawc")
+  cut_warp(pawc_4326, pawc_aoi, wy_aoi_buffer_4326, wkt)
 
   print ("Clipping precip")
   cut_warp(precip_4326, precip_aoi, wy_aoi_buffer_4326, wkt)

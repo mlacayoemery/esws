@@ -68,19 +68,30 @@ if __name__ == "__main__":
   parser = argparse.ArgumentParser(description='Preprocessor for InVEST WY using global layers and a projected AOI')
   parser.add_argument('aoi',
                       help='AOI shapefile with a linear unit projection')
+##  parser.add_argument('-srs',
+##                      help='Target with a linear unit projection')
 
 
   try:
     args = parser.parse_args()
     aoi = args.aoi
+
+##    if args.srs is not None:
+##      wkt = args.srs
+##    else:
+##      ds = osgeo.gdal.OpenEx(aoi, osgeo.gdal.OF_VECTOR)
+##      wkt = ds.GetLayer().GetSpatialRef().ExportToWkt()
+##      ds = None
+      
     
   except SystemExit:
     aoi = "/home/mlacayo/workspace/data_esws/demo/swissBOUNDARIES3D_1_3_TLM_LANDESGEBIET.shp"
-    
+##    wkt = "EPSG:2056"
+
   ds = osgeo.gdal.OpenEx(aoi, osgeo.gdal.OF_VECTOR)
   wkt = ds.GetLayer().GetSpatialRef().ExportToWkt()
   ds = None
-
+    
   wy_aoi = os.path.join(os.path.dirname(aoi),"wy_aoi.shp")
   wy_aoi_buffer = os.path.join(os.path.dirname(aoi),"wy_buffer.shp")
   wy_aoi_buffer_4326 = os.path.join(os.path.dirname(aoi),"wy_aoi_buffer_4326.shp")

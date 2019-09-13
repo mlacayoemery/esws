@@ -33,7 +33,8 @@ def cut_warp(in_raster_path, out_raster_path, vector_path, wkt):
                        dstSRS=wkt,
                        cutlineDSName=vector_path,
                        cropToCutline=True,
-                       creationOptions=["COMPRESS=DEFLATE"])
+                       creationOptions=["COMPRESS=DEFLATE"],
+                       multithread=True)
   #ds = osgeo.gdal.Warp(out_raster_path, in_raster_path, format='GTiff')
 
 def raster_add(rasters=[]):

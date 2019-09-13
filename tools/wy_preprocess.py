@@ -23,9 +23,22 @@ def select_touches(in_path, filter_path, out_path):
   #osgeo.gdal.VectorTranslate(layers = [])
   pass
   
-def cut_warp(in_raster_path, out_raster_path, vector_path, wkt):
+def cut_warp(in_raster_path, out_raster_path, vector_path, wkt, resampleAlg="near"):
 ##  gdal_template = "gdalwarp -t_srs %s -cutline %s -of GTiff -co \"COMPRESS=DEFLATE\" -crop_to_cutline %s %s"
 ##  print(gdal_template % (wkt,vector_path,in_raster_path,out_raster_path))
+
+  assert resampleAlg in ["near",
+                         "bilinear",
+                         "cubic",
+                         "cubicspline",
+                         "lanczos",
+                         "average",
+                         "mode",
+                         "max",
+                         "min",
+                         "med",
+                         "q1",
+                         "q3"]
 
   ds = osgeo.gdal.Warp(out_raster_path,
                        in_raster_path,
@@ -34,7 +47,8 @@ def cut_warp(in_raster_path, out_raster_path, vector_path, wkt):
                        cutlineDSName=vector_path,
                        cropToCutline=True,
                        creationOptions=["COMPRESS=DEFLATE"],
-                       multithread=True)
+                       multithread=True,
+                       resampleAlg=resampleAlg)
   #ds = osgeo.gdal.Warp(out_raster_path, in_raster_path, format='GTiff')
 
 def raster_add(rasters=[]):

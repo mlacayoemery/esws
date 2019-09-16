@@ -16,7 +16,7 @@ coverage_stores = [("ch_depth", os.path.join(data_path, "wy_depth_aoi.tif")),
 
 
 
-workspace_name = "cas"
+workspace_name = "swatch21"
 workspace_url = "http://www.unige.ch"
 
 cat = geoserver.catalog.Catalog(rest_url, username=username, password=password)

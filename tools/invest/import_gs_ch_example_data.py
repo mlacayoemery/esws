@@ -23,7 +23,7 @@ cat = geoserver.catalog.Catalog(rest_url, username=username, password=password)
 
 print("Removing workspace(s)")
 for ws in cat.get_workspaces():
-    if ws.name[:3] == "cas":
+    if ws.name[:3] == "swatch21":
         print("\t%s" % ws.name)
         cat.delete(ws, recurse=True)
 

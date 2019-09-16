@@ -1,7 +1,7 @@
 import geoserver.catalog
 import os.path
 
-rest_url = "http://localhost:8080/gs213/rest"
+rest_url = "http://localhost:8080/gs215/rest"
 username = "admin"
 password = "geoserver"
 

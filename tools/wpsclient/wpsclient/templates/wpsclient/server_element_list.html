@@ -10,7 +10,7 @@
 <tr><td>Jobs</td><td> {{ server.jobs }}</td></tr>
 </table>
 
-<h3>Registered Elements</h3>
+<h3>Bookmarked Elements</h3>
 {% if registered_element_list|length > 0 %}
 <table border=1 frame=void rules=all>
 <tr>
@@ -19,7 +19,7 @@
 </tr>
 {% for element in registered_element_list %}
 <tr>
-<td><a href="{% url 'server_element_unregister' server_type=server.server_type server_pk=server.pk element_id=element %}">Unregister</a></td>
+<td><a href="{% url 'server_element_unregister' server_type=server.server_type server_pk=server.pk element_id=element %}">Unbookmark</a></td>
 <td><a href="{% url 'server_element_detail' server_type=server.server_type server_pk=server.pk element_id=element %}">{{element}}</td>
 </tr>
 {% endfor %}
@@ -28,7 +28,7 @@
 <p>Total: {{ registered_element_list|length }}
 
 <p>
-<h3>Unregistered Elements<h3>
+<h3>Unbookmarked Elements<h3>
 {% if unregistered_element_list|length > 0 %}
 <table border=1 frame=void rules=all>
 <tr>
@@ -37,7 +37,7 @@
 </tr>
 {% for element in unregistered_element_list %}
 <tr>
-<td><a href="{% url 'server_element_register' server_type=server.server_type server_pk=server.pk element_id=element %}">Register</a></td>
+<td><a href="{% url 'server_element_register' server_type=server.server_type server_pk=server.pk element_id=element %}">Bookmark</a></td>
 <td><a href="{% url 'server_element_detail' server_type=server.server_type server_pk=server.pk element_id=element %}">{{element}}</td>
 </tr>
 {% endfor %}

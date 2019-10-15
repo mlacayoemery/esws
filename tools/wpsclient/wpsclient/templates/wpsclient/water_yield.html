@@ -1,5 +1,7 @@
 {% extends 'wpsclient/base.html' %}
 
+<h2>InVEST Water Yield</h2>
+
 {% block content %}
     <form method="POST" class="post-form">{% csrf_token %}
         {{ form.as_p }}

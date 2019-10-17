@@ -6,3 +6,4 @@ DOCTREES	= -d ./doctrees
 
 html:
 	$(SPHINXBUILD) -b html $(DOCTREES) $(SOURCEDIR) $(OUTPUTDIR)
+	cp ./CNAME $(OUTPUTDIR)

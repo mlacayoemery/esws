@@ -1,7 +1,7 @@
 .. _index:
 
-Ecosystem Service Web Services (ESWS)
-=====================================
+Ecosystem Service Web Services
+==============================
 
 Ecosystem Service Web Services (ESWS) are a method for creating
 interoperable analysis workflows with the Open Geospatial Consortium

@@ -1,6 +1,6 @@
 SPHINXBUILD 	= sphinx-build -W
 SOURCEDIR 	= .
-OUTPUTDIR	= ./_build
+OUTPUTDIR	= ../docs
 
 DOCTREES	= -d ./doctrees
 

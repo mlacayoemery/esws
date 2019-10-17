@@ -26,8 +26,8 @@ ESWS are:
 
 Resources:
 ----------
-`VirtualBox 6.0 virtual machine (OVA) <https://drive.google.com/file/d/1YtR5WWwU8OS5ozW-WGaL_6NcDnmMGdFq/view?usp=sharing>`_
-`GitHub Repository <https://github.com/mlacayoemery/esws>`_
+* `VirtualBox 6.0 virtual machine (OVA) <https://drive.google.com/file/d/1YtR5WWwU8OS5ozW-WGaL_6NcDnmMGdFq/view?usp=sharing>`_
+* `GitHub Repository <https://github.com/mlacayoemery/esws>`_
 
 
 Contents:

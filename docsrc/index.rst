@@ -1,7 +1,7 @@
 .. _index:
 
-Welcome to the ESWS |release| documentation!
-=============================================
+Ecosystem Service Web Services (ESWS)
+=====================================
 
 Ecosystem Service Web Services (ESWS) are a method for creating
 interoperable analysis workflows with the Open Geospatial Consortium
@@ -23,6 +23,12 @@ ESWS are:
 * modular
 * redistributable
 * open
+
+Resources:
+----------
+`VirtualBox 6.0 virtual machine (OVA) <https://drive.google.com/file/d/1YtR5WWwU8OS5ozW-WGaL_6NcDnmMGdFq/view?usp=sharing>`_
+`GitHub Repository <https://github.com/mlacayoemery/esws>`_
+
 
 Contents:
 ---------

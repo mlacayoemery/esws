@@ -34,7 +34,7 @@ Contents:
 ---------
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 4
 
    install
    configuration
@@ -43,6 +43,7 @@ Contents:
    vectors
    processes
    extensions
+   tut
 
 ==================
 Indices and tables

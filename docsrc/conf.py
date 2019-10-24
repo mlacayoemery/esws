@@ -1,3 +1,5 @@
+project = 'ESWS'
+
 extensions = []
 #    'sphinx.ext.extlinks',
 #    'sphinx.ext.autodoc',
@@ -14,7 +16,7 @@ master_doc = 'index'
 
 pygments_style = 'sphinx'
 
-html_static_path = ['_static']
+#html_static_path = ['_static']
 
 htmlhelp_basename = 'ESWSdoc'
  

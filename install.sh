@@ -101,15 +101,18 @@ read -p "Press [Enter] key to continue..."
 
 4)
 #install Python requirements
-sudo pip3 install --upgrade pip
+#sudo pip3 install --upgrade pip
 
-sudo pip3 install --upgrade Cython
-sudo pip3 install --upgrade numpy>=1.11.0
-sudo pip3 install --upgrade flask
-sudo pip3 install --upgrade pywps
-sudo pip3 install --upgrade -e git+https://github.com/boundlessgeo/gsconfig.git@d05a4dc152aa3fb97171f418d7dc09f5f45445a5#egg=gsconfig-py
+#sudo pip3 install --upgrade Cython
+#sudo pip3 install --upgrade numpy>=1.11.0
+#sudo pip3 install --upgrade flask
+#sudo pip3 install --upgrade pywps
+#sudo pip3 install --upgrade -e git+https://github.com/boundlessgeo/gsconfig.git@d05a4dc152aa3fb97171f418d7dc09f5f45445a5#egg=gsconfig-py
 #sudo pip3 install --upgrade -r requirements_py2.txt
-sudo pip3 install --upgrade -r requirements_py3.txt
+#sudo pip3 install --upgrade -r requirements_py3.txt
+
+sudo xargs pip3 install --upgrade < requirements_py3.txt
+
 read -p "Press [Enter] key to continue..."
 ;;
 

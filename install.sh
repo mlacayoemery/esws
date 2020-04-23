@@ -90,8 +90,8 @@ if [ -f "proj-datumgrid-1.8.zip" ]; then
 else
     wget http://download.osgeo.org/proj/proj-datumgrid-1.8.zip
 fi
-unzip proj-datumgrid-1.8.zip -d proj-5.2.0/nad
-cd proj-5.2.0
+unzip proj-datumgrid-1.8.zip -d proj-7.0.0/nad
+cd proj-7.0.0
 ./configure
 make
 sudo make install

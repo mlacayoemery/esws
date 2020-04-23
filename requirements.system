@@ -1,7 +1,5 @@
 git
 mercurial
-python
-python-pip
 python3
 python3-pip
 build-essential
@@ -13,11 +11,11 @@ make
 g++
 unzip
 libspatialindex-dev
-python-dev
+python3-dev
 libgeos-dev
 libblas-dev
 liblapack-dev
 libatlas-base-dev
 gfortran
-python-pygraphviz
+python3-pygraphviz
 python3-venv

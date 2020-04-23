@@ -51,10 +51,9 @@ read -p "Press [Enter] key to continue..."
 ;;
 
 2)
-sudo pip2 install numpy
 sudo pip3 install numpy
 sudo apt-get install sqlite3 libsqlite3-dev
-#install GDAL with Python 2 and 3 bindings
+#install GDAL with Python 3 bindings
 cd ..
 if [[ $LD_LIBRARY_PATH == *"/usr/local/lib"* ]]; then
     echo "LD_LIBRARY_PATH already set"
@@ -62,17 +61,16 @@ else
     export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
     sudo ldconfig
 fi
-if [ -f "gdal-2.3.1.tar.gz" ]; then
+if [ -f "gdal-2.4.4.tar.gz" ]; then
     echo "GDAL already downloaded"
 else
-    wget http://download.osgeo.org/gdal/2.3.1/gdal-2.3.1.tar.gz
+    wget http://download.osgeo.org/gdal/2.4.4/gdal-2.4.4.tar.gz
 fi
-tar -xvf gdal-2.3.1.tar.gz
-cd gdal-2.3.1
+tar -xvf gdal-2.4.4.tar.gz
+cd gdal-2.4.4
 ./configure --with-python --with-sqlite3
 make
 sudo make install
-sudo pip2 install swig/python
 sudo pip3 install swig/python
 cd ../esws
 read -p "Press [Enter] key to continue..."
@@ -81,12 +79,12 @@ read -p "Press [Enter] key to continue..."
 3)
 #install PROJ.4 for shapely
 cd ..
-if [ -f "proj-5.2.0.tar.gz" ]; then
+if [ -f "proj-7.0.0.tar.gz" ]; then
     echo "PROJ.4 already downloaded"
 else
-    wget http://download.osgeo.org/proj/proj-5.2.0.tar.gz
+    wget http://download.osgeo.org/proj/proj-7.0.0.tar.gz
 fi
-tar -xvf proj-5.2.0.tar.gz
+tar -xvf proj-7.0.0.tar.gz
 if [ -f "proj-datumgrid-1.8.zip" ]; then
     echo "PROJ.4 datum grid already downloaded"
 else

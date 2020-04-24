@@ -187,6 +187,16 @@ sudo systemctl start esws-file-server
 sudo systemctl enable esws-file-server
 alias http="sudo systemctl status esws-file-server"
 
+sudo systemctl stop esws-tjs
+sudo systemctl disable esws-tjs
+sudo cp esws-tjs.service /etc/systemd/system
+sudo chmod 644 /etc/systemd/system/esws-tjs.service
+sudo systemctl reload esws-tjs
+sudo systemctl start esws-tjs
+sudo systemctl enable esws-tjs
+alias tjs="sudo systemctl status esws-tjs"
+
+
 #sudo systemctl stop esws-data-gala
 #sudo systemctl disable esws-data-gala
 #sudo cp esws-data-gala.service /etc/systemd/system

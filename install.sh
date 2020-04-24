@@ -147,14 +147,14 @@ else
     wget http://sourceforge.net/projects/geoserver/files/GeoServer/2.17.0/extensions/geoserver-2.17.0-wps-plugin.zip
 fi
 unzip -p geoserver-2.17.0-war.zip geoserver.war > gs217.war
-sudo service tomcat stop
-sudo mv gs217.war /var/lib/tomcat8/webapps
-sudo service tomcat start
+sudo service tomcat9 stop
+sudo mv gs217.war /var/lib/tomcat9/webapps
+sudo service tomcat9 start
 echo "Waiting 10 seconds for Tomcat setup"
 sleep 10
-sudo service tomcat stop
-sudo -u tomcat unzip geoserver-2.17.0-wps-plugin.zip -d /var/lib/tomcat8/webapps/gs217/WEB-INF/lib
-sudo service tomcat start
+sudo service tomcat9 stop
+sudo -u tomcat unzip geoserver-2.17.0-wps-plugin.zip -d /var/lib/tomcat9/webapps/gs217/WEB-INF/lib
+sudo service tomcat9 start
 cd esws
 read -p "Press [Enter] key to continue..."
 ;;

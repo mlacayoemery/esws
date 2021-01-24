@@ -1,17 +1,17 @@
 
 <!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
   <head>
     <meta charset="utf-8" />
-    <title>Ecosystem Service Web Services &#8212; ESWS  documentation</title>
-    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ecosystem Service Web Service &#8212; ESWS  documentation</title>
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-    <script type="text/javascript" src="_static/jquery.js"></script>
-    <script type="text/javascript" src="_static/underscore.js"></script>
-    <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Installation" href="install.html" />
@@ -31,9 +31,9 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="ecosystem-service-web-services">
-<span id="index"></span><h1>Ecosystem Service Web Services<a class="headerlink" href="#ecosystem-service-web-services" title="Permalink to this headline">¶</a></h1>
-<p>Ecosystem Service Web Services (ESWS) are a method for creating
+  <div class="section" id="ecosystem-service-web-service">
+<span id="index"></span><h1>Ecosystem Service Web Service<a class="headerlink" href="#ecosystem-service-web-service" title="Permalink to this headline">¶</a></h1>
+<p>Ecosystem Service Web Service (ESWS) is a method for creating
 interoperable analysis workflows with the Open Geospatial Consortium
 (OGC)
 <a class="reference external" href="https://www.opengeospatial.org/standards/common">Web Services (OWS) standards</a>
@@ -42,7 +42,7 @@ interoperable analysis workflows with the Open Geospatial Consortium
 <a class="reference external" href="https://www.opengeospatial.org/standards/wcs">Web Coverage Service (WCS)</a>,
 <a class="reference external" href="https://www.opengeospatial.org/standards/wfs">Web Feature Service (WFS)</a>, and
 <a class="reference external" href="https://www.opengeospatial.org/standards/wps">Web Processing Service (WPS)</a>.</p>
-<p>ESWS are:</p>
+<p>ESWS workflows are:</p>
 <ul class="simple">
 <li><p>modular</p></li>
 <li><p>redistributable</p></li>
@@ -59,12 +59,40 @@ interoperable analysis workflows with the Open Geospatial Consortium
 <h2>Contents:<a class="headerlink" href="#contents" title="Permalink to this headline">¶</a></h2>
 <div class="toctree-wrapper compound">
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="install.html#virtualbox">VirtualBox</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="install.html#host-network-manager">Host Network Manager</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="install.html#gui">GUI</a></li>
+<li class="toctree-l4"><a class="reference internal" href="install.html#linux-commandline">Linux Commandline</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="install.html#import-appliance">Import Appliance</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="install.html#id2">GUI</a></li>
+<li class="toctree-l4"><a class="reference internal" href="install.html#id3">Linux Commandline</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="run.html">Running</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="run.html#dashboard">Dashboard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="run.html#geoserver">GeoServer</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration &amp; Maintenance</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="configuration.html#login">Login</a></li>
+<li class="toctree-l2"><a class="reference internal" href="configuration.html#update-the-guest-os">Update the Guest OS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="configuration.html#update-esws">Update ESWS</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="tables.html">Tabular Data</a></li>
 <li class="toctree-l1"><a class="reference internal" href="rasters.html">Raster Data</a></li>
 <li class="toctree-l1"><a class="reference internal" href="vectors.html">Vector Data</a></li>
-<li class="toctree-l1"><a class="reference internal" href="processes.html">Processes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="processes.html">Processes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="processes.html#invest-average-annual-water-yield">InVEST Average Annual Water Yield</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="extensions.html">Third-Party Extensions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tut.html">Tutorials</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="tut_data.html">InVEST Water Yield Data</a><ul>
@@ -116,7 +144,8 @@ interoperable analysis workflows with the Open Geospatial Consortium
 <h3>Navigation</h3>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="run.html">Running</a></li>
+<li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration &amp; Maintenance</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tables.html">Tabular Data</a></li>
 <li class="toctree-l1"><a class="reference internal" href="rasters.html">Raster Data</a></li>
 <li class="toctree-l1"><a class="reference internal" href="vectors.html">Vector Data</a></li>
@@ -142,7 +171,7 @@ interoperable analysis workflows with the Open Geospatial Consortium
     </form>
     </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>$('#searchbox').show(0);</script>
 
 
 
@@ -159,7 +188,7 @@ interoperable analysis workflows with the Open Geospatial Consortium
       &copy;.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.4.3</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

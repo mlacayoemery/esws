@@ -39,4 +39,6 @@ def wps():
     return service
 
 bind_host='0.0.0.0'
-app.run(threaded=True,host=bind_host)
+config_file=process_path = os.path.join(os.path.dirname(__file__), "pywps.cfg")
+
+app.run(threaded=True,host=bind_host, config_file=config_file)

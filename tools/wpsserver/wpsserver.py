@@ -32,13 +32,12 @@ for file_name in os.listdir(process_path):
         
         wps_processes.append(c())
 
-service = pywps.Service(wps_processes)
+config_file=process_path = os.path.join(os.path.dirname(__file__), "pywps.cfg")
+service = pywps.Service(wps_processes, config_file)
 
 @app.route('/wps', methods=['GET', 'POST'])
 def wps():
     return service
 
 bind_host='0.0.0.0'
-config_file=process_path = os.path.join(os.path.dirname(__file__), "pywps.cfg")
-
-app.run(threaded=True,host=bind_host, config_file=config_file)
+app.run(threaded=True,host=bind_host)

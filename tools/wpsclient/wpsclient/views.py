@@ -770,7 +770,16 @@ def job_run(request, job_pk):
         xml = parseString(response.read()).toprettyxml()
         xml = '\n'.join([line for line in xml.split('\n') if line.strip()])
 
-        return render(request, "wpsclient/job_run.html", {"xml" : xml})
+        job.status = "Complete"
+        job.status_url = job_to_wps_url(job)
+        job.save()
+
+        return render(request, "wpsclient/job_run.html", {'job': job,
+                                                          "xml" : xml})
+
+    else:
+        job_detail(request, job_pk)
+        
 
 
     

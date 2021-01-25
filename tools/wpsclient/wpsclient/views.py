@@ -778,7 +778,7 @@ def job_run(request, job_pk):
                                                           "xml" : xml})
 
     else:
-        job_detail(request, job_pk)
+        return job_detail(request, job_pk)
         
 
 

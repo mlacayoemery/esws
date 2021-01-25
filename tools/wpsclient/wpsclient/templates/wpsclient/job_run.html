@@ -1,6 +1,20 @@
 {% extends 'wpsclient/base.html' %}
 
 {% block content %}
+        <p><b>Server: </b><a href="{% url 'server_element_list' server_type='WPS' server_pk=job.server.pk %}">{{ job.server.title }}</a></p>
+        <p><b>Process: </b><a href="{% url 'server_element_detail' server_type='WPS' server_pk=job.server.pk element_id=job.identifier %}">{{ job.identifier }}</a></p>        
+        <p><b>Job Id: </b>{{job.pk}}<p/>
+        <p><b><a href="{% url 'job_edit' job_pk=job.pk %}">Edit Job</a></b></p>
+        <table border=1 frame=void rules=all>
+        <tr><td><b>key</b></td><td><b>value</b></td></tr>
+        {% for k, v in job.args.items  %}
+        <tr><td>{{k}}</td><td>{{v}}</td></tr>
+        {% endfor %}
+        </table>
+        <p><b>Job Queue: </b></p>
+        <p><a href="{% url 'server_job_list' server_pk=job.server.pk%}">Server</a></p>
+        <p><a href="{% url 'job_list' %}">All</a></p>
+
             <p><b>XML</b></p>
         <p><pre>{{ xml}}</pre></p>
 {% endblock %}

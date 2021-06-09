@@ -18,7 +18,7 @@ xlwt
 natcap.invest==3.8.0
 virtualenv
 -e git+https://github.com/mlacayoemery/django-SplitJSONWidget-form.git@77c458d3fd17a97d8bb4753baaed71b3a6f1028c#egg=django-split-json-widget
-django==2.2.13
+django==2.2.22
 django-extensions
 jsonfield
 bs4

@@ -1,4 +1,4 @@
-django==2.2.13
+django==3.2.24
 jsonfield
 -e git+https://github.com/mlacayoemery/django-SplitJSONWidget-form.git#egg=django-split-json-widget
 owslib

@@ -1,0 +1,13 @@
+.git
+.gitignore
+docs
+docsrc
+**/__pycache__
+**/*.pyc
+*.exe
+tools/swat/swat.exe
+tools/nodered/node_modules
+**/db.sqlite3
+demo.pid
+*.log
+.env

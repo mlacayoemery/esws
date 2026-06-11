@@ -1,7 +1,7 @@
 {% extends 'wpsclient/base.html' %}
 
 {% block content %}
-<h2>{{ servers.0.server_type }} Servers</h2>
+<h2>{{ server_type }} Servers</h2>
 <table border=1 frame=void rules=all>
 <tr>
 <td>Id</td>
@@ -22,7 +22,7 @@
 </tr>
 {% endfor %}
 </table>
-<a href="{% url 'server_new' server_type=servers.0.server_type %}">Add Source</a>
+<a href="{% url 'server_new' server_type=server_type %}">Add Source</a>
 <a href="{% url 'job_list'%}">Combined Instances</a>
 
 {% endblock %}

@@ -1,0 +1,4 @@
+# Test / development tooling for the smoke-test framework.
+pytest
+requests
+owslib

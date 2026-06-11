@@ -39,7 +39,6 @@ import html
 
 import owslib.wps
 
-from django.shortcuts import render_to_response
 from django.template import RequestContext
 from .forms import testForm
 
@@ -92,9 +91,10 @@ def server_list(request, server_type):
         "WPS" : ServerWPS
         }
 
-    ServerClass = server_dict[server_type]    
+    ServerClass = server_dict[server_type]
     servers = ServerClass.objects.order_by('title')
-    return render(request, 'wpsclient/server_list.html', {'servers' : servers})
+    return render(request, 'wpsclient/server_list.html',
+                  {'servers' : servers, 'server_type' : server_type})
 
 def server_detail(request, server_pk, server_type):
     server_dict = {

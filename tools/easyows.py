@@ -43,6 +43,17 @@ class Catalog:
 
         self.ows_cache = {}
 
+    @classmethod
+    def from_env(cls, logger=logging.getLogger('easyows')):
+        "Builds a Catalog from GEOSERVER_* environment variables (container config)"
+        return cls(
+            gs_url=os.environ.get("GEOSERVER_URL", "http://localhost:8080/geoserver"),
+            username=os.environ.get("GEOSERVER_USER", "admin"),
+            password=os.environ.get("GEOSERVER_PASS", "geoserver"),
+            ws_prefix=os.environ.get("WPS_WORKSPACE_PREFIX", "esws-"),
+            logger=logger,
+        )
+
     def get_cat(self, rest_url):
         "Creates connection to catalog"
         self.logger.debug("Connecting to catalog %s" % rest_url)
@@ -126,10 +137,33 @@ class Catalog:
 
         tiffdata = { 'tiff' : tif_path }
 
+        # upload_data=True uploads the GeoTIFF to GeoServer over REST, so the
+        # (separate) GeoServer container does not need filesystem access to the
+        # WPS workspace.
         return self.gs_cat.create_coveragestore(name = tif_name,
-                                                path = "file://" + tif_path,
+                                                path = tif_path,
                                                 workspace = self.gs_cat.get_workspace(gs_workspace),
-                                                layer_name = tif_name) 
+                                                layer_name = tif_name,
+                                                upload_data = True)
+
+    def publish_gpkg(self,
+                     gpkg_path,
+                     gpkg_name = None,
+                     gs_workspace = None):
+        "Publishes a GeoPackage by translating it to a Shapefile with GDAL first"
+
+        from osgeo import gdal
+
+        if gpkg_name is None:
+            gpkg_name = os.path.splitext(os.path.basename(gpkg_path))[0]
+
+        tmp_dir = tempfile.mkdtemp(prefix="esws-gpkg-")
+        shp_path = os.path.join(tmp_dir, gpkg_name + ".shp")
+
+        self.logger.debug("Translating %s to %s" % (gpkg_path, shp_path))
+        gdal.VectorTranslate(shp_path, gpkg_path, format="ESRI Shapefile")
+
+        return self.publish_shp(shp_path, gpkg_name, gs_workspace)
 
     def layer_url(self,layer_name):
         template = self.gs_url + "/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=%s&outputFormat=SHAPE-ZIP"
@@ -190,9 +224,9 @@ class Job:
     def are_local_parameters(self):
         "Boolean of whether all the arguments to the process are local"
 
-        for key, value in self.args.iteritems():
-            if type(value) in [str, unicode]:
-                self.logger.debug("Checking locality of %s" % value)                
+        for key, value in self.args.items():
+            if isinstance(value, str):
+                self.logger.debug("Checking locality of %s" % value)
 
                 if value[:4].lower() == "http":
                     return False
@@ -212,9 +246,9 @@ class Job:
 
         failure = False
         failure_list = []
-        for key, value in self.args.iteritems():
+        for key, value in self.args.items():
             try:
-                if type(value) in [str, unicode]:
+                if isinstance(value, str):
                     if value[:4].lower() == "http":
                         self.logger.debug("Found remote parameter %s" % value)
                         if value[4] == "%":
@@ -238,7 +272,7 @@ class Job:
                                 
                                 try:
                                     _, tmp_path = tempfile.mkstemp(suffix=".zip", prefix=prefix)
-                                    urllib.URLopener().retrieve(value, tmp_path)
+                                    urlretrieve(value, tmp_path)
 
                                     tmp_dir = tempfile.mkdtemp(prefix=prefix)
                                     zipfile.ZipFile(tmp_path, 'r').extractall(tmp_dir)
@@ -269,7 +303,7 @@ class Job:
                                     raise MissingResource("Missing resource")
                                 
                                 _, tmp_path = tempfile.mkstemp(suffix=".tif", prefix=prefix)
-                                urllib.URLopener().retrieve(value, tmp_path)
+                                urlretrieve(value, tmp_path)
                                 self.args[key] = tmp_path
                                 self.logger.debug("Assigned %s %s" % (key, self.args[key]))
                                 ows_cache[value] = self.args[key]
@@ -285,7 +319,7 @@ class Job:
 
                             else:                               
                                 _, tmp_path = tempfile.mkstemp(suffix=".csv", prefix=prefix)
-                                urllib.URLopener().retrieve(value, tmp_path)
+                                urlretrieve(value, tmp_path)
                                 self.args[key] = tmp_path
                                 self.logger.debug("Assigned %s %s" % (key, self.args[key]))
                                 ows_cache[value] = self.args[key]                            
@@ -307,9 +341,12 @@ class Job:
 
         if self.are_local_parameters():
             self.logger.debug("Local parameters detected")
-            apply(self.process, [self.args])
-            
-            for layer_name, layer_path in self.uploads.iteritems():
+            self.process(self.args)
+
+            for layer_name, layer_path in self.uploads.items():
+                if not os.path.exists(layer_path):
+                    self.logger.warning("Skipping missing output %s" % layer_path)
+                    continue
                 self.logger.debug("Uploading %s" % layer_name)
                 ws, layer_name = layer_name.split(":")
                 if layer_path.lower().endswith(".shp"):
@@ -318,9 +355,11 @@ class Job:
                 elif layer_path.lower().endswith(".tif"):
                     self.catalog.publish_tif(layer_path, layer_name, ws)
 
+                elif layer_path.lower().endswith(".gpkg"):
+                    self.catalog.publish_gpkg(layer_path, layer_name, ws)
+
                 else:
-                    self.logger.error("Unknown file type %s" % layer_path)
-                    raise ValueError(layer_path)
+                    self.logger.warning("Skipping unsupported output type %s" % layer_path)
             return True
 
         else:

@@ -1,0 +1,80 @@
+# ESWS containerized stack.
+#
+#   wps         pywps middleware exposing every InVEST model (port 5000)
+#   fileserver  static file server for input/output data (port 8001)
+#   dashboard   Django WPS client dashboard (port 8000)
+#   geoserver   OGC server the WPS handlers publish model outputs to (port 8080)
+#
+# Quick start:  make up   (or: docker compose up --build)
+# Smoke tests:  make smoke
+
+services:
+  wps:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.invest
+    image: esws/wps
+    command: python tools/wpsserver/wpsserver.py
+    ports:
+      # host 5000 is often taken (e.g. a local docker registry); container stays 5000
+      - "5005:5000"
+    volumes:
+      - ./:/app
+      - wps_outputs:/tmp/wpsoutputs
+      - gisdata:/gisdata
+    environment:
+      GEOSERVER_URL: http://geoserver:8080/geoserver
+      GEOSERVER_PUBLIC_URL: http://localhost:8080/geoserver
+      GEOSERVER_USER: ${GEOSERVER_USER:-admin}
+      GEOSERVER_PASS: ${GEOSERVER_PASS:-geoserver}
+      WPS_WORKSPACE_PREFIX: esws-
+    depends_on:
+      - geoserver
+
+  fileserver:
+    image: esws/wps
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.invest
+    command: python tools/http_server.py
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./:/app
+      - gisdata:/gisdata
+
+  dashboard:
+    image: esws/wps
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.invest
+    command: >
+      sh -c "python tools/wpsclient/manage.py migrate --run-syncdb &&
+             python tools/wpsclient/manage.py runserver 0.0.0.0:8000"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./:/app
+    environment:
+      DJANGO_ALLOWED_HOSTS: "*"
+      DJANGO_DB_PATH: /tmp/esws-db.sqlite3
+      WPS_SERVER_URL: http://wps:5000/wps
+    depends_on:
+      - wps
+
+  geoserver:
+    image: docker.osgeo.org/geoserver:2.25.2
+    ports:
+      - "8080:8080"
+    environment:
+      GEOSERVER_ADMIN_USER: ${GEOSERVER_USER:-admin}
+      GEOSERVER_ADMIN_PASSWORD: ${GEOSERVER_PASS:-geoserver}
+      SKIP_DEMO_DATA: "true"
+    volumes:
+      - gisdata:/gisdata
+      - geoserver_data:/opt/geoserver_data
+
+volumes:
+  wps_outputs:
+  gisdata:
+  geoserver_data:

@@ -1,0 +1,44 @@
+# ESWS WPS server image — InVEST 3.14.3 on a conda-forge GDAL base.
+#
+# Mirrors the NatCap approach (natcap/invest-compute startup_script.sh): bring in
+# Python + GDAL (+ build tooling for InVEST's Cython extensions) from conda-forge,
+# then pip-install the rest of the stack against that GDAL.
+#
+# Shared by the `wps` and `fileserver` compose services.
+FROM mambaorg/micromamba:1.5.8
+
+# Install requirements file early for better layer caching.
+COPY --chown=$MAMBA_USER:$MAMBA_USER requirements/server.txt /tmp/server.txt
+
+# Python 3.11 + GDAL 3.x + compilers/cython so `pip install natcap.invest` can
+# build its extensions from sdist if no wheel is available for this platform.
+RUN micromamba install -y -n base -c conda-forge \
+        python=3.11 \
+        "gdal=3.9.*" \
+        c-compiler \
+        cxx-compiler \
+        cython \
+        numpy \
+        setuptools \
+        setuptools_scm \
+        wheel \
+        pip \
+        babel && \
+    micromamba clean --all --yes
+
+# Activate the base env for the remaining RUN steps (and at container runtime via
+# the micromamba entrypoint).
+ARG MAMBA_DOCKERFILE_ACTIVATE=1
+
+RUN pip install --no-cache-dir -r /tmp/server.txt
+
+# Application code (compose also bind-mounts ./ over /app for live editing).
+COPY --chown=$MAMBA_USER:$MAMBA_USER . /app
+WORKDIR /app
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app/tools
+
+# pywps Flask server (tools/wpsserver/wpsserver.py binds 0.0.0.0:5000).
+EXPOSE 5000
+CMD ["python", "tools/wpsserver/wpsserver.py"]

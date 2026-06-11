@@ -1,0 +1,248 @@
+"""Sphinx directive that diagrams an InVEST model's inputs.
+
+Usage in .rst::
+
+    .. invest-inputs:: annual_water_yield
+
+It reads the model's ``MODEL_SPEC["args"]`` and renders a single model box
+(titled with the model name) containing every input as a node, colour-coded by
+requirement:
+
+* **green**  -- required (``required`` is ``True`` / the default)
+* **amber**  -- conditional (``required`` is an expression string)
+* **grey**   -- optional (``required`` is ``False``)
+
+When a parameter gates additional inputs (i.e. another input's ``required``
+expression references it), those dependent inputs are nested as a sub-box inside
+it -- so "turn on valuation" visibly contains the inputs it requires.
+
+The runner-only args ``workspace_dir``, ``n_workers`` and ``results_suffix`` are
+omitted. Inputs are read from the installed natcap.invest package at build time,
+so the docs must be built in an InVEST-enabled environment.
+
+Output is a lightweight Mermaid ``flowchart`` (rendered client-side by
+sphinxcontrib.mermaid), so it works on a static GitHub Pages site.
+"""
+import importlib
+import os
+import re
+
+# docutils/sphinx are only needed inside a Sphinx build; import lazily so the
+# rendering helpers stay usable on a bare interpreter (previews).
+try:
+    from docutils import nodes
+    from docutils.parsers.rst import Directive, directives
+except Exception:  # pragma: no cover
+    nodes = None
+    Directive = object
+    directives = None
+
+INFRA_ARGS = {"workspace_dir", "n_workers", "results_suffix"}
+
+_IDENT = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+
+# requirement class -> (fill, stroke)
+_COLORS = {
+    "required": ("#e8f5e9", "#2e7d32"),
+    "conditional": ("#fff3e0", "#ef6c00"),
+    "optional": ("#eceff1", "#546e7a"),
+}
+
+
+# --------------------------------------------------------------------------- #
+# spec resolution
+# --------------------------------------------------------------------------- #
+def _normalize_args(spec_args):
+    """MODEL_SPEC['args'] -> [{id, name, type, required}] (required: True|False|str)."""
+    out = []
+    for arg_id, a in spec_args.items():
+        req = a.get("required", True)  # InVEST default: required when key absent
+        req = req if isinstance(req, str) else bool(req)
+        out.append({
+            "id": arg_id,
+            "name": str(a.get("name", arg_id)),
+            "type": str(a.get("type", "")),
+            "required": req,
+        })
+    return out
+
+
+def _load_model(model_id):
+    """Return (model_name, [arg, ...]) from the installed natcap.invest package."""
+    from natcap.invest import model_metadata
+    meta = model_metadata.MODEL_METADATA[model_id]
+    spec = importlib.import_module(meta.pyname).MODEL_SPEC
+    return str(spec.get("model_name") or model_id), _normalize_args(spec["args"])
+
+
+# --------------------------------------------------------------------------- #
+# mermaid rendering
+# --------------------------------------------------------------------------- #
+def _mm_text(s):
+    """Escape a string for a quoted mermaid label/title."""
+    return (str(s).replace("\\", "").replace('"', "'")
+            .replace("|", "/").replace("\n", " ").strip())
+
+
+def _class_of(arg):
+    req = arg["required"]
+    if isinstance(req, str):
+        return "conditional"
+    return "required" if req else "optional"
+
+
+def _controllers(arg, arg_ids):
+    """Arg ids referenced by this arg's `required` expression (its gating params)."""
+    req = arg["required"]
+    if not isinstance(req, str):
+        return []
+    out = []
+    for tok in _IDENT.findall(req):
+        if tok in arg_ids and tok != arg["id"] and tok not in out:
+            out.append(tok)
+    return out
+
+
+def _leaf_label(arg):
+    lines = [_mm_text(arg["name"] or arg["id"])]
+    lines.append(_mm_text(arg["id"] + (" &middot; " + arg["type"] if arg["type"] else "")))
+    if isinstance(arg["required"], str):
+        lines.append("only if: " + _mm_text(arg["required"]))
+    return "<br/>".join(lines)
+
+
+def _box_title(arg):
+    # keep short: long subgraph titles clip in some mermaid renderers. The
+    # parameter's id/type/condition is shown on its node inside the box.
+    return _mm_text(arg["name"] or arg["id"])
+
+
+def _self_label(arg):
+    """Label for a gating parameter's own node (the box title already has its name)."""
+    label = _mm_text(arg["id"] + (" &middot; " + arg["type"] if arg["type"] else ""))
+    if isinstance(arg["required"], str):
+        label += "<br/>only if: " + _mm_text(arg["required"])
+    return label
+
+
+def build_mermaid(model_name, model_id, args):
+    args = [a for a in args if a["id"] not in INFRA_ARGS]
+    by_id = {a["id"]: a for a in args}
+    ids = set(by_id)
+
+    # nest each input under the first parameter that gates it (a forest)
+    children = {aid: [] for aid in by_id}
+    top = []
+    for a in args:
+        ctrls = [c for c in _controllers(a, ids) if c in by_id]
+        if ctrls:
+            children[ctrls[0]].append(a["id"])
+        else:
+            top.append(a["id"])
+
+    lines = ["flowchart TB"]
+    for cls, (fill, stroke) in _COLORS.items():
+        lines.append("  classDef %s fill:%s,stroke:%s,color:#222;" % (cls, fill, stroke))
+    styles = []
+    counter = [0]
+
+    def emit(aid, indent):
+        arg = by_id[aid]
+        cls = _class_of(arg)
+        pad = "  " * indent
+        if children[aid]:
+            sid = "s%d" % counter[0]
+            counter[0] += 1
+            lines.append('%ssubgraph %s["%s"]' % (pad, sid, _box_title(arg)))
+            lines.append("%s  direction TB" % pad)
+            selfid = "n%d" % counter[0]  # the gating parameter itself, shown first
+            counter[0] += 1
+            lines.append('%s  %s["%s"]:::%s' % (pad, selfid, _self_label(arg), cls))
+            child_ids = [selfid] + [emit(c, indent + 1) for c in children[aid]]
+            if len(child_ids) > 1:  # invisible chain stacks the box's contents
+                lines.append("%s  %s" % (pad, " ~~~ ".join(child_ids)))
+            lines.append("%send" % pad)
+            fill, stroke = _COLORS[cls]
+            styles.append("style %s fill:%s,stroke:%s" % (sid, fill, stroke))
+            return sid
+        nid = "n%d" % counter[0]
+        counter[0] += 1
+        lines.append('%s%s["%s"]:::%s' % (pad, nid, _leaf_label(arg), cls))
+        return nid
+
+    lines.append('  subgraph MODEL["%s"]' % _mm_text(model_id))
+    lines.append("    direction TB")
+    lines.append('    hdr["%s"]' % _mm_text(model_name))  # header carries the name
+    ordered = ["hdr"] + [emit(aid, 2) for aid in top]
+    if len(ordered) > 1:
+        lines.append("    " + " ~~~ ".join(ordered))
+    lines.append("  end")
+    styles.append("style hdr fill:#1565c0,stroke:#0d47a1,color:#ffffff")
+    lines.append("  style MODEL fill:#ffffff,stroke:#1565c0,stroke-width:2px,color:#0d47a1")
+    lines.extend("  " + s for s in styles)
+    return "\n".join(lines)
+
+
+def build_mermaid_tree(model_name, model_id, args):
+    """Dependency-tree style: root = model name; an edge runs from each parameter
+    to the parameter (or the root) that enables it. Required / optional params are
+    colour-distinguished; conditionally-enabled params hang off their toggle."""
+    args = [a for a in args if a["id"] not in INFRA_ARGS]
+    by_id = {a["id"]: a for a in args}
+    ids = set(by_id)
+
+    lines = ["flowchart LR"]
+    for cls, (fill, stroke) in _COLORS.items():
+        lines.append("  classDef %s fill:%s,stroke:%s,color:#222;" % (cls, fill, stroke))
+
+    lines.append('  root(["%s"])' % _mm_text(model_name))
+    lines.append("  style root fill:#1565c0,stroke:#0d47a1,color:#ffffff")
+
+    nid = {a["id"]: "n%d" % i for i, a in enumerate(args)}
+    for a in args:
+        lines.append('  %s["%s"]:::%s' % (nid[a["id"]], _leaf_label(a), _class_of(a)))
+    for a in args:
+        ctrls = [c for c in _controllers(a, ids) if c in by_id]
+        parent = nid[ctrls[0]] if ctrls else "root"
+        lines.append("  %s --> %s" % (parent, nid[a["id"]]))
+    return "\n".join(lines)
+
+
+# --------------------------------------------------------------------------- #
+# directive
+# --------------------------------------------------------------------------- #
+class InvestInputsDirective(Directive):
+    required_arguments = 1
+    optional_arguments = 0
+    final_argument_whitespace = False
+    option_spec = ({"title": directives.unchanged, "style": directives.unchanged}
+                   if directives else {})
+    has_content = False
+
+    def run(self):
+        model_id = self.arguments[0].strip()
+        try:
+            model_name, args = _load_model(model_id)
+        except Exception as exc:  # noqa: BLE001 - visible placeholder
+            box = nodes.error()
+            box += nodes.paragraph(
+                text="invest-inputs: could not resolve model %r (%s)" % (model_id, exc))
+            return [box]
+
+        style = (self.options.get("style") or "boxes").strip().lower()
+        builder = build_mermaid_tree if style == "tree" else build_mermaid
+        code = builder(self.options.get("title") or model_name, model_id, args)
+        try:
+            from sphinxcontrib.mermaid import mermaid as mermaid_node
+            node = mermaid_node()
+            node["code"] = code
+            node["options"] = {}
+            return [node]
+        except Exception:  # pragma: no cover
+            return [nodes.raw("", '<pre class="mermaid">\n%s\n</pre>' % code,
+                              format="html")]
+
+
+def setup(app):
+    app.add_directive("invest-inputs", InvestInputsDirective)
+    return {"version": "0.3", "parallel_read_safe": True, "parallel_write_safe": True}

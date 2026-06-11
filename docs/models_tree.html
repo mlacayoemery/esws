@@ -1,0 +1,1334 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Model Inputs (Dependency Tree) &#8212; ESWS  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+    <script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.12.1/dist/mermaid.esm.min.mjs";
+
+
+
+
+
+const initStyles = () => {
+    const defaultStyle = document.createElement('style');
+    defaultStyle.textContent = `pre.mermaid {
+    /* Same as .mermaid-container > pre */
+    display: block;
+    width: 100%;
+}
+
+pre.mermaid > svg {
+    /* Same as .mermaid-container > pre > svg */
+    height: 500px;
+    width: 100%;
+    max-width: 100% !important;
+}`;
+    document.head.appendChild(defaultStyle);
+
+    const fullscreenStyle = document.createElement('style');
+    fullscreenStyle.textContent = `.mermaid-container {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+}
+
+.mermaid-container > pre {
+    display: block;
+    width: 100%;
+}
+
+.mermaid-container > pre > svg {
+    height: 500px;
+    width: 100%;
+    max-width: 100% !important;
+}
+
+.mermaid-fullscreen-btn {
+    width: 28px;
+    height: 28px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    font-size: 14px;
+    line-height: 1;
+    padding: 0;
+    color: #333;
+}
+
+.mermaid-fullscreen-btn:hover {
+    opacity: 100% !important;
+    background: rgba(255, 255, 255, 1);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+    transform: scale(1.1);
+}
+
+.mermaid-fullscreen-btn.dark-theme {
+    background: rgba(50, 50, 50, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #e0e0e0;
+}
+
+.mermaid-fullscreen-btn.dark-theme:hover {
+    background: rgba(60, 60, 60, 1);
+    box-shadow: 0 3px 10px rgba(255, 255, 255, 0.2);
+}
+
+.mermaid-fullscreen-modal {
+    display: none;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 95vw;
+    height: 100vh;
+    background: rgba(255, 255, 255, 0.98);
+    z-index: 9999;
+    padding: 20px;
+    overflow: auto;
+}
+
+.mermaid-fullscreen-modal.dark-theme {
+    background: rgba(0, 0, 0, 0.98);
+}
+
+.mermaid-fullscreen-modal.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mermaid-container-fullscreen {
+    position: relative;
+    width: 95vw;
+    height: 90vh;
+    max-width: 95vw;
+    max-height: 90vh;
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    overflow: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mermaid-container-fullscreen.dark-theme {
+    background: #1a1a1a;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+}
+
+.mermaid-container-fullscreen pre.mermaid {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mermaid-container-fullscreen .mermaid svg {
+    height: 100% !important;
+    width: 100% !important;
+    cursor: grab;
+}
+
+.mermaid-fullscreen-close {
+    position: fixed !important;
+    top: 20px !important;
+    right: 20px !important;
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s;
+    font-size: 24px;
+    line-height: 1;
+    color: #333;
+}
+
+.mermaid-fullscreen-close:hover {
+    background: white;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+    transform: scale(1.1);
+}
+
+.mermaid-fullscreen-close.dark-theme {
+    background: rgba(50, 50, 50, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #e0e0e0;
+}
+
+.mermaid-fullscreen-close.dark-theme:hover {
+    background: rgba(60, 60, 60, 1);
+    box-shadow: 0 6px 16px rgba(255, 255, 255, 0.2);
+}
+
+.mermaid-fullscreen-modal .mermaid-fullscreen-btn {
+    display: none !important;
+}`;
+    document.head.appendChild(fullscreenStyle);
+}
+
+// Detect if page has dark background
+const isDarkTheme = () => {
+    // We use a set of heuristics:
+    // 1. Check for common dark mode classes or attributes
+    // 2. Check computed background color brightness
+    if (document.documentElement.classList.contains('dark') ||
+        document.documentElement.getAttribute('data-theme') === 'dark' ||
+        document.body.classList.contains('dark') ||
+        document.body.getAttribute('data-theme') === 'dark') {
+        // console.log("Dark theme detected via class/attribute");
+        return true;
+    }
+    if (document.documentElement.classList.contains('light') ||
+        document.documentElement.getAttribute('data-theme') === 'light' ||
+        document.body.classList.contains('light') ||
+        document.body.getAttribute('data-theme') === 'light') {
+        // console.log("Light theme detected via class/attribute");
+        return false;
+    }
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        // console.log("Dark theme detected via prefers-color-scheme");
+        return true;
+    }
+    const bgColor = window.getComputedStyle(document.body).backgroundColor;
+    const match = bgColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)/);
+    if (match) {
+        const r = parseInt(match[1]);
+        const g = parseInt(match[2]);
+        const b = parseInt(match[3]);
+        const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+        // console.log("Background color brightness:", brightness);
+        return brightness < 128;
+    }
+    // console.log("No dark or light theme detected, defaulting to light theme");
+    return false;
+};
+
+let darkTheme = isDarkTheme();
+let modal = null;
+let modalContent = null;
+let previousScrollOffset = [window.scrollX, window.scrollY];
+
+const runMermaid = async (rerun) => {
+    console.log("Running mermaid diagrams, rerun =", rerun);
+    // clear all existing mermaid charts
+    let all_mermaids = document.querySelectorAll(".mermaid");
+
+    if (rerun) {
+        all_mermaids.forEach((el) => {
+            if(!el.hasAttribute("data-original-code")) {
+                // store original code
+                // console.log(`Storing original code for first run: `, el.innerHTML);
+                el.setAttribute('data-original-code', el.innerHTML);
+            }
+            if(el.getAttribute("data-processed") === "true") {
+                // remove and restore original
+                el.removeAttribute("data-processed");
+                // console.log(`Restoring original code for re-run: `, el.getAttribute('data-original-code'));
+                el.innerHTML = el.getAttribute('data-original-code');
+            } else {
+                // store original code
+                // console.log(`Storing original code for re-run: `, el.innerHTML);
+                el.setAttribute('data-original-code', el.innerHTML);
+            }
+        });
+        await mermaid.run();
+    }
+
+    all_mermaids = document.querySelectorAll(".mermaid");
+    const mermaids_processed = document.querySelectorAll(".mermaid[data-processed='true']");
+
+    if ("False" === "True") {
+        const mermaids_to_add_zoom = -1 === -1 ? all_mermaids.length : -1;
+        if(mermaids_to_add_zoom > 0) {
+            var svgs = d3.selectAll("");
+            if(all_mermaids.length !== mermaids_processed.length) {
+                setTimeout(() => runMermaid(false), 200);
+                return;
+            } else if(svgs.size() !== mermaids_to_add_zoom) {
+                setTimeout(() => runMermaid(false), 200);
+                return;
+            } else {
+                svgs.each(function() {
+                    var svg = d3.select(this);
+                    svg.html("<g class='wrapper'>" + svg.html() + "</g>");
+                    var inner = svg.select("g");
+                    var zoom = d3.zoom().on("zoom", function(event) {
+                        inner.attr("transform", event.transform);
+                    });
+                    svg.call(zoom);
+                });
+            }
+        }
+    } else if(all_mermaids.length !== mermaids_processed.length) {
+        // Wait for mermaid to process all diagrams
+        setTimeout(() => runMermaid(false), 200);
+        return;
+    }
+
+    // Stop here if not adding fullscreen capability
+    if ("True" !== "True") return;
+
+    if (modal !== null ) {
+        // Destroy existing modal
+        modal.remove();
+        modal = null;
+        modalContent = null;
+    }
+
+    modal = document.createElement('div');
+    modal.className = 'mermaid-fullscreen-modal' + (darkTheme ? ' dark-theme' : '');
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-label', 'Fullscreen diagram viewer');
+    modal.innerHTML = `
+        <button class="mermaid-fullscreen-close${darkTheme ? ' dark-theme' : ''}" aria-label="Close fullscreen">✕</button>
+        <div class="mermaid-container-fullscreen${darkTheme ? ' dark-theme' : ''}"></div>
+    `;
+    document.body.appendChild(modal);
+
+    modalContent = modal.querySelector('.mermaid-container-fullscreen');
+    const closeBtn = modal.querySelector('.mermaid-fullscreen-close');
+
+    const closeModal = () => {
+        modal.classList.remove('active');
+        modalContent.innerHTML = '';
+        document.body.style.overflow = ''
+        window.scrollTo({left: previousScrollOffset[0], top: previousScrollOffset[1], behavior: 'instant'});
+    };
+
+    closeBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.classList.contains('active')) {
+            closeModal();
+        }
+    });
+
+    document.querySelectorAll('.mermaid').forEach((mermaidDiv) => {
+        if (mermaidDiv.parentNode.classList.contains('mermaid-container') ||
+            mermaidDiv.closest('.mermaid-fullscreen-modal')) {
+            // Already processed, adjust button class if needed
+            const existingBtn = mermaidDiv.parentNode.querySelector('.mermaid-fullscreen-btn');
+            if (existingBtn) {
+                existingBtn.className = 'mermaid-fullscreen-btn' + (darkTheme ? ' dark-theme' : '');
+            }
+            return;
+        }
+
+        const container = document.createElement('div');
+        container.className = 'mermaid-container';
+        mermaidDiv.parentNode.insertBefore(container, mermaidDiv);
+        container.appendChild(mermaidDiv);
+
+        const fullscreenBtn = document.createElement('button');
+        fullscreenBtn.className = 'mermaid-fullscreen-btn' + (darkTheme ? ' dark-theme' : '');
+        fullscreenBtn.setAttribute('aria-label', 'View diagram in fullscreen');
+        fullscreenBtn.textContent = '⛶';
+        fullscreenBtn.style.opacity = '50%';
+
+        // Calculate dynamic position based on diagram's margin and padding
+        const diagramStyle = window.getComputedStyle(mermaidDiv);
+        const marginTop = parseFloat(diagramStyle.marginTop) || 0;
+        const marginRight = parseFloat(diagramStyle.marginRight) || 0;
+        const paddingTop = parseFloat(diagramStyle.paddingTop) || 0;
+        const paddingRight = parseFloat(diagramStyle.paddingRight) || 0;
+        fullscreenBtn.style.top = `${marginTop + paddingTop + 4}px`;
+        fullscreenBtn.style.right = `${marginRight + paddingRight + 4}px`;
+
+        fullscreenBtn.addEventListener('click', () => {
+            previousScrollOffset = [window.scroll, window.scrollY];
+            const clone = mermaidDiv.cloneNode(true);
+            modalContent.innerHTML = '';
+            modalContent.appendChild(clone);
+
+            const svg = clone.querySelector('svg');
+            if (svg) {
+                svg.removeAttribute('width');
+                svg.removeAttribute('height');
+                svg.style.width = '100%';
+                svg.style.height = 'auto';
+                svg.style.maxWidth = '100%';
+                svg.style.sdisplay = 'block';
+
+                if ("False" === "True") {
+                    setTimeout(() => {
+                        const g = svg.querySelector('g');
+                        if (g) {
+                            var svgD3 = d3.select(svg);
+                            svgD3.html("<g class='wrapper'>" + svgD3.html() + "</g>");
+                            var inner = svgD3.select("g");
+                            var zoom = d3.zoom().on("zoom", function(event) {
+                                inner.attr("transform", event.transform);
+                            });
+                            svgD3.call(zoom);
+                        }
+                    }, 100);
+                }
+            }
+
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        });
+        container.appendChild(fullscreenBtn);
+    });
+};
+
+const load = async () => {
+    initStyles();
+
+    await runMermaid(true);
+
+    const reRunIfThemeChanges = async () => {
+        const newDarkTheme = isDarkTheme();
+        if (newDarkTheme !== darkTheme) {
+            darkTheme = newDarkTheme;
+            console.log("Theme change detected, re-running mermaid with", darkTheme ? "dark" : "default", "theme");
+            await mermaid.initialize(
+                {...JSON.parse(
+                    `{"startOnLoad": false}`
+                ),
+                ...{ darkMode: darkTheme, theme: darkTheme ? 'dark' : 'default' },
+                }
+            );
+            await runMermaid(true);
+        }
+    };
+
+    // Update theme classes when theme changes
+    const themeObserver = new MutationObserver(reRunIfThemeChanges);
+    themeObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['class', 'style', 'data-theme']
+    });
+    themeObserver.observe(document.body, {
+        attributes: true,
+        attributeFilter: ['class', 'style', 'data-theme']
+    });
+};
+
+
+
+
+
+console.log("Initializing mermaid with", darkTheme ? "dark" : "default", "theme");
+mermaid.initialize(
+    {...JSON.parse(
+        `{"startOnLoad": false}`
+    ),
+    ...{ darkMode: darkTheme, theme: darkTheme ? 'dark' : 'default' },
+    }
+);
+
+window.addEventListener("load", load);
+window.runMermaid = runMermaid;</script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Third-Party Extensions" href="extensions.html" />
+    <link rel="prev" title="Model Inputs" href="models.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="model-inputs-dependency-tree">
+<h1>Model Inputs (Dependency Tree)<a class="headerlink" href="#model-inputs-dependency-tree" title="Link to this heading">¶</a></h1>
+<p>The same inputs as <a class="reference internal" href="models.html"><span class="doc">Model Inputs</span></a>, drawn as a dependency tree: the model is
+the root, each parameter is a node (green = required, grey = optional,
+amber = conditionally enabled), and optional toggles branch to the
+parameters they enable.</p>
+<section id="annual-water-yield">
+<h2>Annual Water Yield<a class="headerlink" href="#annual-water-yield" title="Link to this heading">¶</a></h2>
+<pre  class="mermaid">
+        flowchart LR
+  classDef required fill:#e8f5e9,stroke:#2e7d32,color:#222;
+  classDef conditional fill:#fff3e0,stroke:#ef6c00,color:#222;
+  classDef optional fill:#eceff1,stroke:#546e7a,color:#222;
+  root([&quot;Annual Water Yield&quot;])
+  style root fill:#1565c0,stroke:#0d47a1,color:#ffffff
+  n0[&quot;land use/land cover&lt;br/&gt;lulc_path &amp;middot; raster&quot;]:::required
+  n1[&quot;root restricting layer depth&lt;br/&gt;depth_to_root_rest_layer_path &amp;middot; raster&quot;]:::required
+  n2[&quot;precipitation&lt;br/&gt;precipitation_path &amp;middot; raster&quot;]:::required
+  n3[&quot;plant available water content&lt;br/&gt;pawc_path &amp;middot; raster&quot;]:::required
+  n4[&quot;reference evapotranspiration&lt;br/&gt;eto_path &amp;middot; raster&quot;]:::required
+  n5[&quot;watersheds&lt;br/&gt;watersheds_path &amp;middot; vector&quot;]:::required
+  n6[&quot;sub-watersheds&lt;br/&gt;sub_watersheds_path &amp;middot; vector&quot;]:::optional
+  n7[&quot;biophysical table&lt;br/&gt;biophysical_table_path &amp;middot; csv&quot;]:::required
+  n8[&quot;z parameter&lt;br/&gt;seasonality_constant &amp;middot; number&quot;]:::required
+  n9[&quot;water demand table&lt;br/&gt;demand_table_path &amp;middot; csv&quot;]:::optional
+  n10[&quot;hydropower valuation table&lt;br/&gt;valuation_table_path &amp;middot; csv&quot;]:::optional
+  root --&gt; n0
+  root --&gt; n1
+  root --&gt; n2
+  root --&gt; n3
+  root --&gt; n4
+  root --&gt; n5
+  root --&gt; n6
+  root --&gt; n7
+  root --&gt; n8
+  root --&gt; n9
+  root --&gt; n10
+    </pre></section>
+<section id="carbon-storage-and-sequestration">
+<h2>Carbon Storage and Sequestration<a class="headerlink" href="#carbon-storage-and-sequestration" title="Link to this heading">¶</a></h2>
+<pre  class="mermaid">
+        flowchart LR
+  classDef required fill:#e8f5e9,stroke:#2e7d32,color:#222;
+  classDef conditional fill:#fff3e0,stroke:#ef6c00,color:#222;
+  classDef optional fill:#eceff1,stroke:#546e7a,color:#222;
+  root([&quot;Carbon Storage and Sequestration&quot;])
+  style root fill:#1565c0,stroke:#0d47a1,color:#ffffff
+  n0[&quot;current LULC&lt;br/&gt;lulc_cur_path &amp;middot; raster&quot;]:::required
+  n1[&quot;calculate sequestration&lt;br/&gt;calc_sequestration &amp;middot; boolean&lt;br/&gt;only if: do_valuation / do_redd&quot;]:::conditional
+  n2[&quot;future LULC&lt;br/&gt;lulc_fut_path &amp;middot; raster&lt;br/&gt;only if: calc_sequestration&quot;]:::conditional
+  n3[&quot;REDD scenario analysis&lt;br/&gt;do_redd &amp;middot; boolean&quot;]:::optional
+  n4[&quot;REDD LULC&lt;br/&gt;lulc_redd_path &amp;middot; raster&lt;br/&gt;only if: do_redd&quot;]:::conditional
+  n5[&quot;carbon pools&lt;br/&gt;carbon_pools_path &amp;middot; csv&quot;]:::required
+  n6[&quot;current LULC year&lt;br/&gt;lulc_cur_year &amp;middot; number&lt;br/&gt;only if: do_valuation&quot;]:::conditional
+  n7[&quot;future LULC year&lt;br/&gt;lulc_fut_year &amp;middot; number&lt;br/&gt;only if: do_valuation&quot;]:::conditional
+  n8[&quot;run valuation model&lt;br/&gt;do_valuation &amp;middot; boolean&quot;]:::optional
+  n9[&quot;price of carbon&lt;br/&gt;price_per_metric_ton_of_c &amp;middot; number&lt;br/&gt;only if: do_valuation&quot;]:::conditional
+  n10[&quot;annual market discount rate&lt;br/&gt;discount_rate &amp;middot; ratio&lt;br/&gt;only if: do_valuation&quot;]:::conditional
+  n11[&quot;annual price change&lt;br/&gt;rate_change &amp;middot; ratio&lt;br/&gt;only if: do_valuation&quot;]:::conditional
+  root --&gt; n0
+  n8 --&gt; n1
+  n1 --&gt; n2
+  root --&gt; n3
+  n3 --&gt; n4
+  root --&gt; n5
+  n8 --&gt; n6
+  n8 --&gt; n7
+  root --&gt; n8
+  n8 --&gt; n9
+  n8 --&gt; n10
+  n8 --&gt; n11
+    </pre></section>
+<section id="coastal-blue-carbon">
+<h2>Coastal Blue Carbon<a class="headerlink" href="#coastal-blue-carbon" title="Link to this heading">¶</a></h2>
+<pre  class="mermaid">
+        flowchart LR
+  classDef required fill:#e8f5e9,stroke:#2e7d32,color:#222;
+  classDef conditional fill:#fff3e0,stroke:#ef6c00,color:#222;
+  classDef optional fill:#eceff1,stroke:#546e7a,color:#222;
+  root([&quot;Coastal Blue Carbon&quot;])
+  style root fill:#1565c0,stroke:#0d47a1,color:#ffffff
+  n0[&quot;landcover snapshots table&lt;br/&gt;landcover_snapshot_csv &amp;middot; csv&quot;]:::required
+  n1[&quot;analysis year&lt;br/&gt;analysis_year &amp;middot; number&quot;]:::optional
+  n2[&quot;biophysical table&lt;br/&gt;biophysical_table_path &amp;middot; csv&quot;]:::required
+  n3[&quot;landcover transitions table&lt;br/&gt;landcover_transitions_table &amp;middot; csv&quot;]:::required
+  n4[&quot;run valuation&lt;br/&gt;do_economic_analysis &amp;middot; boolean&quot;]:::optional
+  n5[&quot;use price table&lt;br/&gt;use_price_table &amp;middot; boolean&quot;]:::optional
+  n6[&quot;price&lt;br/&gt;price &amp;middot; number&lt;br/&gt;only if: do_economic_analysis and (not use_price_table)&quot;]:::conditional
+  n7[&quot;interest rate&lt;br/&gt;inflation_rate &amp;middot; percent&lt;br/&gt;only if: do_economic_analysis and (not use_price_table)&quot;]:::conditional
+  n8[&quot;price table&lt;br/&gt;price_table_path &amp;middot; csv&lt;br/&gt;only if: use_price_table&quot;]:::conditional
+  n9[&quot;discount rate&lt;br/&gt;discount_rate &amp;middot; percent&lt;br/&gt;only if: do_economic_analysis&quot;]:::conditional
+  root --&gt; n0
+  root --&gt; n1
+  root --&gt; n2
+  root --&gt; n3
+  root --&gt; n4
+  root --&gt; n5
+  n4 --&gt; n6
+  n4 --&gt; n7
+  n5 --&gt; n8
+  n4 --&gt; n9
+    </pre></section>
+<section id="coastal-blue-carbon-preprocessor">
+<h2>Coastal Blue Carbon Preprocessor<a class="headerlink" href="#coastal-blue-carbon-preprocessor" title="Link to this heading">¶</a></h2>
+<pre  class="mermaid">
+        flowchart LR
+  classDef required fill:#e8f5e9,stroke:#2e7d32,color:#222;
+  classDef conditional fill:#fff3e0,stroke:#ef6c00,color:#222;
+  classDef optional fill:#eceff1,stroke:#546e7a,color:#222;
+  root([&quot;Coastal Blue Carbon Preprocessor&quot;])
+  style root fill:#1565c0,stroke:#0d47a1,color:#ffffff
+  n0[&quot;LULC lookup table&lt;br/&gt;lulc_lookup_table_path &amp;middot; csv&quot;]:::required
+  n1[&quot;LULC snapshots table&lt;br/&gt;landcover_snapshot_csv &amp;middot; csv&quot;]:::required
+  root --&gt; n0
+  root --&gt; n1
+    </pre></section>
+<section id="coastal-vulnerability">
+<h2>Coastal Vulnerability<a class="headerlink" href="#coastal-vulnerability" title="Link to this heading">¶</a></h2>
+<pre  class="mermaid">
+        flowchart LR
+  classDef required fill:#e8f5e9,stroke:#2e7d32,color:#222;
+  classDef conditional fill:#fff3e0,stroke:#ef6c00,color:#222;
+  classDef optional fill:#eceff1,stroke:#546e7a,color:#222;
+  root([&quot;Coastal Vulnerability&quot;])
+  style root fill:#1565c0,stroke:#0d47a1,color:#ffffff
+  n0[&quot;area of interest&lt;br/&gt;aoi_vector_path &amp;middot; vector&quot;]:::required
+  n1[&quot;model resolution&lt;br/&gt;model_resolution &amp;middot; number&quot;]:::required
+  n2[&quot;landmasses&lt;br/&gt;landmass_vector_path &amp;middot; vector&quot;]:::required
+  n3[&quot;WaveWatchIII&lt;br/&gt;wwiii_vector_path &amp;middot; vector&quot;]:::required
+  n4[&quot;maximum fetch distance&lt;br/&gt;max_fetch_distance &amp;middot; number&quot;]:::required
+  n5[&quot;Bathymetry&lt;br/&gt;bathymetry_raster_path &amp;middot; raster&quot;]:::required
+  n6[&quot;continental shelf contour&lt;br/&gt;shelf_contour_vector_path &amp;middot; vector&quot;]:::required
+  n7[&quot;digital elevation model&lt;br/&gt;dem_path &amp;middot; raster&quot;]:::required
+  n8[&quot;elevation averaging radius&lt;br/&gt;dem_averaging_radius &amp;middot; number&quot;]:::required
+  n9[&quot;habitats table&lt;br/&gt;habitat_table_path &amp;middot; csv&quot;]:::required
+  n10[&quot;geomorphology&lt;br/&gt;geomorphology_vector_path &amp;middot; vector&quot;]:::optional
+  n11[&quot;geomorphology fill value&lt;br/&gt;geomorphology_fill_value &amp;middot; option_string&lt;br/&gt;only if: geomorphology_vector_path&quot;]:::conditional
+  n12[&quot;human population&lt;br/&gt;population_raster_path &amp;middot; raster&quot;]:::optional
+  n13[&quot;population search radius&lt;br/&gt;population_radius &amp;middot; number&lt;br/&gt;only if: population_raster_path&quot;]:::conditional
+  n14[&quot;sea level rise&lt;br/&gt;slr_vector_path &amp;middot; vector&quot;]:::optional
+  n15[&quot;sea level rise field&lt;br/&gt;slr_field &amp;middot; option_string&lt;br/&gt;only if: slr_vector_path&quot;]:::conditional
+  root --&gt; n0
+  root --&gt; n1
+  root --&gt; n2
+  root --&gt; n3
+  root --&gt; n4
+  root --&gt; n5
+  root --&gt; n6
+  root --&gt; n7
+  root --&gt; n8
+  root --&gt; n9
+  root --&gt; n10
+  n10 --&gt; n11
+  root --&gt; n12
+  n12 --&gt; n13
+  root --&gt; n14
+  n14 --&gt; n15
+    </pre></section>
+<section id="crop-pollination">
+<h2>Crop Pollination<a class="headerlink" href="#crop-pollination" title="Link to this heading">¶</a></h2>
+<pre  class="mermaid">
+        flowchart LR
+  classDef required fill:#e8f5e9,stroke:#2e7d32,color:#222;
+  classDef conditional fill:#fff3e0,stroke:#ef6c00,color:#222;
+  classDef optional fill:#eceff1,stroke:#546e7a,color:#222;
+  root([&quot;Crop Pollination&quot;])
+  style root fill:#1565c0,stroke:#0d47a1,color:#ffffff
+  n0[&quot;land use/land cover&lt;br/&gt;landcover_raster_path &amp;middot; raster&quot;]:::required
+  n1[&quot;Guild Table&lt;br/&gt;guild_table_path &amp;middot; csv&quot;]:::required
+  n2[&quot;biophysical table&lt;br/&gt;landcover_biophysical_table_path &amp;middot; csv&quot;]:::required
+  n3[&quot;farms map&lt;br/&gt;farm_vector_path &amp;middot; vector&quot;]:::optional
+  root --&gt; n0
+  root --&gt; n1
+  root --&gt; n2
+  root --&gt; n3
+    </pre></section>
+<section id="crop-production-percentile">
+<h2>Crop Production: Percentile<a class="headerlink" href="#crop-production-percentile" title="Link to this heading">¶</a></h2>
+<pre  class="mermaid">
+        flowchart LR
+  classDef required fill:#e8f5e9,stroke:#2e7d32,color:#222;
+  classDef conditional fill:#fff3e0,stroke:#ef6c00,color:#222;
+  classDef optional fill:#eceff1,stroke:#546e7a,color:#222;
+  root([&quot;Crop Production: Percentile&quot;])
+  style root fill:#1565c0,stroke:#0d47a1,color:#ffffff
+  n0[&quot;land use/land cover&lt;br/&gt;landcover_raster_path &amp;middot; raster&quot;]:::required
+  n1[&quot;LULC to Crop Table&lt;br/&gt;landcover_to_crop_table_path &amp;middot; csv&quot;]:::required
+  n2[&quot;area of interest&lt;br/&gt;aggregate_polygon_path &amp;middot; vector&quot;]:::optional
+  n3[&quot;model data directory&lt;br/&gt;model_data_path &amp;middot; directory&quot;]:::required
+  root --&gt; n0
+  root --&gt; n1
+  root --&gt; n2
+  root --&gt; n3
+    </pre></section>
+<section id="crop-production-regression">
+<h2>Crop Production: Regression<a class="headerlink" href="#crop-production-regression" title="Link to this heading">¶</a></h2>
+<pre  class="mermaid">
+        flowchart LR
+  classDef required fill:#e8f5e9,stroke:#2e7d32,color:#222;
+  classDef conditional fill:#fff3e0,stroke:#ef6c00,color:#222;
+  classDef optional fill:#eceff1,stroke:#546e7a,color:#222;
+  root([&quot;Crop Production: Regression&quot;])
+  style root fill:#1565c0,stroke:#0d47a1,color:#ffffff
+  n0[&quot;land use/land cover&lt;br/&gt;landcover_raster_path &amp;middot; raster&quot;]:::required
+  n1[&quot;LULC to crop table&lt;br/&gt;landcover_to_crop_table_path &amp;middot; csv&quot;]:::required
+  n2[&quot;fertilization rate table&lt;br/&gt;fertilization_rate_table_path &amp;middot; csv&quot;]:::required
+  n3[&quot;area of interest&lt;br/&gt;aggregate_polygon_path &amp;middot; vector&quot;]:::optional
+  n4[&quot;model data&lt;br/&gt;model_data_path &amp;middot; directory&quot;]:::required
+  root --&gt; n0
+  root --&gt; n1
+  root --&gt; n2
+  root --&gt; n3
+  root --&gt; n4
+    </pre></section>
+<section id="delineateit">
+<h2>DelineateIt<a class="headerlink" href="#delineateit" title="Link to this heading">¶</a></h2>
+<pre  class="mermaid">
+        flowchart LR
+  classDef required fill:#e8f5e9,stroke:#2e7d32,color:#222;
+  classDef conditional fill:#fff3e0,stroke:#ef6c00,color:#222;
+  classDef optional fill:#eceff1,stroke:#546e7a,color:#222;
+  root([&quot;DelineateIt&quot;])
+  style root fill:#1565c0,stroke:#0d47a1,color:#ffffff
+  n0[&quot;digital elevation model&lt;br/&gt;dem_path &amp;middot; raster&quot;]:::required
+  n1[&quot;detect pour points&lt;br/&gt;detect_pour_points &amp;middot; boolean&quot;]:::optional
+  n2[&quot;watershed outlets&lt;br/&gt;outlet_vector_path &amp;middot; vector&lt;br/&gt;only if: not detect_pour_points&quot;]:::conditional
+  n3[&quot;snap points to the nearest stream&lt;br/&gt;snap_points &amp;middot; boolean&quot;]:::optional
+  n4[&quot;threshold flow accumulation&lt;br/&gt;flow_threshold &amp;middot; number&lt;br/&gt;only if: snap_points&quot;]:::conditional
+  n5[&quot;snap distance&lt;br/&gt;snap_distance &amp;middot; number&lt;br/&gt;only if: snap_points&quot;]:::conditional
+  n6[&quot;skip invalid geometries&lt;br/&gt;skip_invalid_geometry &amp;middot; boolean&quot;]:::optional
+  root --&gt; n0
+  root --&gt; n1
+  n1 --&gt; n2
+  root --&gt; n3
+  n3 --&gt; n4
+  n3 --&gt; n5
+  root --&gt; n6
+    </pre></section>
+<section id="forest-carbon-edge-effect">
+<h2>Forest Carbon Edge Effect<a class="headerlink" href="#forest-carbon-edge-effect" title="Link to this heading">¶</a></h2>
+<pre  class="mermaid">
+        flowchart LR
+  classDef required fill:#e8f5e9,stroke:#2e7d32,color:#222;
+  classDef conditional fill:#fff3e0,stroke:#ef6c00,color:#222;
+  classDef optional fill:#eceff1,stroke:#546e7a,color:#222;
+  root([&quot;Forest Carbon Edge Effect&quot;])
+  style root fill:#1565c0,stroke:#0d47a1,color:#ffffff
+  n0[&quot;number of points to average&lt;br/&gt;n_nearest_model_points &amp;middot; number&lt;br/&gt;only if: compute_forest_edge_effects&quot;]:::conditional
+  n1[&quot;area of interest&lt;br/&gt;aoi_vector_path &amp;middot; vector&quot;]:::optional
+  n2[&quot;biophysical table&lt;br/&gt;biophysical_table_path &amp;middot; csv&quot;]:::required
+  n3[&quot;land use/land cover&lt;br/&gt;lulc_raster_path &amp;middot; raster&quot;]:::required
+  n4[&quot;carbon pools to calculate&lt;br/&gt;pools_to_calculate &amp;middot; option_string&quot;]:::required
+  n5[&quot;compute forest edge effects&lt;br/&gt;compute_forest_edge_effects &amp;middot; boolean&quot;]:::required
+  n6[&quot;global regression models&lt;br/&gt;tropical_forest_edge_carbon_model_vector_path &amp;middot; vector&lt;br/&gt;only if: compute_forest_edge_effects&quot;]:::conditional
+  n7[&quot;forest edge biomass to carbon conversion factor&lt;br/&gt;biomass_to_carbon_conversion_factor &amp;middot; ratio&lt;br/&gt;only if: compute_forest_edge_effects&quot;]:::conditional
+  n5 --&gt; n0
+  root --&gt; n1
+  root --&gt; n2
+  root --&gt; n3
+  root --&gt; n4
+  root --&gt; n5
+  n5 --&gt; n6
+  n5 --&gt; n7
+    </pre></section>
+<section id="habitat-quality">
+<h2>Habitat Quality<a class="headerlink" href="#habitat-quality" title="Link to this heading">¶</a></h2>
+<pre  class="mermaid">
+        flowchart LR
+  classDef required fill:#e8f5e9,stroke:#2e7d32,color:#222;
+  classDef conditional fill:#fff3e0,stroke:#ef6c00,color:#222;
+  classDef optional fill:#eceff1,stroke:#546e7a,color:#222;
+  root([&quot;Habitat Quality&quot;])
+  style root fill:#1565c0,stroke:#0d47a1,color:#ffffff
+  n0[&quot;current land cover&lt;br/&gt;lulc_cur_path &amp;middot; raster&quot;]:::required
+  n1[&quot;future land cover&lt;br/&gt;lulc_fut_path &amp;middot; raster&quot;]:::optional
+  n2[&quot;baseline land cover&lt;br/&gt;lulc_bas_path &amp;middot; raster&quot;]:::optional
+  n3[&quot;threats table&lt;br/&gt;threats_table_path &amp;middot; csv&quot;]:::required
+  n4[&quot;accessibility to threats&lt;br/&gt;access_vector_path &amp;middot; vector&quot;]:::optional
+  n5[&quot;sensitivity table&lt;br/&gt;sensitivity_table_path &amp;middot; csv&quot;]:::required
+  n6[&quot;half-saturation constant&lt;br/&gt;half_saturation_constant &amp;middot; number&quot;]:::required
+  root --&gt; n0
+  root --&gt; n1
+  root --&gt; n2
+  root --&gt; n3
+  root --&gt; n4
+  root --&gt; n5
+  root --&gt; n6
+    </pre></section>
+<section id="habitat-risk-assessment">
+<h2>Habitat Risk Assessment<a class="headerlink" href="#habitat-risk-assessment" title="Link to this heading">¶</a></h2>
+<pre  class="mermaid">
+        flowchart LR
+  classDef required fill:#e8f5e9,stroke:#2e7d32,color:#222;
+  classDef conditional fill:#fff3e0,stroke:#ef6c00,color:#222;
+  classDef optional fill:#eceff1,stroke:#546e7a,color:#222;
+  root([&quot;Habitat Risk Assessment&quot;])
+  style root fill:#1565c0,stroke:#0d47a1,color:#ffffff
+  n0[&quot;habitat stressor table&lt;br/&gt;info_table_path &amp;middot; csv&quot;]:::required
+  n1[&quot;criteria scores table&lt;br/&gt;criteria_table_path &amp;middot; csv&quot;]:::required
+  n2[&quot;resolution of analysis&lt;br/&gt;resolution &amp;middot; number&quot;]:::required
+  n3[&quot;maximum criteria score&lt;br/&gt;max_rating &amp;middot; number&quot;]:::required
+  n4[&quot;risk equation&lt;br/&gt;risk_eq &amp;middot; option_string&quot;]:::required
+  n5[&quot;decay equation&lt;br/&gt;decay_eq &amp;middot; option_string&quot;]:::required
+  n6[&quot;area of interest&lt;br/&gt;aoi_vector_path &amp;middot; vector&quot;]:::required
+  n7[&quot;Number of Overlapping Stressors&lt;br/&gt;n_overlapping_stressors &amp;middot; number&quot;]:::required
+  n8[&quot;Generate GeoJSONs&lt;br/&gt;visualize_outputs &amp;middot; boolean&quot;]:::optional
+  root --&gt; n0
+  root --&gt; n1
+  root --&gt; n2
+  root --&gt; n3
+  root --&gt; n4
+  root --&gt; n5
+  root --&gt; n6
+  root --&gt; n7
+  root --&gt; n8
+    </pre></section>
+<section id="nutrient-delivery-ratio">
+<h2>Nutrient Delivery Ratio<a class="headerlink" href="#nutrient-delivery-ratio" title="Link to this heading">¶</a></h2>
+<pre  class="mermaid">
+        flowchart LR
+  classDef required fill:#e8f5e9,stroke:#2e7d32,color:#222;
+  classDef conditional fill:#fff3e0,stroke:#ef6c00,color:#222;
+  classDef optional fill:#eceff1,stroke:#546e7a,color:#222;
+  root([&quot;Nutrient Delivery Ratio&quot;])
+  style root fill:#1565c0,stroke:#0d47a1,color:#ffffff
+  n0[&quot;digital elevation model&lt;br/&gt;dem_path &amp;middot; raster&quot;]:::required
+  n1[&quot;land use/land cover&lt;br/&gt;lulc_path &amp;middot; raster&quot;]:::required
+  n2[&quot;nutrient runoff proxy&lt;br/&gt;runoff_proxy_path &amp;middot; raster&quot;]:::required
+  n3[&quot;watersheds&lt;br/&gt;watersheds_path &amp;middot; vector&quot;]:::required
+  n4[&quot;biophysical table&lt;br/&gt;biophysical_table_path &amp;middot; csv&quot;]:::required
+  n5[&quot;calculate phosphorus&lt;br/&gt;calc_p &amp;middot; boolean&quot;]:::required
+  n6[&quot;calculate nitrogen&lt;br/&gt;calc_n &amp;middot; boolean&quot;]:::required
+  n7[&quot;threshold flow accumulation&lt;br/&gt;threshold_flow_accumulation &amp;middot; number&quot;]:::required
+  n8[&quot;Borselli k parameter&lt;br/&gt;k_param &amp;middot; number&quot;]:::required
+  n9[&quot;subsurface critical length (nitrogen)&lt;br/&gt;subsurface_critical_length_n &amp;middot; number&lt;br/&gt;only if: calc_n&quot;]:::conditional
+  n10[&quot;subsurface maximum retention efficiency (nitrogen)&lt;br/&gt;subsurface_eff_n &amp;middot; ratio&lt;br/&gt;only if: calc_n&quot;]:::conditional
+  root --&gt; n0
+  root --&gt; n1
+  root --&gt; n2
+  root --&gt; n3
+  root --&gt; n4
+  root --&gt; n5
+  root --&gt; n6
+  root --&gt; n7
+  root --&gt; n8
+  n6 --&gt; n9
+  n6 --&gt; n10
+    </pre></section>
+<section id="routedem">
+<h2>RouteDEM<a class="headerlink" href="#routedem" title="Link to this heading">¶</a></h2>
+<pre  class="mermaid">
+        flowchart LR
+  classDef required fill:#e8f5e9,stroke:#2e7d32,color:#222;
+  classDef conditional fill:#fff3e0,stroke:#ef6c00,color:#222;
+  classDef optional fill:#eceff1,stroke:#546e7a,color:#222;
+  root([&quot;RouteDEM&quot;])
+  style root fill:#1565c0,stroke:#0d47a1,color:#ffffff
+  n0[&quot;digital elevation model&lt;br/&gt;dem_path &amp;middot; raster&quot;]:::required
+  n1[&quot;band index&lt;br/&gt;dem_band_index &amp;middot; number&quot;]:::optional
+  n2[&quot;routing algorithm&lt;br/&gt;algorithm &amp;middot; option_string&quot;]:::required
+  n3[&quot;calculate flow direction&lt;br/&gt;calculate_flow_direction &amp;middot; boolean&quot;]:::optional
+  n4[&quot;calculate flow accumulation&lt;br/&gt;calculate_flow_accumulation &amp;middot; boolean&quot;]:::optional
+  n5[&quot;calculate streams&lt;br/&gt;calculate_stream_threshold &amp;middot; boolean&quot;]:::optional
+  n6[&quot;threshold flow accumulation&lt;br/&gt;threshold_flow_accumulation &amp;middot; number&lt;br/&gt;only if: calculate_stream_threshold&quot;]:::conditional
+  n7[&quot;calculate distance to stream&lt;br/&gt;calculate_downslope_distance &amp;middot; boolean&quot;]:::optional
+  n8[&quot;calculate slope&lt;br/&gt;calculate_slope &amp;middot; boolean&quot;]:::optional
+  n9[&quot;calculate strahler stream orders (D8 only)&lt;br/&gt;calculate_stream_order &amp;middot; boolean&quot;]:::optional
+  n10[&quot;calculate subwatersheds (D8 only)&lt;br/&gt;calculate_subwatersheds &amp;middot; boolean&quot;]:::optional
+  root --&gt; n0
+  root --&gt; n1
+  root --&gt; n2
+  root --&gt; n3
+  root --&gt; n4
+  root --&gt; n5
+  n5 --&gt; n6
+  root --&gt; n7
+  root --&gt; n8
+  root --&gt; n9
+  root --&gt; n10
+    </pre></section>
+<section id="scenario-generator-proximity-based">
+<h2>Scenario Generator: Proximity Based<a class="headerlink" href="#scenario-generator-proximity-based" title="Link to this heading">¶</a></h2>
+<pre  class="mermaid">
+        flowchart LR
+  classDef required fill:#e8f5e9,stroke:#2e7d32,color:#222;
+  classDef conditional fill:#fff3e0,stroke:#ef6c00,color:#222;
+  classDef optional fill:#eceff1,stroke:#546e7a,color:#222;
+  root([&quot;Scenario Generator: Proximity Based&quot;])
+  style root fill:#1565c0,stroke:#0d47a1,color:#ffffff
+  n0[&quot;base LULC map&lt;br/&gt;base_lulc_path &amp;middot; raster&quot;]:::required
+  n1[&quot;replacement landcover code&lt;br/&gt;replacement_lucode &amp;middot; integer&quot;]:::required
+  n2[&quot;maximum area to convert&lt;br/&gt;area_to_convert &amp;middot; number&quot;]:::required
+  n3[&quot;focal landcover codes&lt;br/&gt;focal_landcover_codes &amp;middot; freestyle_string&quot;]:::required
+  n4[&quot;convertible landcover codes&lt;br/&gt;convertible_landcover_codes &amp;middot; freestyle_string&quot;]:::required
+  n5[&quot;number of conversion steps&lt;br/&gt;n_fragmentation_steps &amp;middot; number&quot;]:::required
+  n6[&quot;area of interest&lt;br/&gt;aoi_path &amp;middot; vector&quot;]:::optional
+  n7[&quot;convert farthest from edge&lt;br/&gt;convert_farthest_from_edge &amp;middot; boolean&quot;]:::required
+  n8[&quot;convert nearest to edge&lt;br/&gt;convert_nearest_to_edge &amp;middot; boolean&quot;]:::required
+  root --&gt; n0
+  root --&gt; n1
+  root --&gt; n2
+  root --&gt; n3
+  root --&gt; n4
+  root --&gt; n5
+  root --&gt; n6
+  root --&gt; n7
+  root --&gt; n8
+    </pre></section>
+<section id="scenic-quality">
+<h2>Scenic Quality<a class="headerlink" href="#scenic-quality" title="Link to this heading">¶</a></h2>
+<pre  class="mermaid">
+        flowchart LR
+  classDef required fill:#e8f5e9,stroke:#2e7d32,color:#222;
+  classDef conditional fill:#fff3e0,stroke:#ef6c00,color:#222;
+  classDef optional fill:#eceff1,stroke:#546e7a,color:#222;
+  root([&quot;Scenic Quality&quot;])
+  style root fill:#1565c0,stroke:#0d47a1,color:#ffffff
+  n0[&quot;area of interest&lt;br/&gt;aoi_path &amp;middot; vector&quot;]:::required
+  n1[&quot;features impacting scenic quality&lt;br/&gt;structure_path &amp;middot; vector&quot;]:::required
+  n2[&quot;digital elevation model&lt;br/&gt;dem_path &amp;middot; raster&quot;]:::required
+  n3[&quot;refractivity coefficient&lt;br/&gt;refraction &amp;middot; ratio&quot;]:::required
+  n4[&quot;run valuation&lt;br/&gt;do_valuation &amp;middot; boolean&quot;]:::optional
+  n5[&quot;Valuation function&lt;br/&gt;valuation_function &amp;middot; option_string&lt;br/&gt;only if: do_valuation&quot;]:::conditional
+  n6[&quot;coefficient a&lt;br/&gt;a_coef &amp;middot; number&lt;br/&gt;only if: do_valuation&quot;]:::conditional
+  n7[&quot;coefficient b&lt;br/&gt;b_coef &amp;middot; number&lt;br/&gt;only if: do_valuation&quot;]:::conditional
+  n8[&quot;maximum valuation radius&lt;br/&gt;max_valuation_radius &amp;middot; number&quot;]:::optional
+  root --&gt; n0
+  root --&gt; n1
+  root --&gt; n2
+  root --&gt; n3
+  root --&gt; n4
+  n4 --&gt; n5
+  n4 --&gt; n6
+  n4 --&gt; n7
+  root --&gt; n8
+    </pre></section>
+<section id="seasonal-water-yield">
+<h2>Seasonal Water Yield<a class="headerlink" href="#seasonal-water-yield" title="Link to this heading">¶</a></h2>
+<pre  class="mermaid">
+        flowchart LR
+  classDef required fill:#e8f5e9,stroke:#2e7d32,color:#222;
+  classDef conditional fill:#fff3e0,stroke:#ef6c00,color:#222;
+  classDef optional fill:#eceff1,stroke:#546e7a,color:#222;
+  root([&quot;Seasonal Water Yield&quot;])
+  style root fill:#1565c0,stroke:#0d47a1,color:#ffffff
+  n0[&quot;threshold flow accumulation&lt;br/&gt;threshold_flow_accumulation &amp;middot; number&quot;]:::required
+  n1[&quot;ET0 directory&lt;br/&gt;et0_dir &amp;middot; directory&lt;br/&gt;only if: not user_defined_local_recharge&quot;]:::conditional
+  n2[&quot;precipitation directory&lt;br/&gt;precip_dir &amp;middot; directory&lt;br/&gt;only if: not user_defined_local_recharge&quot;]:::conditional
+  n3[&quot;digital elevation model&lt;br/&gt;dem_raster_path &amp;middot; raster&quot;]:::required
+  n4[&quot;land use/land cover&lt;br/&gt;lulc_raster_path &amp;middot; raster&quot;]:::required
+  n5[&quot;soil hydrologic group&lt;br/&gt;soil_group_path &amp;middot; raster&lt;br/&gt;only if: not user_defined_local_recharge&quot;]:::conditional
+  n6[&quot;area of interest&lt;br/&gt;aoi_path &amp;middot; vector&quot;]:::required
+  n7[&quot;biophysical table&lt;br/&gt;biophysical_table_path &amp;middot; csv&quot;]:::required
+  n8[&quot;rain events table&lt;br/&gt;rain_events_table_path &amp;middot; csv&lt;br/&gt;only if: (not user_defined_local_recharge) &amp; (not user_defined_climate_zones)&quot;]:::conditional
+  n9[&quot;alpha_m parameter&lt;br/&gt;alpha_m &amp;middot; freestyle_string&lt;br/&gt;only if: not monthly_alpha&quot;]:::conditional
+  n10[&quot;beta_i parameter&lt;br/&gt;beta_i &amp;middot; ratio&quot;]:::required
+  n11[&quot;gamma parameter&lt;br/&gt;gamma &amp;middot; ratio&quot;]:::required
+  n12[&quot;user-defined recharge layer (advanced)&lt;br/&gt;user_defined_local_recharge &amp;middot; boolean&quot;]:::required
+  n13[&quot;local recharge&lt;br/&gt;l_path &amp;middot; raster&lt;br/&gt;only if: user_defined_local_recharge&quot;]:::conditional
+  n14[&quot;climate zones (advanced)&lt;br/&gt;user_defined_climate_zones &amp;middot; boolean&quot;]:::required
+  n15[&quot;climate zone table&lt;br/&gt;climate_zone_table_path &amp;middot; csv&lt;br/&gt;only if: user_defined_climate_zones&quot;]:::conditional
+  n16[&quot;climate zone map&lt;br/&gt;climate_zone_raster_path &amp;middot; raster&lt;br/&gt;only if: user_defined_climate_zones&quot;]:::conditional
+  n17[&quot;use monthly alpha table (advanced)&lt;br/&gt;monthly_alpha &amp;middot; boolean&quot;]:::required
+  n18[&quot;monthly alpha table&lt;br/&gt;monthly_alpha_path &amp;middot; csv&lt;br/&gt;only if: monthly_alpha&quot;]:::conditional
+  root --&gt; n0
+  n12 --&gt; n1
+  n12 --&gt; n2
+  root --&gt; n3
+  root --&gt; n4
+  n12 --&gt; n5
+  root --&gt; n6
+  root --&gt; n7
+  n12 --&gt; n8
+  n17 --&gt; n9
+  root --&gt; n10
+  root --&gt; n11
+  root --&gt; n12
+  n12 --&gt; n13
+  root --&gt; n14
+  n14 --&gt; n15
+  n14 --&gt; n16
+  root --&gt; n17
+  n17 --&gt; n18
+    </pre></section>
+<section id="sediment-delivery-ratio">
+<h2>Sediment Delivery Ratio<a class="headerlink" href="#sediment-delivery-ratio" title="Link to this heading">¶</a></h2>
+<pre  class="mermaid">
+        flowchart LR
+  classDef required fill:#e8f5e9,stroke:#2e7d32,color:#222;
+  classDef conditional fill:#fff3e0,stroke:#ef6c00,color:#222;
+  classDef optional fill:#eceff1,stroke:#546e7a,color:#222;
+  root([&quot;Sediment Delivery Ratio&quot;])
+  style root fill:#1565c0,stroke:#0d47a1,color:#ffffff
+  n0[&quot;digital elevation model&lt;br/&gt;dem_path &amp;middot; raster&quot;]:::required
+  n1[&quot;erosivity&lt;br/&gt;erosivity_path &amp;middot; raster&quot;]:::required
+  n2[&quot;soil erodibility&lt;br/&gt;erodibility_path &amp;middot; raster&quot;]:::required
+  n3[&quot;land use/land cover&lt;br/&gt;lulc_path &amp;middot; raster&quot;]:::required
+  n4[&quot;Watersheds&lt;br/&gt;watersheds_path &amp;middot; vector&quot;]:::required
+  n5[&quot;biophysical table&lt;br/&gt;biophysical_table_path &amp;middot; csv&quot;]:::required
+  n6[&quot;threshold flow accumulation&lt;br/&gt;threshold_flow_accumulation &amp;middot; number&quot;]:::required
+  n7[&quot;Borselli k parameter&lt;br/&gt;k_param &amp;middot; number&quot;]:::required
+  n8[&quot;maximum SDR value&lt;br/&gt;sdr_max &amp;middot; ratio&quot;]:::required
+  n9[&quot;Borselli IC0 parameter&lt;br/&gt;ic_0_param &amp;middot; number&quot;]:::required
+  n10[&quot;maximum l value&lt;br/&gt;l_max &amp;middot; number&quot;]:::required
+  n11[&quot;drainages&lt;br/&gt;drainage_path &amp;middot; raster&quot;]:::optional
+  root --&gt; n0
+  root --&gt; n1
+  root --&gt; n2
+  root --&gt; n3
+  root --&gt; n4
+  root --&gt; n5
+  root --&gt; n6
+  root --&gt; n7
+  root --&gt; n8
+  root --&gt; n9
+  root --&gt; n10
+  root --&gt; n11
+    </pre></section>
+<section id="urban-cooling">
+<h2>Urban Cooling<a class="headerlink" href="#urban-cooling" title="Link to this heading">¶</a></h2>
+<pre  class="mermaid">
+        flowchart LR
+  classDef required fill:#e8f5e9,stroke:#2e7d32,color:#222;
+  classDef conditional fill:#fff3e0,stroke:#ef6c00,color:#222;
+  classDef optional fill:#eceff1,stroke:#546e7a,color:#222;
+  root([&quot;Urban Cooling&quot;])
+  style root fill:#1565c0,stroke:#0d47a1,color:#ffffff
+  n0[&quot;land use/land cover&lt;br/&gt;lulc_raster_path &amp;middot; raster&quot;]:::required
+  n1[&quot;reference evapotranspiration&lt;br/&gt;ref_eto_raster_path &amp;middot; raster&quot;]:::required
+  n2[&quot;area of interest&lt;br/&gt;aoi_vector_path &amp;middot; vector&quot;]:::required
+  n3[&quot;biophysical table&lt;br/&gt;biophysical_table_path &amp;middot; csv&quot;]:::required
+  n4[&quot;maximum cooling distance&lt;br/&gt;green_area_cooling_distance &amp;middot; number&quot;]:::required
+  n5[&quot;air blending distance&lt;br/&gt;t_air_average_radius &amp;middot; number&quot;]:::required
+  n6[&quot;reference air temperature&lt;br/&gt;t_ref &amp;middot; number&quot;]:::required
+  n7[&quot;UHI effect&lt;br/&gt;uhi_max &amp;middot; number&quot;]:::required
+  n8[&quot;run energy savings valuation&lt;br/&gt;do_energy_valuation &amp;middot; boolean&quot;]:::required
+  n9[&quot;run work productivity valuation&lt;br/&gt;do_productivity_valuation &amp;middot; boolean&quot;]:::required
+  n10[&quot;average relative humidity&lt;br/&gt;avg_rel_humidity &amp;middot; percent&lt;br/&gt;only if: do_productivity_valuation&quot;]:::conditional
+  n11[&quot;buildings&lt;br/&gt;building_vector_path &amp;middot; vector&lt;br/&gt;only if: do_energy_valuation&quot;]:::conditional
+  n12[&quot;energy consumption table&lt;br/&gt;energy_consumption_table_path &amp;middot; csv&lt;br/&gt;only if: do_energy_valuation&quot;]:::conditional
+  n13[&quot;cooling capacity calculation method&lt;br/&gt;cc_method &amp;middot; option_string&quot;]:::required
+  n14[&quot;shade weight&lt;br/&gt;cc_weight_shade &amp;middot; ratio&quot;]:::optional
+  n15[&quot;albedo weight&lt;br/&gt;cc_weight_albedo &amp;middot; ratio&quot;]:::optional
+  n16[&quot;evapotranspiration weight&lt;br/&gt;cc_weight_eti &amp;middot; ratio&quot;]:::optional
+  root --&gt; n0
+  root --&gt; n1
+  root --&gt; n2
+  root --&gt; n3
+  root --&gt; n4
+  root --&gt; n5
+  root --&gt; n6
+  root --&gt; n7
+  root --&gt; n8
+  root --&gt; n9
+  n9 --&gt; n10
+  n8 --&gt; n11
+  n8 --&gt; n12
+  root --&gt; n13
+  root --&gt; n14
+  root --&gt; n15
+  root --&gt; n16
+    </pre></section>
+<section id="urban-flood-risk-mitigation">
+<h2>Urban Flood Risk Mitigation<a class="headerlink" href="#urban-flood-risk-mitigation" title="Link to this heading">¶</a></h2>
+<pre  class="mermaid">
+        flowchart LR
+  classDef required fill:#e8f5e9,stroke:#2e7d32,color:#222;
+  classDef conditional fill:#fff3e0,stroke:#ef6c00,color:#222;
+  classDef optional fill:#eceff1,stroke:#546e7a,color:#222;
+  root([&quot;Urban Flood Risk Mitigation&quot;])
+  style root fill:#1565c0,stroke:#0d47a1,color:#ffffff
+  n0[&quot;area of interest&lt;br/&gt;aoi_watersheds_path &amp;middot; vector&quot;]:::required
+  n1[&quot;rainfall depth&lt;br/&gt;rainfall_depth &amp;middot; number&quot;]:::required
+  n2[&quot;land use/land cover&lt;br/&gt;lulc_path &amp;middot; raster&quot;]:::required
+  n3[&quot;soil hydrologic group&lt;br/&gt;soils_hydrological_group_raster_path &amp;middot; raster&quot;]:::required
+  n4[&quot;biophysical table&lt;br/&gt;curve_number_table_path &amp;middot; csv&quot;]:::required
+  n5[&quot;built infrastructure&lt;br/&gt;built_infrastructure_vector_path &amp;middot; vector&quot;]:::optional
+  n6[&quot;damage loss table&lt;br/&gt;infrastructure_damage_loss_table_path &amp;middot; csv&lt;br/&gt;only if: built_infrastructure_vector_path&quot;]:::conditional
+  root --&gt; n0
+  root --&gt; n1
+  root --&gt; n2
+  root --&gt; n3
+  root --&gt; n4
+  root --&gt; n5
+  n5 --&gt; n6
+    </pre></section>
+<section id="urban-nature-access">
+<h2>Urban Nature Access<a class="headerlink" href="#urban-nature-access" title="Link to this heading">¶</a></h2>
+<pre  class="mermaid">
+        flowchart LR
+  classDef required fill:#e8f5e9,stroke:#2e7d32,color:#222;
+  classDef conditional fill:#fff3e0,stroke:#ef6c00,color:#222;
+  classDef optional fill:#eceff1,stroke:#546e7a,color:#222;
+  root([&quot;Urban Nature Access&quot;])
+  style root fill:#1565c0,stroke:#0d47a1,color:#ffffff
+  n0[&quot;land use/land cover&lt;br/&gt;lulc_raster_path &amp;middot; raster&quot;]:::required
+  n1[&quot;LULC attribute table&lt;br/&gt;lulc_attribute_table &amp;middot; csv&quot;]:::required
+  n2[&quot;population raster&lt;br/&gt;population_raster_path &amp;middot; raster&quot;]:::required
+  n3[&quot;administrative boundaries&lt;br/&gt;admin_boundaries_vector_path &amp;middot; vector&quot;]:::required
+  n4[&quot;urban nature demand per capita&lt;br/&gt;urban_nature_demand &amp;middot; number&quot;]:::required
+  n5[&quot;decay function&lt;br/&gt;decay_function &amp;middot; option_string&quot;]:::required
+  n6[&quot;search radius mode&lt;br/&gt;search_radius_mode &amp;middot; option_string&quot;]:::required
+  n7[&quot;Aggregate by population groups&lt;br/&gt;aggregate_by_pop_group &amp;middot; boolean&quot;]:::optional
+  n8[&quot;uniform search radius&lt;br/&gt;search_radius &amp;middot; number&lt;br/&gt;only if: search_radius_mode == 'uniform radius'&quot;]:::conditional
+  n9[&quot;population group radii table&lt;br/&gt;population_group_radii_table &amp;middot; csv&lt;br/&gt;only if: search_radius_mode == 'radius per population group'&quot;]:::conditional
+  root --&gt; n0
+  root --&gt; n1
+  root --&gt; n2
+  root --&gt; n3
+  root --&gt; n4
+  root --&gt; n5
+  root --&gt; n6
+  root --&gt; n7
+  n6 --&gt; n8
+  n6 --&gt; n9
+    </pre></section>
+<section id="urban-stormwater-retention">
+<h2>Urban Stormwater Retention<a class="headerlink" href="#urban-stormwater-retention" title="Link to this heading">¶</a></h2>
+<pre  class="mermaid">
+        flowchart LR
+  classDef required fill:#e8f5e9,stroke:#2e7d32,color:#222;
+  classDef conditional fill:#fff3e0,stroke:#ef6c00,color:#222;
+  classDef optional fill:#eceff1,stroke:#546e7a,color:#222;
+  root([&quot;Urban Stormwater Retention&quot;])
+  style root fill:#1565c0,stroke:#0d47a1,color:#ffffff
+  n0[&quot;land use/land cover&lt;br/&gt;lulc_path &amp;middot; raster&quot;]:::required
+  n1[&quot;soil hydrologic group&lt;br/&gt;soil_group_path &amp;middot; raster&quot;]:::required
+  n2[&quot;precipitation&lt;br/&gt;precipitation_path &amp;middot; raster&quot;]:::required
+  n3[&quot;Biophysical table&lt;br/&gt;biophysical_table &amp;middot; csv&quot;]:::required
+  n4[&quot;Adjust retention ratios&lt;br/&gt;adjust_retention_ratios &amp;middot; boolean&quot;]:::required
+  n5[&quot;Retention radius&lt;br/&gt;retention_radius &amp;middot; number&lt;br/&gt;only if: adjust_retention_ratios&quot;]:::conditional
+  n6[&quot;Road centerlines&lt;br/&gt;road_centerlines_path &amp;middot; vector&lt;br/&gt;only if: adjust_retention_ratios&quot;]:::conditional
+  n7[&quot;area of interest&lt;br/&gt;aggregate_areas_path &amp;middot; vector&quot;]:::optional
+  n8[&quot;Replacement cost&lt;br/&gt;replacement_cost &amp;middot; number&quot;]:::optional
+  root --&gt; n0
+  root --&gt; n1
+  root --&gt; n2
+  root --&gt; n3
+  root --&gt; n4
+  n4 --&gt; n5
+  n4 --&gt; n6
+  root --&gt; n7
+  root --&gt; n8
+    </pre></section>
+<section id="visitation-recreation-and-tourism">
+<h2>Visitation: Recreation and Tourism<a class="headerlink" href="#visitation-recreation-and-tourism" title="Link to this heading">¶</a></h2>
+<pre  class="mermaid">
+        flowchart LR
+  classDef required fill:#e8f5e9,stroke:#2e7d32,color:#222;
+  classDef conditional fill:#fff3e0,stroke:#ef6c00,color:#222;
+  classDef optional fill:#eceff1,stroke:#546e7a,color:#222;
+  root([&quot;Visitation: Recreation and Tourism&quot;])
+  style root fill:#1565c0,stroke:#0d47a1,color:#ffffff
+  n0[&quot;area of interest&lt;br/&gt;aoi_path &amp;middot; vector&quot;]:::required
+  n1[&quot;hostname&lt;br/&gt;hostname &amp;middot; freestyle_string&quot;]:::optional
+  n2[&quot;port&lt;br/&gt;port &amp;middot; number&quot;]:::optional
+  n3[&quot;start year&lt;br/&gt;start_year &amp;middot; number&quot;]:::required
+  n4[&quot;end year&lt;br/&gt;end_year &amp;middot; number&quot;]:::required
+  n5[&quot;grid the AOI&lt;br/&gt;grid_aoi &amp;middot; boolean&quot;]:::optional
+  n6[&quot;grid type&lt;br/&gt;grid_type &amp;middot; option_string&lt;br/&gt;only if: grid_aoi&quot;]:::conditional
+  n7[&quot;cell size&lt;br/&gt;cell_size &amp;middot; number&lt;br/&gt;only if: grid_aoi&quot;]:::conditional
+  n8[&quot;compute regression&lt;br/&gt;compute_regression &amp;middot; boolean&quot;]:::optional
+  n9[&quot;predictor table&lt;br/&gt;predictor_table_path &amp;middot; csv&lt;br/&gt;only if: compute_regression&quot;]:::conditional
+  n10[&quot;scenario predictor table&lt;br/&gt;scenario_predictor_table_path &amp;middot; csv&quot;]:::optional
+  root --&gt; n0
+  root --&gt; n1
+  root --&gt; n2
+  root --&gt; n3
+  root --&gt; n4
+  root --&gt; n5
+  n5 --&gt; n6
+  n5 --&gt; n7
+  root --&gt; n8
+  n8 --&gt; n9
+  root --&gt; n10
+    </pre></section>
+<section id="wave-energy-production">
+<h2>Wave Energy Production<a class="headerlink" href="#wave-energy-production" title="Link to this heading">¶</a></h2>
+<pre  class="mermaid">
+        flowchart LR
+  classDef required fill:#e8f5e9,stroke:#2e7d32,color:#222;
+  classDef conditional fill:#fff3e0,stroke:#ef6c00,color:#222;
+  classDef optional fill:#eceff1,stroke:#546e7a,color:#222;
+  root([&quot;Wave Energy Production&quot;])
+  style root fill:#1565c0,stroke:#0d47a1,color:#ffffff
+  n0[&quot;wave base data&lt;br/&gt;wave_base_data_path &amp;middot; directory&quot;]:::required
+  n1[&quot;analysis area&lt;br/&gt;analysis_area &amp;middot; option_string&quot;]:::required
+  n2[&quot;area of interest&lt;br/&gt;aoi_path &amp;middot; vector&quot;]:::optional
+  n3[&quot;machine performance table&lt;br/&gt;machine_perf_path &amp;middot; csv&quot;]:::required
+  n4[&quot;machine parameter table&lt;br/&gt;machine_param_path &amp;middot; csv&quot;]:::required
+  n5[&quot;bathymetry&lt;br/&gt;dem_path &amp;middot; raster&quot;]:::required
+  n6[&quot;run valuation&lt;br/&gt;valuation_container &amp;middot; boolean&quot;]:::optional
+  n7[&quot;grid connection points table&lt;br/&gt;land_gridPts_path &amp;middot; csv&lt;br/&gt;only if: valuation_container&quot;]:::conditional
+  n8[&quot;machine economic table&lt;br/&gt;machine_econ_path &amp;middot; csv&lt;br/&gt;only if: valuation_container&quot;]:::conditional
+  n9[&quot;number of machines&lt;br/&gt;number_of_machines &amp;middot; number&lt;br/&gt;only if: valuation_container&quot;]:::conditional
+  root --&gt; n0
+  root --&gt; n1
+  root --&gt; n2
+  root --&gt; n3
+  root --&gt; n4
+  root --&gt; n5
+  root --&gt; n6
+  n6 --&gt; n7
+  n6 --&gt; n8
+  n6 --&gt; n9
+    </pre></section>
+<section id="wind-energy-production">
+<h2>Wind Energy Production<a class="headerlink" href="#wind-energy-production" title="Link to this heading">¶</a></h2>
+<pre  class="mermaid">
+        flowchart LR
+  classDef required fill:#e8f5e9,stroke:#2e7d32,color:#222;
+  classDef conditional fill:#fff3e0,stroke:#ef6c00,color:#222;
+  classDef optional fill:#eceff1,stroke:#546e7a,color:#222;
+  root([&quot;Wind Energy Production&quot;])
+  style root fill:#1565c0,stroke:#0d47a1,color:#ffffff
+  n0[&quot;wind data points&lt;br/&gt;wind_data_path &amp;middot; csv&quot;]:::required
+  n1[&quot;area of interest&lt;br/&gt;aoi_vector_path &amp;middot; vector&lt;br/&gt;only if: valuation_container and grid_points_path&quot;]:::conditional
+  n2[&quot;bathymetry&lt;br/&gt;bathymetry_path &amp;middot; raster&quot;]:::required
+  n3[&quot;land polygon&lt;br/&gt;land_polygon_vector_path &amp;middot; vector&lt;br/&gt;only if: min_distance or max_distance or valuation_container&quot;]:::conditional
+  n4[&quot;global wind energy parameters&lt;br/&gt;global_wind_parameters_path &amp;middot; csv&quot;]:::required
+  n5[&quot;turbine parameters&lt;br/&gt;turbine_parameters_path &amp;middot; csv&quot;]:::required
+  n6[&quot;number of turbines&lt;br/&gt;number_of_turbines &amp;middot; number&quot;]:::required
+  n7[&quot;minimum depth&lt;br/&gt;min_depth &amp;middot; number&quot;]:::required
+  n8[&quot;maximum depth&lt;br/&gt;max_depth &amp;middot; number&quot;]:::required
+  n9[&quot;minimum distance&lt;br/&gt;min_distance &amp;middot; number&lt;br/&gt;only if: valuation_container&quot;]:::conditional
+  n10[&quot;maximum distance&lt;br/&gt;max_distance &amp;middot; number&lt;br/&gt;only if: valuation_container&quot;]:::conditional
+  n11[&quot;run valuation&lt;br/&gt;valuation_container &amp;middot; boolean&quot;]:::optional
+  n12[&quot;foundation cost&lt;br/&gt;foundation_cost &amp;middot; number&lt;br/&gt;only if: valuation_container&quot;]:::conditional
+  n13[&quot;discount rate&lt;br/&gt;discount_rate &amp;middot; ratio&lt;br/&gt;only if: valuation_container&quot;]:::conditional
+  n14[&quot;grid connection points&lt;br/&gt;grid_points_path &amp;middot; csv&lt;br/&gt;only if: valuation_container and (not avg_grid_distance)&quot;]:::conditional
+  n15[&quot;average shore-to-grid distance&lt;br/&gt;avg_grid_distance &amp;middot; number&lt;br/&gt;only if: valuation_container and (not grid_points_path)&quot;]:::conditional
+  n16[&quot;use price table&lt;br/&gt;price_table &amp;middot; boolean&lt;br/&gt;only if: valuation_container&quot;]:::conditional
+  n17[&quot;wind energy price table&lt;br/&gt;wind_schedule &amp;middot; csv&lt;br/&gt;only if: valuation_container and price_table&quot;]:::conditional
+  n18[&quot;price of energy&lt;br/&gt;wind_price &amp;middot; number&lt;br/&gt;only if: valuation_container and (not price_table)&quot;]:::conditional
+  n19[&quot;rate of price change&lt;br/&gt;rate_change &amp;middot; ratio&lt;br/&gt;only if: valuation_container and (not price_table)&quot;]:::conditional
+  root --&gt; n0
+  n11 --&gt; n1
+  root --&gt; n2
+  n9 --&gt; n3
+  root --&gt; n4
+  root --&gt; n5
+  root --&gt; n6
+  root --&gt; n7
+  root --&gt; n8
+  n11 --&gt; n9
+  n11 --&gt; n10
+  root --&gt; n11
+  n11 --&gt; n12
+  n11 --&gt; n13
+  n11 --&gt; n14
+  n11 --&gt; n15
+  n11 --&gt; n16
+  n11 --&gt; n17
+  n11 --&gt; n18
+  n11 --&gt; n19
+    </pre></section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">ESWS</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="run.html">Running</a></li>
+<li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration &amp; Maintenance</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tables.html">Tabular Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rasters.html">Raster Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="vectors.html">Vector Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="processes.html">Processes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Model Inputs</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Model Inputs (Dependency Tree)</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#annual-water-yield">Annual Water Yield</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#carbon-storage-and-sequestration">Carbon Storage and Sequestration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#coastal-blue-carbon">Coastal Blue Carbon</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#coastal-blue-carbon-preprocessor">Coastal Blue Carbon Preprocessor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#coastal-vulnerability">Coastal Vulnerability</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#crop-pollination">Crop Pollination</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#crop-production-percentile">Crop Production: Percentile</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#crop-production-regression">Crop Production: Regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#delineateit">DelineateIt</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#forest-carbon-edge-effect">Forest Carbon Edge Effect</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#habitat-quality">Habitat Quality</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#habitat-risk-assessment">Habitat Risk Assessment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#nutrient-delivery-ratio">Nutrient Delivery Ratio</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#routedem">RouteDEM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#scenario-generator-proximity-based">Scenario Generator: Proximity Based</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#scenic-quality">Scenic Quality</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#seasonal-water-yield">Seasonal Water Yield</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#sediment-delivery-ratio">Sediment Delivery Ratio</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#urban-cooling">Urban Cooling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#urban-flood-risk-mitigation">Urban Flood Risk Mitigation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#urban-nature-access">Urban Nature Access</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#urban-stormwater-retention">Urban Stormwater Retention</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#visitation-recreation-and-tourism">Visitation: Recreation and Tourism</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#wave-energy-production">Wave Energy Production</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#wind-energy-production">Wind Energy Production</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="extensions.html">Third-Party Extensions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tut.html">Tutorials</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="models.html" title="previous chapter">Model Inputs</a></li>
+      <li>Next: <a href="extensions.html" title="next chapter">Third-Party Extensions</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.0.4</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/models_tree.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -43,6 +43,8 @@ Contents:
    rasters
    vectors
    processes
+   models
+   models_tree
    extensions
    tut
 

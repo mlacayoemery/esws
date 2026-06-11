@@ -25,7 +25,7 @@ SECRET_KEY = '0@h#ygy0=n@k@0fw1gkn3)5jav0xbp%i!a*dor=1-fx1^hoy!-'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '*').split(',')
 
 
 # Application definition
@@ -82,9 +82,14 @@ GRAPH_MODELS = {
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        # Writable location override for containers (the repo is mounted read-only).
+        'NAME': os.environ.get('DJANGO_DB_PATH', os.path.join(BASE_DIR, 'db.sqlite3')),
     }
 }
+
+# Create the wpsclient tables via `migrate --run-syncdb` instead of migration
+# files, so the container never needs to write into the (read-only) app source.
+MIGRATION_MODULES = {'wpsclient': None}
 
 
 # Password validation
@@ -115,8 +120,6 @@ TIME_ZONE = 'UTC'
 
 USE_I18N = True
 
-USE_L10N = True
-
 USE_TZ = True
 
 
@@ -124,3 +127,6 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/1.11/howto/static-files/
 
 STATIC_URL = '/static/'
+
+# Django 3.2+ requires an explicit default primary key type.
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

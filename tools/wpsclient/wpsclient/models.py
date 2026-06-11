@@ -1,5 +1,4 @@
 from django.db import models
-from jsonfield import JSONField
 
 # Create your models here.
 
@@ -85,7 +84,7 @@ class Job(models.Model):
     status = models.CharField(max_length=12, default='Pending')
     status_url = models.TextField(default="")
 
-    args = JSONField()
+    args = models.JSONField(default=dict)
 
     def publish(self):
         self.save()

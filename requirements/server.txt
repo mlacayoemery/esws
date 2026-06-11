@@ -1,0 +1,39 @@
+# ESWS application image — modern InVEST 3.14.3 geospatial stack + Django dashboard.
+#
+# A single image (docker/Dockerfile.invest) backs every Python service: the pywps
+# server, the file server, and the Django dashboard. The dashboard's views import
+# tools/easyows.py (GeoServer client), so it needs the same geo stack as the WPS
+# server — unifying on one image avoids duplicating GDAL/GeoServer deps.
+#
+# NOTE: GDAL (and its Python bindings) are installed from conda-forge in
+#       docker/Dockerfile.invest. Do NOT add gdal here.
+#
+# Supersedes the InVEST 3.8.0 / Django 2.2 era pins in ../requirements_py3.txt.
+
+# --- InVEST + geoprocessing ---
+natcap.invest==3.14.3
+pygeoprocessing>=2.4.6
+taskgraph[niced_processes]>=0.11.0
+Pyro4==4.77            # still pinned exactly by InVEST 3.14.3 / taskgraph
+pint
+Babel
+
+# --- WPS middleware ---
+pywps>=4.5,<4.7
+Flask
+flask-cors
+
+# --- GeoServer REST client ---
+# Python 3 maintained fork of gsconfig; provides the `geoserver` package that
+# tools/easyows.py imports (geoserver.catalog.Catalog). Replaces the old
+# boundlessgeo/gsconfig git pin.
+geoserver-restconfig
+
+# --- Django dashboard (tools/wpsclient) ---
+Django==4.2.*
+django-extensions
+owslib
+beautifulsoup4
+
+# --- misc used by easyows / handlers / views ---
+requests

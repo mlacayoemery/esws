@@ -1,14 +1,31 @@
+"""Legacy GeoServer-integrated Annual Water Yield WPS process.
+
+This is the original bespoke water-yield process (it returns a ready-to-use
+GeoServer WMS GetMap URL and is what the Django dashboard targets). It is kept
+for backward compatibility; every InVEST model — including a generic
+``annual_water_yield`` — is also exposed by ``invest_models.py``.
+
+Ported to Python 3 / InVEST 3.14.3: the model module
+``natcap.invest.hydropower.hydropower_water_yield`` was renamed to
+``natcap.invest.annual_water_yield``. The WPS identifier is left at the old
+string so existing dashboard requests keep resolving.
+"""
 import logging
+import os.path
+import sys
+import tempfile
+
 import pywps
 
-import sys
-import os.path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 import easyows
-import tempfile
 
-import natcap.invest.hydropower.hydropower_water_yield
+import natcap.invest
+import natcap.invest.annual_water_yield
+
+LEGACY_IDENTIFIER = 'natcap.invest.hydropower.hydropower_water_yield'
+
 
 class WebProcess(pywps.Process):
     def __init__(self):
@@ -39,11 +56,11 @@ class WebProcess(pywps.Process):
                   pywps.LiteralInput('watersheds_path',
                                      'Watersheds',
                                      data_type='string'),
-                  
+
                   pywps.LiteralInput('biophysical_table_path',
                                      'Biophysical table',
                                      data_type='string'),
-                  
+
                   pywps.LiteralInput('seasonality_constant',
                                      'Seasonality constant',
                                      data_type='float')]
@@ -54,10 +71,10 @@ class WebProcess(pywps.Process):
 
         super(WebProcess, self).__init__(
             self._handler,
-            identifier='natcap.invest.hydropower.hydropower_water_yield',
+            identifier=LEGACY_IDENTIFIER,
             title='Water Yield',
-            abstract= natcap.invest.hydropower.hydropower_water_yield.__doc__,
-            version= natcap.invest.__version__,
+            abstract=natcap.invest.annual_water_yield.__doc__,
+            version=natcap.invest.__version__,
             inputs=inputs,
             outputs=outputs,
             store_supported=True,
@@ -77,7 +94,7 @@ class WebProcess(pywps.Process):
             logger.addHandler(fh)
 
         logger.setLevel(logging.DEBUG)
-        
+
         logger.info("BEGIN CALL TO WPS INVEST_WY")
         logger.debug("DEBUG MODE")
 
@@ -91,46 +108,45 @@ class WebProcess(pywps.Process):
                      'lulc_path',
                      'watersheds_path',
                      'biophysical_table_path',
-                     'seasonality_constant']        
+                     'seasonality_constant']
 
         for a in args_list:
             args[a] = request.inputs[a][0].data
 
-        args["workspace_dir"] = tempfile.mkdtemp(prefix="esws-%s-" % str(self.uuid))
-
+        args["workspace_dir"] = tempfile.mkdtemp(
+            prefix="esws-%s-" % str(self.uuid),
+            dir=os.environ.get("WPS_WORKSPACE_ROOT", tempfile.gettempdir()))
+        os.chmod(args["workspace_dir"], 0o755)
+        args["n_workers"] = -1
 
         for k in args.keys():
             try:
                 args[k] = os.path.expanduser(args[k])
 
-            except AttributeError:
+            except (AttributeError, TypeError):
                 continue
 
-        cat = easyows.Catalog(gs_url = "http://localhost:8080/gs215",
-                              username = "admin",
-                              password = "geoserver",
-                              ws_prefix = "esws-",
-                              logger = logger)
+        cat = easyows.Catalog.from_env(logger=logger)
 
         logger.info("Removing workspace(s)")
         try:
             cat.clean_named_workspace()
 
-        except:
+        except Exception:
             raise pywps.exceptions.NoApplicableCode("Could not clean workspace(s)")
 
         logger.info("Making output workspace")
         ws = cat.make_named_workspace(workspace_uuid)
 
         layer_name = ":".join([ws, "wy"])
-        
+
         logger.info("Constructing upload template")
         uploads = {
-            layer_name : os.path.join(args[u'workspace_dir'], "output", u'watershed_results_wyield.shp')
+            layer_name: os.path.join(args[u'workspace_dir'], "output", u'watershed_results_wyield.shp')
         }
 
         logger.info("Constructing WPS job")
-        j = easyows.Job(natcap.invest.hydropower.hydropower_water_yield.execute,
+        j = easyows.Job(natcap.invest.annual_water_yield.execute,
                         args,
                         uploads,
                         "Call to InVEST WY WPS %s" % ws,
@@ -138,19 +154,15 @@ class WebProcess(pywps.Process):
                         cat,
                         logger)
 
-##        response.outputs['response'].data = str(args)
-##        response.outputs['response'].uom = pywps.UOM('unity')
-##
-##        return response
-
-
-        gs_url = "http://127.0.0.1:8080/gs215"
-        result_layers = ",".join([cat.cover_name_from_url(args["lulc_path"]),layer_name])
+        gs_url = os.environ.get("GEOSERVER_PUBLIC_URL",
+                                os.environ.get("GEOSERVER_URL",
+                                               "http://localhost:8080/geoserver"))
+        result_layers = ",".join([cat.cover_name_from_url(args["lulc_path"]), layer_name])
         bbox = "453436.69380764756,4918220.405289317,468316.69380764384,4952570.405289317"
         width = "332"
         height = "768"
         srs = "EPSG:26910"
-        result_template="%s/wms?service=WMS&version=1.1.0&request=GetMap&layers=%s&styles=&bbox=%s&width=%s&height=%s&srs=%s&format=application/openlayers"
+        result_template = "%s/wms?service=WMS&version=1.1.0&request=GetMap&layers=%s&styles=&bbox=%s&width=%s&height=%s&srs=%s&format=application/openlayers"
         result_url = result_template % (gs_url, result_layers, bbox, width, height, srs)
 
         logger.info("Running job")
@@ -160,7 +172,7 @@ class WebProcess(pywps.Process):
                 response.outputs['response'].uom = pywps.UOM('unity')
 
                 logger.info("END CALL TO WPS INVEST_WY")
-                       
+
                 return response
 
-        raise IOError, "Job timed out, perhaps some remote data cannot be retrieved."
+        raise IOError("Job timed out, perhaps some remote data cannot be retrieved.")

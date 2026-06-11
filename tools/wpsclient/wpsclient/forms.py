@@ -10,7 +10,7 @@ from .models import WaterYieldModel
 
 from .models import Job
 
-from splitjson.widgets import SplitJSONWidget
+from .widgets import SplitJSONWidget
 
 ##class ServerForm(forms.ModelForm):
 ##

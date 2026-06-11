@@ -10,3 +10,4 @@
 sample.csv
 shape_join.*
 src
+.env

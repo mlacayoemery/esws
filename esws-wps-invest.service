@@ -4,7 +4,9 @@ After=multi-user.target
 
 [Service]
 Type=idle
-ExecStart=/usr/bin/python3 /home/esws/esws/tools/wpsserver/wpsserver.py
+; The Python stack lives in the conda-forge env created by install.sh option 2
+; (ESWS_ENV, /home/esws/esws-invest by default), not in the system interpreter.
+ExecStart=/home/esws/esws-invest/bin/python /home/esws/esws/tools/wpsserver/wpsserver.py
 
 [Install]
 WantedBy=multi-user.target

@@ -20,3 +20,4 @@ python3-pygraphviz
 python3-venv
 libtiff-dev
 libcurl4-openssl-dev
+bzip2

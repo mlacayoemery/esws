@@ -1,5 +1,5 @@
 pip
-GDAL==2.4.4
+GDAL==3.13.1
 Cython
 Pyro4==4.77
 pandas>=0.22.0

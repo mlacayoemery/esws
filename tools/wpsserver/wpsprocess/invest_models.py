@@ -59,6 +59,24 @@ def _literal_input(inp):
     # literal True maps to a mandatory WPS input.
     min_occurs = 1 if required is True else 0
 
+    # Path-like inputs all go out as strings, which loses the distinction
+    # between a raster, a vector and a table -- exactly what a client needs in
+    # order to offer the right data to choose from. Publish the InVEST type in
+    # the abstract as a machine-readable trailer so it survives DescribeProcess
+    # and any WPS client can act on it, instead of clients guessing from the
+    # identifier or importing natcap.invest themselves.
+    #
+    # It rides in the abstract rather than ows:Metadata because pywps 4.6 drops
+    # metadata from LiteralInput when rendering DescribeProcess -- the element
+    # simply never appears in the response.
+    trailer = []
+    if arg_type:
+        trailer.append("invest:type=%s" % arg_type)
+    if isinstance(required, str):
+        trailer.append("invest:required=%s" % required)
+    if trailer:
+        abstract = ("%s\n\n[%s]" % (abstract, " ".join(trailer))).strip()
+
     kwargs = dict(
         identifier=inp.id,
         title=title,
@@ -191,11 +209,26 @@ class InvestProcess(pywps.Process):
                           0, cat, logger)
 
         published = []
+        ran = False
         while job.priority < 3:
             if job.run():
-                # only report layers whose files actually existed/published
-                published = [ln for ln, p in uploads.items() if os.path.exists(p)]
+                ran = True
+                # Report only layers that actually made it into GeoServer:
+                # the file existing is not enough, since publishing it may
+                # still have been refused (see easyows.Job.failed_uploads).
+                published = [ln for ln, p in uploads.items()
+                             if os.path.exists(p)
+                             and ln.split(":")[-1] not in job.failed_uploads]
                 break
+
+        if not ran:
+            # Job.run() returns False when it could not resolve the inputs --
+            # typically a remote OWS reference that would not download. Falling
+            # out of the loop used to be reported as ProcessSucceeded with no
+            # outputs, so a job that never executed looked like a success.
+            raise pywps.exceptions.NoApplicableCode(
+                "Could not resolve all inputs for %s; the model did not run"
+                % self.model_id)
 
         gs_url = os.environ.get(
             "GEOSERVER_PUBLIC_URL",

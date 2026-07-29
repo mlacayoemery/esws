@@ -54,6 +54,26 @@ class ServerWFS(Server):
 class ServerWPS(Server):
     server_type = models.CharField(max_length=3, default='WPS', editable=False)
 
+class ServerTemplate(ServerWPS):
+    """A WPS source whose job forms come prefilled with sample values.
+
+    Points at the same WPS URL as a plain WPS source and lists the same
+    processes; the only difference is that job_new preselects the arguments
+    recorded in InVEST's sample datastacks, so a process can be run without
+    hunting for inputs first.
+
+    Subclasses ServerWPS rather than Server so that Job.server -- a ForeignKey
+    to ServerWPS -- accepts a template. The cost is that templates also satisfy
+    ServerWPS queries, so the WPS listings exclude them explicitly.
+
+    server_type is inherited, not redeclared: multi-table inheritance forbids
+    shadowing a parent field, so it is stamped on save instead.
+    """
+
+    def save(self, *args, **kwargs):
+        self.server_type = 'TPL'
+        return super().save(*args, **kwargs)
+
 class ServerElement(models.Model):
     server = models.ForeignKey(Server, on_delete=models.CASCADE)   
     identifier = models.CharField(max_length=200)
@@ -115,20 +135,3 @@ class Job(models.Model):
 ##        args = JSONField()
 ##        
 
-class WaterYieldModel(models.Model):
-##    depth = ServerElement.objects.filter(server__server_type="WCS")
-##    precipitation = ServerElement.objects.filter(server__server_type="WCS")
-##    pawc = ServerElement.objects.filter(server__server_type="WCS")
-##    evapotranspiration = ServerElement.objects.filter(server__server_type="WCS")
-##    lulc = ServerElement.objects.filter(server__server_type="WCS")
-##    watersheds = ServerElement.objects.filter(server__server_type="WFS")
-##    biophysical = ServerElement.objects.filter(server__server_type="CSV")
-
-    precipitation_path = models.ForeignKey(ElementWCS, related_name="precipitation", on_delete=models.CASCADE, default=6)
-    eto_path = models.ForeignKey(ElementWCS, related_name="evapotranspiration", on_delete=models.CASCADE, default=3)    
-    depth_to_root_rest_layer_path = models.ForeignKey(ElementWCS, related_name="depth", on_delete=models.CASCADE, default=2)
-    pawc_path = models.ForeignKey(ElementWCS, related_name="pawc", on_delete=models.CASCADE, default=4)
-    lulc_path = models.ForeignKey(ElementWCS, related_name="lulc", on_delete=models.CASCADE, default=5)
-    watersheds_path = models.ForeignKey(ElementWFS, related_name="watersheds", on_delete=models.CASCADE, default=7)
-    biophysical_table_path = models.ForeignKey(ElementCSV, related_name="biophysical", on_delete=models.CASCADE, default=1)
-    seasonality_constant = models.IntegerField(default=5)

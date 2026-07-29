@@ -7,13 +7,13 @@ from .models import ServerCSV
 from .models import ServerWCS
 from .models import ServerWFS
 from .models import ServerWPS
+from .models import ServerTemplate
 
 from .models import ElementCSV
 from .models import ElementWCS
 from .models import ElementWFS
 from .models import ElementWPS
 
-from .models import WaterYieldModel
 
 from .models import ServerElement
 from .models import Job
@@ -22,8 +22,9 @@ from .forms import ServerFormCSV
 from .forms import ServerFormWCS
 from .forms import ServerFormWFS
 from .forms import ServerFormWPS
+from .forms import ServerFormTemplate
 
-from .forms import WaterYieldForm
+from .forms import ProcessForm
 
 from .forms import JobForm
 
@@ -73,14 +74,17 @@ def dashboard(request):
     servers_csv = ServerCSV.objects.order_by('title')
     servers_wcs = ServerWCS.objects.order_by('title')
     servers_wfs = ServerWFS.objects.order_by('title')
-    servers_wps = ServerWPS.objects.order_by('title')
+    # A template is also a ServerWPS, so keep it out of the WPS list.
+    servers_wps = ServerWPS.objects.filter(servertemplate__isnull=True).order_by('title')
+    servers_tpl = ServerTemplate.objects.order_by('title')
 
     process_jobs = Job.objects.order_by('pk')
     
     return render(request, 'wpsclient/dashboard.html', {'servers_csv' : servers_csv,
                                                         'servers_wcs' : servers_wcs,
                                                         'servers_wfs' : servers_wfs,
-                                                        'servers_wps' : servers_wps,                                                        
+                                                        'servers_wps' : servers_wps,
+                                                        'servers_tpl' : servers_tpl,
                                                         'process_list' : process_jobs})
 
 def server_list(request, server_type):
@@ -88,11 +92,14 @@ def server_list(request, server_type):
         "CSV" : ServerCSV,
         "WCS" : ServerWCS,
         "WFS" : ServerWFS,
-        "WPS" : ServerWPS
+        "WPS" : ServerWPS,
+        "TPL" : ServerTemplate
         }
 
     ServerClass = server_dict[server_type]
     servers = ServerClass.objects.order_by('title')
+    if server_type == "WPS":
+        servers = servers.filter(servertemplate__isnull=True)
     return render(request, 'wpsclient/server_list.html',
                   {'servers' : servers, 'server_type' : server_type})
 
@@ -101,7 +108,8 @@ def server_detail(request, server_pk, server_type):
         "CSV" : ServerCSV,
         "WCS" : ServerWCS,
         "WFS" : ServerWFS,
-        "WPS" : ServerWPS
+        "WPS" : ServerWPS,
+        "TPL" : ServerTemplate
         }
 
     ServerClass = server_dict[server_type]
@@ -133,13 +141,19 @@ def server_register(request, server_type, title, url):
         "CSV" : ServerCSV,
         "WCS" : ServerWCS,
         "WFS" : ServerWFS,
-        "WPS" : ServerWPS
+        "WPS" : ServerWPS,
+        "TPL" : ServerTemplate
         }
 
     ServerClass = server_dict[server_type]
 
-    server = ServerClass(title=title, url=url)
-    server.save()
+    # Keyed on the URL so re-registering a source updates rather than
+    # duplicating it -- the demo loader is meant to be safe to re-run.
+    server, created = ServerClass.objects.get_or_create(
+        url=url, defaults={"title": title})
+    if not created and server.title != title:
+        server.title = title
+        server.save()
 
     return server_detail(request, server.pk, server_type)
 
@@ -149,7 +163,8 @@ def server_new(request, server_type):
         "CSV" : ServerFormCSV,
         "WCS" : ServerFormWCS,
         "WFS" : ServerFormWFS,
-        "WPS" : ServerFormWPS
+        "WPS" : ServerFormWPS,
+        "TPL" : ServerFormTemplate
         }
 
     FormClass = server_dict[server_type]
@@ -201,7 +216,8 @@ def server_edit(request, server_pk, server_type):
         "CSV" : (ServerCSV, ServerFormCSV),
         "WCS" : (ServerWCS, ServerFormWCS),
         "WFS" : (ServerWFS, ServerFormWFS),
-        "WPS" : (ServerWPS, ServerFormWPS)
+        "WPS" : (ServerWPS, ServerFormWPS),
+        "TPL" : (ServerTemplate, ServerFormTemplate)
         }
 
     ServerClass, FormClass = server_dict[server_type]
@@ -286,7 +302,9 @@ def server_element_list(request, server_type, server_pk):
         "CSV" : (ServerCSV, get_csv_identifiers),
         "WCS" : (ServerWCS, get_wcs_identifiers),
         "WFS" : (ServerWFS, get_wfs_identifiers),        
-        "WPS" : (ServerWPS, get_wps_identifiers)
+        "WPS" : (ServerWPS, get_wps_identifiers),
+        # A template lists the same processes as the WPS it points at.
+        "TPL" : (ServerTemplate, get_wps_identifiers)
         }
 
     ServerClass, get_list = server_dict[server_type]
@@ -311,15 +329,18 @@ def server_element_register(request, server_type, server_pk, element_id):
         "CSV" : (ServerCSV, ElementCSV), 
         "WCS" : (ServerWCS, ElementWCS),
         "WFS" : (ServerWFS, ElementWFS),
-        "WPS" : (ServerWPS, ElementWPS)
+        "WPS" : (ServerWPS, ElementWPS),
+        "TPL" : (ServerTemplate, ElementWPS)
         }
 
     ServerClass, ElementClass = server_dict[server_type]
     
     server = get_object_or_404(ServerClass, pk=server_pk)
 
-    element = ElementClass(server=server,identifier=element_id)
-    element.save()
+    # Same reasoning as server_register: registering an element twice should
+    # be a no-op, not a duplicate row in every dropdown.
+    element, _created = ElementClass.objects.get_or_create(
+        server=server, identifier=element_id)
 
     server.registrations = server.registrations + 1
     server.save()
@@ -331,7 +352,8 @@ def server_element_unregister(request, server_type, server_pk, element_id):
         "CSV" : ServerCSV,
         "WCS" : ServerWCS,
         "WFS" : ServerWFS,
-        "WPS" : ServerWPS
+        "WPS" : ServerWPS,
+        "TPL" : ServerTemplate
         }
 
     ServerClass = server_dict[server_type]
@@ -573,6 +595,85 @@ def job_validate(request, job_pk):
     return dashboard(request)
 
   
+def template_initial(process_id):
+    """Initial form values for a template source: InVEST's own sample arguments.
+
+    The sample archives ship datastacks -- complete, known-good arg sets per
+    model -- so the defaults are InVEST's rather than invented. File arguments
+    are matched back to the elements scripts/load_demo.py registered, using the
+    same layer naming it published under, so the dropdowns come *preselected*
+    instead of merely filled with a path.
+
+    Returns {} if the sample cache is not mounted or the model has no
+    datastack, in which case the form renders empty as usual.
+    """
+    scripts_dir = "/app/scripts"
+    if scripts_dir not in sys.path:
+        sys.path.insert(0, scripts_dir)
+    try:
+        import invest_sample_manifest as manifest
+        import load_demo
+    except Exception:  # noqa: BLE001 - no sample cache: fall back to empty form
+        return {}
+
+    # The manifest defaults to the host cache path; inside a container the
+    # samples are mounted elsewhere, so point it at the same root load_demo
+    # publishes from.
+    manifest.SAMPLES = load_demo.SAMPLES
+
+    try:
+        entries, _unmatched = manifest.build()
+    except Exception:  # noqa: BLE001
+        return {}
+
+    entry = entries.get(process_id)
+    if not entry or not entry.get("datastacks"):
+        return {}
+    stack = entry["datastacks"][0]
+
+    element_for_ext = {
+        ".tif": ElementWCS, ".tiff": ElementWCS,
+        ".shp": ElementWFS, ".gpkg": ElementWFS,
+        ".csv": ElementCSV,
+    }
+
+    initial = {}
+    for key, value in stack["args"].items():
+        if key in ("workspace_dir", "n_workers"):
+            continue
+        if not isinstance(value, str):
+            initial[key] = value
+            continue
+
+        candidate = value
+        if not path.isabs(candidate):
+            candidate = path.join(stack["dir"], candidate)
+        if not path.exists(candidate):
+            initial[key] = value
+            continue
+
+        resolved = path.realpath(candidate)
+        ext = path.splitext(resolved)[1].lower()
+        ElementClass = element_for_ext.get(ext)
+        if ElementClass is None:
+            initial[key] = value
+            continue
+
+        if ext == ".csv":
+            identifier = "invest/%s" % path.relpath(resolved, load_demo.SAMPLES)
+        else:
+            identifier = "%s:%s" % (load_demo.WORKSPACE,
+                                    load_demo.layer_name(resolved))
+
+        element = ElementClass.objects.filter(identifier=identifier).first()
+        # A ModelChoiceField takes the primary key; fall back to the raw value
+        # so an unpublished input still shows something meaningful.
+        initial[key] = element.pk if element else value
+
+    return initial
+
+
+
 def job_new(request, server_pk, process_id):
     l = logging.getLogger('django.request')
     l.warning(inspect.stack()[0][3])
@@ -581,61 +682,51 @@ def job_new(request, server_pk, process_id):
     #link = server.url + "?service=wps&version=1.0.0&request=DescribeProcess&IDENTIFIER=" + process_id
     #description = requests.get(link)
 
-    args = collections.OrderedDict()
-
     wps = owslib.wps.WebProcessingService(server.url, skip_caps=True)
     process = wps.describeprocess(process_id)
-
-    for parameter in process.dataInputs:            
-        if parameter.dataType == "double":
-            args[parameter.identifier] = float(0)
-        elif parameter.dataType == "int":
-            args[parameter.identifier] = int(0)                
-        else:
-            args[parameter.identifier] = ""
+    parameters = process.dataInputs
+    is_template = ServerTemplate.objects.filter(pk=server_pk).exists()
 
     if request.method == "POST":
-        form = testForm(request.POST)
+        form = ProcessForm(request.POST, parameters=parameters)
+        if form.is_valid():
+            args = collections.OrderedDict()
+            for name, value in form.cleaned_data.items():
+                if value is None or value == "":
+                    continue
+                if name in form.element_fields:
+                    # A chosen data source becomes the URL the WPS will fetch,
+                    # the same conversion the water yield form used to do.
+                    value = get_ows_data_url(value.element_type,
+                                             value.server.url,
+                                             value.identifier)
+                elif isinstance(value, bool):
+                    value = "true" if value else "false"
+                args[name] = str(value)
 
-##        l.warning(str(dir(form)))
-##        l.warning(str(form.data))
-        data = copy.copy(form.data)
-        del data["csrfmiddlewaretoken"]
-        keys=list(data.keys())
-        key_values = []
-        strip_index=len("data__")
-        for k in keys:
-            key_values.append((k[strip_index:], type(args[k[strip_index:]])(data[k])))
-        
-        #form.data.pop('QueryDict')
+            job = Job(server=server, identifier=process_id, args=args)
+            job.status = "Run"
+            status_url = (server.url +
+                          "?service=wps&version=1.0.0&request=Execute&IDENTIFIER=" +
+                          job.identifier + "&datainputs=")
+            status_url += ";".join("%s=%s" % (k, quote(quote(v)))
+                                   for k, v in args.items())
+            job.status_url = status_url
+            job.save()
 
-##        l.warning(str(list(request.POST.keys())))
-##        keys = list(request.POST.keys())
-##        keys.pop(0)
-##        values = json()
-##        for k in keys:
-##            json[
+            server.jobs = server.jobs + 1
+            server.save()
 
-        #form.data["csrfmiddlewaretoken"].delete()
-            
-        args= collections.OrderedDict(key_values)
-        job = Job(server=server,identifier=process_id,args=args)
+            return redirect('job_detail', job_pk=job.pk)
+    else:
+        initial = template_initial(process_id) if is_template else None
+        form = ProcessForm(parameters=parameters, initial=initial)
 
-        job.status = "Run"
-        status_url = server.url + "?service=wps&version=1.0.0&request=Execute&IDENTIFIER=" + job.identifier + "&datainputs="
-        status_url = status_url + ";".join(["%s=%s" % (k, quote(quote(job.args[k]))) for k in job.args.keys()])
-        job.status_url = status_url
-        
-        job.save()
-
-        server.jobs = server.jobs + 1
-        server.save()
-        
-        return redirect('job_detail', job_pk=job.pk)
-    else:        
-        form = testForm(request.POST or None, initial={'data': args})
-        
-    return render(request, 'wpsclient/job_edit.html', {'form': form})
+    return render(request, 'wpsclient/job_edit.html',
+                  {'form': form,
+                   'server_title': server.title,
+                   'process_id': process_id,
+                   'is_template': is_template})
 
 def job_edit(request, job_pk):
     l = logging.getLogger('django.request')
@@ -702,49 +793,20 @@ def get_ows_data_url(server_type, server_url, identifier):
     return ows_templates[server_type] % (server_url, identifier)
  
 def water_yield(request):
-    if request.method == "POST":
-        form = WaterYieldForm(request.POST)
+    """Redirect to the generated form for the annual water yield model.
 
-        #clean up data and convert server element ids to gettable URLs
-        data = copy.copy(form.data)
-        del data["csrfmiddlewaretoken"]
+    This used to be a hand-built form: a fixed set of fields, each a dropdown
+    of registered data sources, wired to a WaterYieldModel whose ForeignKeys
+    hardcoded which element type every input wanted -- and to server_pk="4".
+    ProcessForm now derives exactly that from DescribeProcess for any process,
+    so the bespoke page, form and model are gone and this only redirects.
+    """
+    server = ServerWPS.objects.order_by("pk").first()
+    if server is None:
+        return redirect("server_list", server_type="WPS")
+    return redirect("job_new", server_pk=server.pk,
+                    process_id="annual_water_yield")
 
-        keys = set(data.keys())
-        keys.remove("seasonality_constant")
-
-        for k in keys:
-            element = get_server_element(data[k])
-            data[k] = get_ows_data_url(element.element_type,element.server.url,element.identifier)      
-
-        #save data to a job and redirect to details
-        args = data
-        server_pk="4"
-        server = get_object_or_404(ServerWPS, pk=server_pk)
-        process_id="natcap.invest.hydropower.hydropower_water_yield"
-
-        #cat = easyows.Catalog()
-        name = str(uuid.uuid1())
-        #cat.gs_cat.create_workspace(name)
-        args["workspace_dir"] = name
-        
-        job = Job(server=server,identifier=process_id,args=args)
-
-        job.status = "Run"
-        status_url = server.url + "?service=wps&version=1.0.0&request=Execute&IDENTIFIER=natcap.invest.hydropower.hydropower_water_yield&datainputs="
-        status_url = status_url + ";".join(["%s=%s" % (k, quote(quote(job.args[k]))) for k in job.args.keys()])
-        job.status_url = status_url
-        
-        job.save()               
-
-        server.jobs = server.jobs + 1
-        server.save()
-        
-        return redirect('job_detail', job_pk=job.pk)        
-            
-    else: #elif request.method == "GET"
-        form = WaterYieldForm()
-
-    return render(request, 'wpsclient/water_yield.html', {'form': form})
 
 def job_to_wps_url(job):
     url = job.server.url + "?service=wps&version=1.0.0&request=Execute&IDENTIFIER=" + job.identifier + "&datainputs="

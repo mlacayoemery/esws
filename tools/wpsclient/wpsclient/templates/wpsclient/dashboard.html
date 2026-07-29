@@ -97,6 +97,30 @@ Total: {{ servers_wps.count }}<p>
 <a href="{% url 'job_list'%}">Jobs</a>
 
 <p>
+<h3>Templates</h3>
+<table border=1 frame=void rules=all>
+<tr>
+<td>Id</td>
+<td>Updated</td>
+<td>Name</td>
+<td>Bookmarks</td>
+<td>Jobs</td>
+</tr>
+{% for server in servers_tpl %}
+<tr>
+<td><a href="{% url 'server_edit' server_type=server.server_type server_pk=server.pk %}">{{ server.pk }}</a></td>
+<td>{{ server.updated_at|date:'y-m-d H:i' }}</td>
+<td><a href="{% url 'server_element_list' server_type=server.server_type server_pk=server.pk %}">{{ server.title }}</a></td>
+<td align=right>{{ server.registrations }}</td>
+<td align=right><a href="{% url 'server_job_list' server_pk=server.pk%}">{{ server.jobs }}</a></td>
+</tr>
+{% endfor %}
+</table>
+Total: {{ servers_tpl.count }}<p>
+<a href="{% url 'server_new' server_type='TPL' %}">Add</a>
+<a href="{% url 'job_list'%}">Jobs</a>
+
+<p>
 <h3>Jobs</h3>
 <table border=1 frame=void rules=all>
 <tr>

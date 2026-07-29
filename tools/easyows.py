@@ -242,6 +242,9 @@ class Job:
         self.args = args
         self.uploads = uploads
         self.msg = msg
+        # {layer_name: reason} for outputs the model produced but GeoServer
+        # would not accept; reported rather than raised, see run().
+        self.failed_uploads = {}
 
 
     def are_local_parameters(self):
@@ -372,17 +375,28 @@ class Job:
                     continue
                 self.logger.debug("Uploading %s" % layer_name)
                 ws, layer_name = layer_name.split(":")
-                if layer_path.lower().endswith(".shp"):
-                    self.catalog.publish_shp(layer_path, layer_name, ws)
+                try:
+                    if layer_path.lower().endswith(".shp"):
+                        self.catalog.publish_shp(layer_path, layer_name, ws)
 
-                elif layer_path.lower().endswith(".tif"):
-                    self.catalog.publish_tif(layer_path, layer_name, ws)
+                    elif layer_path.lower().endswith(".tif"):
+                        self.catalog.publish_tif(layer_path, layer_name, ws)
 
-                elif layer_path.lower().endswith(".gpkg"):
-                    self.catalog.publish_gpkg(layer_path, layer_name, ws)
+                    elif layer_path.lower().endswith(".gpkg"):
+                        self.catalog.publish_gpkg(layer_path, layer_name, ws)
 
-                else:
-                    self.logger.warning("Skipping unsupported output type %s" % layer_path)
+                    else:
+                        self.logger.warning("Skipping unsupported output type %s"
+                                            % layer_path)
+                except Exception as exc:  # noqa: BLE001
+                    # One unpublishable output must not fail a model run that
+                    # otherwise succeeded. Several models emit convolution
+                    # kernels (search_kernel, area_kernel, gaussian_kernel) as
+                    # intermediate rasters; they carry no CRS, so GeoServer
+                    # answers 500 when asked to make a coverage of them.
+                    self.failed_uploads[layer_name] = str(exc)
+                    self.logger.warning("Could not publish %s: %s",
+                                        layer_name, str(exc)[:200])
             return True
 
         else:

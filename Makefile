@@ -1,5 +1,5 @@
 # ESWS containerized stack — common operations.
-.PHONY: build up down logs smoke test check-baremetal check-geoserver
+.PHONY: build up down logs smoke test demo demo-data check-baremetal check-geoserver
 
 build:        ## Build the app + dashboard images
 	docker compose build
@@ -15,6 +15,14 @@ logs:         ## Follow logs from all services
 
 smoke:        ## Build, start the stack, run the pytest smoke suite, tear down
 	./scripts/smoke.sh
+
+demo-data:    ## Download + unpack the InVEST sample datasets (cached, ~380MB)
+	./scripts/fetch_invest_samples.sh
+
+demo: demo-data  ## Load the demo: publish sample data and register it in the dashboard
+	docker compose up -d
+	# `run` (not `exec`) so the micromamba entrypoint puts python on PATH.
+	docker compose run --rm --no-deps wps python scripts/load_demo.py
 
 check-baremetal:  ## Verify install.sh / requirements_py3.txt still install on a clean machine
 	docker build -f docker/Dockerfile.baremetal-check -t esws/baremetal-check .

@@ -32,10 +32,11 @@ services:
       - geoserver
 
   fileserver:
+    # Shares the wps image. Only the wps service declares the build: buildkit
+    # builds compose services concurrently, so repeating the same build/image
+    # pair here made three builders export the tag at once, which races and
+    # fails the whole build with `image "esws/wps:latest": already exists`.
     image: esws/wps
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.invest
     command: python tools/http_server.py
     ports:
       - "${FILESERVER_HOST_PORT:-8001}:8001"
@@ -44,10 +45,7 @@ services:
       - gisdata:/gisdata
 
   dashboard:
-    image: esws/wps
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.invest
+    image: esws/wps  # see fileserver
     command: >
       sh -c "python tools/wpsclient/manage.py migrate --run-syncdb &&
              python tools/wpsclient/manage.py runserver 0.0.0.0:8000"

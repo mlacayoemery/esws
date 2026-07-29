@@ -212,7 +212,12 @@ class InvestProcess(pywps.Process):
         while job.priority < 3:
             if job.run():
                 # only report layers whose files actually existed/published
-                published = [ln for ln, p in uploads.items() if os.path.exists(p)]
+                # Report only layers that actually made it into GeoServer:
+                # the file existing is not enough, since publishing it may
+                # still have been refused (see easyows.Job.failed_uploads).
+                published = [ln for ln, p in uploads.items()
+                             if os.path.exists(p)
+                             and ln.split(":")[-1] not in job.failed_uploads]
                 break
 
         gs_url = os.environ.get(

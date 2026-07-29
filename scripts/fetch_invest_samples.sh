@@ -45,15 +45,20 @@ for name in $NAMES; do
         mv "$target.part" "$target"
     fi
 
-    dest="$SAMPLES/${name%.zip}"
-    if [ -d "$dest" ]; then
+    # Unpack every archive into one shared root rather than a per-archive
+    # subdirectory. The datastacks use relative paths that reach across sample
+    # sets -- WaveEnergy and WindEnergy both ask for ../Base_Data/global_dem.tif
+    # -- which only resolves if the sets are siblings, as they are in InVEST's
+    # own sample layout. Each zip already contains its own top-level directory.
+    stamp="$ARCHIVES/.unpacked-${name%.zip}"
+    if [ -f "$stamp" ]; then
         continue
     fi
-    mkdir -p "$dest"
-    unzip -q -o "$target" -d "$dest" || {
+    if unzip -q -o "$target" -d "$SAMPLES"; then
+        touch "$stamp"
+    else
         echo "   WARNING: could not unpack $name" >&2
-        rmdir "$dest" 2>/dev/null || true
-    }
+    fi
 done
 
 echo ">> Sample data ready under $SAMPLES"

@@ -9,7 +9,7 @@ from . import views
 element_id = '[-a-zA-Z0-9_:./]+'
 server_title = '[a-zA-Z0-9\W]+'
 server_url = 'http[a-zA-Z0-9:./]+'
-server_type = 'CSV|WCS|WFS|WPS'
+server_type = 'CSV|WCS|WFS|WPS|TPL'
 
 urlpatterns = [
     ##server specific urls

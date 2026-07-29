@@ -9,6 +9,7 @@ from .models import ServerCSV
 from .models import ServerWCS
 from .models import ServerWFS
 from .models import ServerWPS
+from .models import ServerTemplate
 from .models import ServerElement
 
 from .models import Job
@@ -43,6 +44,13 @@ class ServerFormWPS(forms.ModelForm):
 
     class Meta:
         model = ServerWPS
+        fields = ('title', 'url',)
+
+
+class ServerFormTemplate(forms.ModelForm):
+
+    class Meta:
+        model = ServerTemplate
         fields = ('title', 'url',)
 
 

@@ -97,6 +97,56 @@ def test_generated_form_offers_registered_data(registered_wps_server, dashboard_
     assert re.search(r'<select[^>]*name="lulc_path"', r.text), r.text[:2000]
 
 
+@pytest.fixture(scope="module")
+def registered_template(dashboard_url, wps_url):
+    """A Templates source pointing at the same WPS, returning its primary key."""
+    r = requests.get("%s/server/TPL/register/Smoke Template/url/%s"
+                     % (dashboard_url, wps_url), timeout=60)
+    assert r.status_code == 200, r.text[:500]
+
+    listing = requests.get(dashboard_url + "/server/TPL/", timeout=30)
+    assert listing.status_code == 200, listing.text[:1000]
+    pks = re.findall(r"/server/TPL/(\d+)/", listing.text)
+    assert pks, listing.text[:1000]
+    return max(int(p) for p in pks)
+
+
+def test_dashboard_has_a_templates_section(registered_template, dashboard_url):
+    r = requests.get(dashboard_url + "/", timeout=30)
+    assert r.status_code == 200, r.text[:500]
+    assert "Templates" in r.text
+    # Templates are also ServerWPS rows; they must not show up twice.
+    wps_list = requests.get(dashboard_url + "/server/WPS/", timeout=30)
+    assert "Smoke Template" not in wps_list.text, wps_list.text[:1000]
+
+
+def test_template_lists_the_same_processes(registered_template, dashboard_url):
+    r = requests.get("%s/server/TPL/%d/element/" % (dashboard_url, registered_template),
+                     timeout=120)
+    assert r.status_code == 200, r.text[:1000]
+    assert "annual_water_yield" in r.text
+
+
+def test_template_form_is_prefilled_from_the_sample_datastack(registered_template,
+                                                              registered_wps_server,
+                                                              dashboard_url):
+    """A template's job form arrives carrying InVEST's own sample arguments.
+
+    Checked on a scalar rather than a dropdown so it holds without the demo
+    data being published: annual_water_yield's datastack sets results_suffix to
+    "gura" and seasonality_constant to 5. The plain WPS source must stay empty.
+    """
+    tpl = requests.get("%s/server/%d/execute/annual_water_yield/"
+                       % (dashboard_url, registered_template), timeout=120)
+    assert tpl.status_code == 200, tpl.text[:1000]
+    assert 'value="gura"' in tpl.text, tpl.text[:2000]
+
+    plain = requests.get("%s/server/%d/execute/annual_water_yield/"
+                         % (dashboard_url, registered_wps_server), timeout=120)
+    assert plain.status_code == 200, plain.text[:1000]
+    assert 'value="gura"' not in plain.text
+
+
 def test_dashboard_wps_process_detail(registered_wps_server, dashboard_url):
     """Describes a process through owslib -- the path that raised
     TypeError: WebProcessingService.__init__() got an unexpected keyword

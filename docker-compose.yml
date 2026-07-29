@@ -61,6 +61,9 @@ services:
       - "${DASHBOARD_HOST_PORT:-8000}:8000"
     volumes:
       - ./:/app
+      # Read by the Templates source to prefill job forms with the sample
+      # arguments recorded in InVEST's datastacks.
+      - ${INVEST_SAMPLES:-/store/invest/samples}:/data/invest:ro
     environment:
       DJANGO_ALLOWED_HOSTS: "*"
       DJANGO_DB_PATH: /tmp/esws-db.sqlite3

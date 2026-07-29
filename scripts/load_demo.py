@@ -201,7 +201,11 @@ def main():
     wcs_pk = register_server("WCS", "Local WCS", GEOSERVER_BASE)
     wfs_pk = register_server("WFS", "Local WFS", GEOSERVER_BASE)
     wps_pk = register_server("WPS", "InVEST WPS", WPS)
-    log("   CSV=%d WCS=%d WFS=%d WPS=%d" % (csv_pk, wcs_pk, wfs_pk, wps_pk))
+    # Same WPS, listed under Templates: its job forms come prefilled with the
+    # sample arguments from the datastacks.
+    tpl_pk = register_server("TPL", "InVEST Demo", WPS)
+    log("   CSV=%d WCS=%d WFS=%d WPS=%d TPL=%d"
+        % (csv_pk, wcs_pk, wfs_pk, wps_pk, tpl_pk))
 
     log(">> Registering elements")
     n_wcs = register_elements("WCS", wcs_pk,

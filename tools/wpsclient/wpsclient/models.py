@@ -54,6 +54,26 @@ class ServerWFS(Server):
 class ServerWPS(Server):
     server_type = models.CharField(max_length=3, default='WPS', editable=False)
 
+class ServerTemplate(ServerWPS):
+    """A WPS source whose job forms come prefilled with sample values.
+
+    Points at the same WPS URL as a plain WPS source and lists the same
+    processes; the only difference is that job_new preselects the arguments
+    recorded in InVEST's sample datastacks, so a process can be run without
+    hunting for inputs first.
+
+    Subclasses ServerWPS rather than Server so that Job.server -- a ForeignKey
+    to ServerWPS -- accepts a template. The cost is that templates also satisfy
+    ServerWPS queries, so the WPS listings exclude them explicitly.
+
+    server_type is inherited, not redeclared: multi-table inheritance forbids
+    shadowing a parent field, so it is stamped on save instead.
+    """
+
+    def save(self, *args, **kwargs):
+        self.server_type = 'TPL'
+        return super().save(*args, **kwargs)
+
 class ServerElement(models.Model):
     server = models.ForeignKey(Server, on_delete=models.CASCADE)   
     identifier = models.CharField(max_length=200)

@@ -387,7 +387,7 @@ def server_wps_element_detail(request, server_pk, element_id):
     link = server.url + "?service=wps&version=1.0.0&request=DescribeProcess&IDENTIFIER=" + element_id
     description = parseString(requests.get(link).text).toprettyxml()
 
-    wps = owslib.wps.WebProcessingService(server.url, verbose=False, skip_caps=True)
+    wps = owslib.wps.WebProcessingService(server.url, skip_caps=True)
     process = wps.describeprocess(element_id)
 
     process_input = []
@@ -486,7 +486,7 @@ def job_detail(request, job_pk):
 def get_wps_input_fields(server_pk, process_id):
     server = get_object_or_404(ServerWPS, pk=server_pk)
 
-    wps = owslib.wps.WebProcessingService(server.url, verbose=False, skip_caps=True)
+    wps = owslib.wps.WebProcessingService(server.url, skip_caps=True)
     process = wps.describeprocess(process_id)
 
     process_input = []
@@ -583,7 +583,7 @@ def job_new(request, server_pk, process_id):
 
     args = collections.OrderedDict()
 
-    wps = owslib.wps.WebProcessingService(server.url, verbose=False, skip_caps=True)
+    wps = owslib.wps.WebProcessingService(server.url, skip_caps=True)
     process = wps.describeprocess(process_id)
 
     for parameter in process.dataInputs:            

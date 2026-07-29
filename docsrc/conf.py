@@ -1,6 +1,11 @@
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath('_ext'))
+
 project = 'ESWS'
 
-extensions = []
+extensions = ['sphinxcontrib.mermaid', 'invest_inputs']
 #    'sphinx.ext.extlinks',
 #    'sphinx.ext.autodoc',
 #    'sphinx.ext.todo',
@@ -9,6 +14,10 @@ extensions = []
 #    'sphinx.ext.napoleon',
 #    'pywps.ext_autodoc'
 #]
+
+# sphinxcontrib-mermaid defaults to a fixed 500px-tall box, which letterboxes the
+# taller model-input trees down to ~0.23 scale and makes their labels unreadable.
+mermaid_height = 'auto'
 
 exclude_patterns = ['_build']
 source_suffix = '.rst'

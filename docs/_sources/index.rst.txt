@@ -43,6 +43,7 @@ Contents:
    rasters
    vectors
    processes
+   models
    extensions
    tut
 

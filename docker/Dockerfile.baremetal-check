@@ -9,7 +9,13 @@
 #   make check-baremetal
 #
 # Slow (it builds InVEST from sdist), so it is not part of `make smoke`.
-FROM ubuntu:24.04
+#
+# The base has to be glibc. Alpine does not work, for three independent reasons:
+# micromamba is a glibc binary and will not execute under musl at all; conda-forge
+# publishes no musl builds, so the geo stack could not be installed even if it
+# did; and Alpine's own GDAL is 3.13.x, while natcap.invest pins gdal==3.10.* --
+# 3.13 is the exact series whose bindings refuse to build against libgdal 3.10.
+FROM ubuntu:26.04
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         curl bzip2 ca-certificates \

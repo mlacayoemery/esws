@@ -2,8 +2,17 @@
 Model Inputs
 ============
 
-Required, conditional, and optional inputs for each InVEST model,
-generated automatically from each model's ``MODEL_SPEC``.
+The inputs of each InVEST model, generated automatically from the model's
+``MODEL_SPEC`` at documentation build time.
+
+Each diagram is a dependency tree: the model is the root, every parameter is a
+node, and an edge runs from each parameter to the one that enables it -- so an
+optional toggle branches to the inputs it switches on. Nodes are coloured by
+requirement: **green** = required, **amber** = conditional (the condition is
+printed on the node), **grey** = optional.
+
+The runner-only arguments ``workspace_dir``, ``n_workers`` and
+``results_suffix`` are omitted throughout.
 
 Annual Water Yield
 ==================

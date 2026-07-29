@@ -450,7 +450,7 @@ window.addEventListener("load", load);
 window.runMermaid = runMermaid;</script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Third-Party Extensions" href="extensions.html" />
+    <link rel="next" title="Model Inputs" href="models.html" />
     <link rel="prev" title="Vector Data" href="vectors.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
@@ -476,29 +476,33 @@ window.runMermaid = runMermaid;</script>
 <p>The ESWS address for the InVEST Water Yield process is <a class="reference external" href="http://192.168.56.104:8000/test/wy">http://192.168.56.104:8000/test/wy</a>.</p>
 <pre  class="mermaid">
         flowchart LR
-  classDef required fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20;
-  classDef conditional fill:#fff3e0,stroke:#ef6c00,color:#e65100;
-  classDef optional fill:#eceff1,stroke:#546e7a,color:#37474f;
-  subgraph REQUIRED[&quot;Required (8)&quot;]
-    direction TB
-    n0[&quot;land use/land cover&lt;br/&gt;lulc_path &amp;middot; raster&quot;]:::required
-    n1[&quot;root restricting layer depth&lt;br/&gt;depth_to_root_rest_layer_path &amp;middot; raster&quot;]:::required
-    n2[&quot;precipitation&lt;br/&gt;precipitation_path &amp;middot; raster&quot;]:::required
-    n3[&quot;plant available water content&lt;br/&gt;pawc_path &amp;middot; raster&quot;]:::required
-    n4[&quot;reference evapotranspiration&lt;br/&gt;eto_path &amp;middot; raster&quot;]:::required
-    n5[&quot;watersheds&lt;br/&gt;watersheds_path &amp;middot; vector&quot;]:::required
-    n6[&quot;biophysical table&lt;br/&gt;biophysical_table_path &amp;middot; csv&quot;]:::required
-    n7[&quot;z parameter&lt;br/&gt;seasonality_constant &amp;middot; number&quot;]:::required
-    n0 ~~~ n1 ~~~ n2 ~~~ n3 ~~~ n4 ~~~ n5 ~~~ n6 ~~~ n7
-  end
-  subgraph OPTIONAL[&quot;Optional (3)&quot;]
-    direction TB
-    n8[&quot;sub-watersheds&lt;br/&gt;sub_watersheds_path &amp;middot; vector&quot;]:::optional
-    n9[&quot;water demand table&lt;br/&gt;demand_table_path &amp;middot; csv&quot;]:::optional
-    n10[&quot;hydropower valuation table&lt;br/&gt;valuation_table_path &amp;middot; csv&quot;]:::optional
-    n8 ~~~ n9 ~~~ n10
-  end
-  REQUIRED ~~~ OPTIONAL
+  classDef required fill:#e8f5e9,stroke:#2e7d32,color:#222;
+  classDef conditional fill:#fff3e0,stroke:#ef6c00,color:#222;
+  classDef optional fill:#eceff1,stroke:#546e7a,color:#222;
+  root([&quot;Annual Water Yield&quot;])
+  style root fill:#1565c0,stroke:#0d47a1,color:#ffffff
+  n0[&quot;land use/land cover&lt;br/&gt;lulc_path &amp;middot; raster&quot;]:::required
+  n1[&quot;root restricting layer depth&lt;br/&gt;depth_to_root_rest_layer_path &amp;middot; raster&quot;]:::required
+  n2[&quot;precipitation&lt;br/&gt;precipitation_path &amp;middot; raster&quot;]:::required
+  n3[&quot;plant available water content&lt;br/&gt;pawc_path &amp;middot; raster&quot;]:::required
+  n4[&quot;reference evapotranspiration&lt;br/&gt;eto_path &amp;middot; raster&quot;]:::required
+  n5[&quot;watersheds&lt;br/&gt;watersheds_path &amp;middot; vector&quot;]:::required
+  n6[&quot;sub-watersheds&lt;br/&gt;sub_watersheds_path &amp;middot; vector&quot;]:::optional
+  n7[&quot;biophysical table&lt;br/&gt;biophysical_table_path &amp;middot; csv&quot;]:::required
+  n8[&quot;z parameter&lt;br/&gt;seasonality_constant &amp;middot; number&quot;]:::required
+  n9[&quot;water demand table&lt;br/&gt;demand_table_path &amp;middot; csv&quot;]:::optional
+  n10[&quot;hydropower valuation table&lt;br/&gt;valuation_table_path &amp;middot; csv&quot;]:::optional
+  root --&gt; n0
+  root --&gt; n1
+  root --&gt; n2
+  root --&gt; n3
+  root --&gt; n4
+  root --&gt; n5
+  root --&gt; n6
+  root --&gt; n7
+  root --&gt; n8
+  root --&gt; n9
+  root --&gt; n10
     </pre></section>
 </section>
 
@@ -539,6 +543,7 @@ window.runMermaid = runMermaid;</script>
 <li class="toctree-l2"><a class="reference internal" href="#invest-average-annual-water-yield">InVEST Average Annual Water Yield</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Model Inputs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="extensions.html">Third-Party Extensions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tut.html">Tutorials</a></li>
 </ul>
@@ -548,7 +553,7 @@ window.runMermaid = runMermaid;</script>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
       <li>Previous: <a href="vectors.html" title="previous chapter">Vector Data</a></li>
-      <li>Next: <a href="extensions.html" title="next chapter">Third-Party Extensions</a></li>
+      <li>Next: <a href="models.html" title="next chapter">Model Inputs</a></li>
   </ul></li>
 </ul>
 </div>

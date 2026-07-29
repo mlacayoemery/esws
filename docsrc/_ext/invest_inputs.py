@@ -4,17 +4,29 @@ Usage in .rst::
 
     .. invest-inputs:: annual_water_yield
 
-It reads the model's ``MODEL_SPEC["args"]`` and renders a single model box
-(titled with the model name) containing every input as a node, colour-coded by
-requirement:
+It reads the model's ``MODEL_SPEC["args"]`` and renders every input as a node,
+colour-coded by requirement:
 
 * **green**  -- required (``required`` is ``True`` / the default)
 * **amber**  -- conditional (``required`` is an expression string)
 * **grey**   -- optional (``required`` is ``False``)
 
-When a parameter gates additional inputs (i.e. another input's ``required``
-expression references it), those dependent inputs are nested as a sub-box inside
-it -- so "turn on valuation" visibly contains the inputs it requires.
+Two layouts are available via the ``:style:`` option:
+
+``tree`` (default)
+    A dependency tree: the model is the root and an edge runs from each
+    parameter to the parameter that gates it, so "turn on valuation" visibly
+    branches to the inputs it enables.
+
+``boxes``
+    A single model box with gated inputs nested as sub-boxes. This mirrors the
+    InVEST desktop UI's collapsible containers, but mermaid allots a full rank
+    to each invisible (``~~~``) stacking link, so the diagram grows very tall --
+    ~8700px for wind_energy's 20 inputs, against ~2500px for the same model as a
+    tree. It is kept for single-model embeds, not for the 25-model catalog.
+
+When a parameter's ``required`` expression names several other parameters, the
+node hangs off the first one; the full condition is always printed on the node.
 
 The runner-only args ``workspace_dir``, ``n_workers`` and ``results_suffix`` are
 omitted. Inputs are read from the installed natcap.invest package at build time,
@@ -229,8 +241,8 @@ class InvestInputsDirective(Directive):
                 text="invest-inputs: could not resolve model %r (%s)" % (model_id, exc))
             return [box]
 
-        style = (self.options.get("style") or "boxes").strip().lower()
-        builder = build_mermaid_tree if style == "tree" else build_mermaid
+        style = (self.options.get("style") or "tree").strip().lower()
+        builder = build_mermaid if style == "boxes" else build_mermaid_tree
         code = builder(self.options.get("title") or model_name, model_id, args)
         try:
             from sphinxcontrib.mermaid import mermaid as mermaid_node
@@ -245,4 +257,4 @@ class InvestInputsDirective(Directive):
 
 def setup(app):
     app.add_directive("invest-inputs", InvestInputsDirective)
-    return {"version": "0.3", "parallel_read_safe": True, "parallel_write_safe": True}
+    return {"version": "0.4", "parallel_read_safe": True, "parallel_write_safe": True}

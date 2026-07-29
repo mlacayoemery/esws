@@ -111,29 +111,11 @@ sh tools/wpsclient/setup.sh
 ;;
 
 7)
-#install GeoServer
-sudo apt-get install -y openjdk-11-jdk tomcat9 unzip
-cd ..
-if [ -f "geoserver-2.17.0-war.zip" ]; then
-    echo "GeoServer already downloaded"
-else 
-    wget http://sourceforge.net/projects/geoserver/files/GeoServer/2.17.0/geoserver-2.17.0-war.zip
-fi
-if [ -f "geoserver-2.17.0-wps-plugin.zip" ]; then
-    echo "GeoServer WPS plugin already downloaded"
-else 
-    wget http://sourceforge.net/projects/geoserver/files/GeoServer/2.17.0/extensions/geoserver-2.17.0-wps-plugin.zip
-fi
-unzip -p geoserver-2.17.0-war.zip geoserver.war > gs217.war
-sudo service tomcat9 stop
-sudo mv gs217.war /var/lib/tomcat9/webapps
-sudo service tomcat9 start
-echo "Waiting 10 seconds for Tomcat setup"
-sleep 10
-sudo service tomcat9 stop
-sudo -u tomcat unzip geoserver-2.17.0-wps-plugin.zip -d /var/lib/tomcat9/webapps/gs217/WEB-INF/lib
-sudo service tomcat9 start
-cd esws
+# Install GeoServer, version-matched to the container stack (3.0.0).
+# Uses the platform-independent binary (Jetty bundled), so there is no Tomcat
+# to install -- see scripts/install-geoserver.sh. GeoServer 3.0 needs Java 17.
+sudo apt-get install -y openjdk-17-jre-headless unzip curl
+sh scripts/install-geoserver.sh
 read -p "Press [Enter] key to continue..."
 ;;
 
@@ -164,6 +146,15 @@ sudo systemctl reload esws-file-server
 sudo systemctl start esws-file-server
 sudo systemctl enable esws-file-server
 alias http="sudo systemctl status esws-file-server"
+
+sudo systemctl stop esws-geoserver
+sudo systemctl disable esws-geoserver
+sudo cp esws-geoserver.service /etc/systemd/system
+sudo chmod 644 /etc/systemd/system/esws-geoserver.service
+sudo systemctl reload esws-geoserver
+sudo systemctl start esws-geoserver
+sudo systemctl enable esws-geoserver
+alias geoserver="sudo systemctl status esws-geoserver"
 
 sudo systemctl stop esws-tjs
 sudo systemctl disable esws-tjs

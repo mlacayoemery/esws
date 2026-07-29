@@ -1,0 +1,56 @@
+# Verification aid — NOT part of the running stack.
+#
+# Proves scripts/install-geoserver.sh (install.sh option 7) actually produces a
+# serving GeoServer on a clean machine. The step it replaced could not: it ran
+# `apt-get install tomcat9`, and Ubuntu dropped that package after 22.04, so on
+# a current release the GeoServer install simply failed.
+#
+#   make check-geoserver
+#
+# Downloads a ~126MB GeoServer distribution, so it is not part of `make smoke`.
+FROM ubuntu:26.04
+
+# GeoServer 3.0 requires Java 17 (RUNNING.html in the distribution).
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        openjdk-17-jre-headless curl unzip ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /opt/esws
+COPY scripts/install-geoserver.sh scripts/install-geoserver.sh
+
+# install.sh option 7
+RUN sh scripts/install-geoserver.sh
+
+# Boot it and assert it actually serves. A distribution that unpacked but cannot
+# run -- wrong Java, missing data dir -- would pass a file-existence check and
+# fail here, which is the point.
+RUN set -eu; \
+    cd /opt/geoserver; \
+    GEOSERVER_DATA_DIR=/opt/geoserver_data \
+        java -DGEOSERVER_DATA_DIR=/opt/geoserver_data -jar start.jar >/tmp/gs.log 2>&1 & \
+    ok=0; \
+    # Poll the REST API rather than /geoserver/web/: in 3.0 that path answers
+    # 302 to itself until a session exists, so it never reads as 200 even with
+    # -L. REST is also the stronger signal -- it proves the catalog loaded, not
+    # merely that something is listening.
+    for i in $(seq 1 72); do \
+        code=$(curl -s -u admin:geoserver -o /dev/null -w '%{http_code}' \
+            http://localhost:8080/geoserver/rest/about/version.json || true); \
+        if [ "$code" = "200" ]; then ok=1; break; fi; \
+        sleep 5; \
+    done; \
+    if [ "$ok" != "1" ]; then \
+        echo "GeoServer did not come up (last HTTP $code)"; \
+        tail -60 /tmp/gs.log || true; \
+        exit 1; \
+    fi; \
+    ver=$(curl -sf -u admin:geoserver \
+        http://localhost:8080/geoserver/rest/about/version.json); \
+    echo "$ver" | head -c 400; echo; \
+    echo "$ver" | grep -q '"@name":"GeoServer"' \
+        || { echo "REST /about/version did not report GeoServer"; exit 1; }; \
+    echo "$ver" | grep -q '"Version":"3\.' \
+        || { echo "unexpected GeoServer major version"; exit 1; }; \
+    curl -sf -o /dev/null http://localhost:8080/geoserver/index.html \
+        || { echo "GeoServer index page not served"; exit 1; }; \
+    echo "GEOSERVER INSTALL OK"

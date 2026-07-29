@@ -2,5 +2,13 @@
 # Build with the host InVEST env so MODEL_SPEC resolves live, e.g.:
 #   ~/.local/bin/micromamba run -p ~/esws-invest \
 #       sh -c "pip install -r docsrc/requirements.txt && make -C docsrc html"
-sphinx
-sphinxcontrib-mermaid
+#
+# Pinned on purpose. ../docs is committed and served by Pages, so the build has
+# to be reproducible: an unpinned sphinx turns the command above into an upgrade
+# that rewrites every page and all of _static (the 9.x bump already did this
+# once). alabaster is pinned too -- it is what actually emits the HTML, so it
+# moves the output as much as sphinx does. Bump these deliberately, then rebuild
+# and commit the resulting docs/ churn as its own change.
+sphinx==9.0.4
+sphinxcontrib-mermaid==2.0.2
+alabaster==1.0.0

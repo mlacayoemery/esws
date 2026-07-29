@@ -15,6 +15,10 @@ extensions = ['sphinxcontrib.mermaid', 'invest_inputs']
 #    'pywps.ext_autodoc'
 #]
 
+# sphinxcontrib-mermaid defaults to a fixed 500px-tall box, which letterboxes the
+# taller model-input trees down to ~0.23 scale and makes their labels unreadable.
+mermaid_height = 'auto'
+
 exclude_patterns = ['_build']
 source_suffix = '.rst'
 master_doc = 'index'

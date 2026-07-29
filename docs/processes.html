@@ -29,7 +29,7 @@ const initStyles = () => {
 
 pre.mermaid > svg {
     /* Same as .mermaid-container > pre > svg */
-    height: 500px;
+    height: auto;
     width: 100%;
     max-width: 100% !important;
 }`;
@@ -48,7 +48,7 @@ pre.mermaid > svg {
 }
 
 .mermaid-container > pre > svg {
-    height: 500px;
+    height: auto;
     width: 100%;
     max-width: 100% !important;
 }
@@ -476,22 +476,22 @@ window.runMermaid = runMermaid;</script>
 <p>The ESWS address for the InVEST Water Yield process is <a class="reference external" href="http://192.168.56.104:8000/test/wy">http://192.168.56.104:8000/test/wy</a>.</p>
 <pre  class="mermaid">
         flowchart LR
-  classDef required fill:#e8f5e9,stroke:#2e7d32,color:#222;
-  classDef conditional fill:#fff3e0,stroke:#ef6c00,color:#222;
-  classDef optional fill:#eceff1,stroke:#546e7a,color:#222;
+  classDef inputRequired fill:#e8f5e9,stroke:#2e7d32,color:#222;
+  classDef inputConditional fill:#fff3e0,stroke:#ef6c00,color:#222;
+  classDef inputOptional fill:#eceff1,stroke:#546e7a,color:#222;
   root([&quot;Annual Water Yield&quot;])
   style root fill:#1565c0,stroke:#0d47a1,color:#ffffff
-  n0[&quot;land use/land cover&lt;br/&gt;lulc_path &amp;middot; raster&quot;]:::required
-  n1[&quot;root restricting layer depth&lt;br/&gt;depth_to_root_rest_layer_path &amp;middot; raster&quot;]:::required
-  n2[&quot;precipitation&lt;br/&gt;precipitation_path &amp;middot; raster&quot;]:::required
-  n3[&quot;plant available water content&lt;br/&gt;pawc_path &amp;middot; raster&quot;]:::required
-  n4[&quot;reference evapotranspiration&lt;br/&gt;eto_path &amp;middot; raster&quot;]:::required
-  n5[&quot;watersheds&lt;br/&gt;watersheds_path &amp;middot; vector&quot;]:::required
-  n6[&quot;sub-watersheds&lt;br/&gt;sub_watersheds_path &amp;middot; vector&quot;]:::optional
-  n7[&quot;biophysical table&lt;br/&gt;biophysical_table_path &amp;middot; csv&quot;]:::required
-  n8[&quot;z parameter&lt;br/&gt;seasonality_constant &amp;middot; number&quot;]:::required
-  n9[&quot;water demand table&lt;br/&gt;demand_table_path &amp;middot; csv&quot;]:::optional
-  n10[&quot;hydropower valuation table&lt;br/&gt;valuation_table_path &amp;middot; csv&quot;]:::optional
+  n0[&quot;land use/land cover&lt;br/&gt;lulc_path &amp;middot; raster&quot;]:::inputRequired
+  n1[&quot;root restricting layer depth&lt;br/&gt;depth_to_root_rest_layer_path &amp;middot; raster&quot;]:::inputRequired
+  n2[&quot;precipitation&lt;br/&gt;precipitation_path &amp;middot; raster&quot;]:::inputRequired
+  n3[&quot;plant available water content&lt;br/&gt;pawc_path &amp;middot; raster&quot;]:::inputRequired
+  n4[&quot;reference evapotranspiration&lt;br/&gt;eto_path &amp;middot; raster&quot;]:::inputRequired
+  n5[&quot;watersheds&lt;br/&gt;watersheds_path &amp;middot; vector&quot;]:::inputRequired
+  n6[&quot;sub-watersheds&lt;br/&gt;sub_watersheds_path &amp;middot; vector&quot;]:::inputOptional
+  n7[&quot;biophysical table&lt;br/&gt;biophysical_table_path &amp;middot; csv&quot;]:::inputRequired
+  n8[&quot;z parameter&lt;br/&gt;seasonality_constant &amp;middot; number&quot;]:::inputRequired
+  n9[&quot;water demand table&lt;br/&gt;demand_table_path &amp;middot; csv&quot;]:::inputOptional
+  n10[&quot;hydropower valuation table&lt;br/&gt;valuation_table_path &amp;middot; csv&quot;]:::inputOptional
   root --&gt; n0
   root --&gt; n1
   root --&gt; n2

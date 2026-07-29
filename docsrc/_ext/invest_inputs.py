@@ -53,11 +53,14 @@ INFRA_ARGS = {"workspace_dir", "n_workers", "results_suffix"}
 
 _IDENT = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 
-# requirement class -> (fill, stroke)
+# requirement class -> (fill, stroke). These names land verbatim as CSS classes on
+# the rendered SVG nodes, so they are namespaced: Sphinx's own basic.css styles a
+# bare `.optional` at font-size 1.3em (it marks optional arguments in signatures),
+# which silently rendered every grey node 30% larger than its neighbours.
 _COLORS = {
-    "required": ("#e8f5e9", "#2e7d32"),
-    "conditional": ("#fff3e0", "#ef6c00"),
-    "optional": ("#eceff1", "#546e7a"),
+    "inputRequired": ("#e8f5e9", "#2e7d32"),
+    "inputConditional": ("#fff3e0", "#ef6c00"),
+    "inputOptional": ("#eceff1", "#546e7a"),
 }
 
 
@@ -99,8 +102,8 @@ def _mm_text(s):
 def _class_of(arg):
     req = arg["required"]
     if isinstance(req, str):
-        return "conditional"
-    return "required" if req else "optional"
+        return "inputConditional"
+    return "inputRequired" if req else "inputOptional"
 
 
 def _controllers(arg, arg_ids):
@@ -257,4 +260,4 @@ class InvestInputsDirective(Directive):
 
 def setup(app):
     app.add_directive("invest-inputs", InvestInputsDirective)
-    return {"version": "0.4", "parallel_read_safe": True, "parallel_write_safe": True}
+    return {"version": "0.5", "parallel_read_safe": True, "parallel_write_safe": True}

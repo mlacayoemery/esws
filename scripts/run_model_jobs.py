@@ -89,6 +89,13 @@ def build_datainputs(stack, use_ows=False):
         rendered = datainput_value(value, stack["dir"], use_ows=use_ows)
         if rendered == "":
             continue
+        if rendered.startswith("http"):
+            # DataInputs is "k=v;k=v", so a value containing '=', '&' or ';'
+            # has to be percent-encoded or pywps rejects the whole input with
+            # HTTP 400. It is quoted here and again by urlencode when the query
+            # string is built -- the same double-encoding the dashboard applies
+            # in job_to_wps_url.
+            rendered = urllib.parse.quote(rendered, safe="")
         pairs.append("%s=%s" % (key, rendered))
     return ";".join(pairs)
 

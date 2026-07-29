@@ -209,9 +209,10 @@ class InvestProcess(pywps.Process):
                           0, cat, logger)
 
         published = []
+        ran = False
         while job.priority < 3:
             if job.run():
-                # only report layers whose files actually existed/published
+                ran = True
                 # Report only layers that actually made it into GeoServer:
                 # the file existing is not enough, since publishing it may
                 # still have been refused (see easyows.Job.failed_uploads).
@@ -219,6 +220,15 @@ class InvestProcess(pywps.Process):
                              if os.path.exists(p)
                              and ln.split(":")[-1] not in job.failed_uploads]
                 break
+
+        if not ran:
+            # Job.run() returns False when it could not resolve the inputs --
+            # typically a remote OWS reference that would not download. Falling
+            # out of the loop used to be reported as ProcessSucceeded with no
+            # outputs, so a job that never executed looked like a success.
+            raise pywps.exceptions.NoApplicableCode(
+                "Could not resolve all inputs for %s; the model did not run"
+                % self.model_id)
 
         gs_url = os.environ.get(
             "GEOSERVER_PUBLIC_URL",

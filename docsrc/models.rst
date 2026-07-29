@@ -115,6 +115,11 @@ Urban Flood Risk Mitigation
 
 .. invest-inputs:: urban_flood_risk_mitigation
 
+Urban Mental Health
+===================
+
+.. invest-inputs:: urban_mental_health
+
 Urban Nature Access
 ===================
 

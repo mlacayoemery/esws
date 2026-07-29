@@ -1,4 +1,4 @@
-# ESWS WPS server image — InVEST 3.14.3 on a conda-forge GDAL base.
+# ESWS WPS server image — InVEST 3.20.0 on a conda-forge GDAL base.
 #
 # Mirrors the NatCap approach (natcap/invest-compute startup_script.sh): bring in
 # Python + GDAL (+ build tooling for InVEST's Cython extensions) from conda-forge,
@@ -14,11 +14,12 @@ COPY --chown=$MAMBA_USER:$MAMBA_USER requirements/server.txt /tmp/server.txt
 # build its extensions from sdist if no wheel is available for this platform.
 RUN micromamba install -y -n base -c conda-forge \
         python=3.11 \
-        "gdal=3.9.*" \
+        "gdal=3.10.*" \
         c-compiler \
         cxx-compiler \
         cython \
         numpy \
+        "pygeoprocessing>=2.4.10" \
         setuptools \
         setuptools_scm \
         wheel \
@@ -30,7 +31,16 @@ RUN micromamba install -y -n base -c conda-forge \
 # the micromamba entrypoint).
 ARG MAMBA_DOCKERFILE_ACTIVATE=1
 
-RUN pip install --no-cache-dir -r /tmp/server.txt
+# InVEST publishes no Linux wheels, so it builds from sdist here. Its build
+# requirements include pygeoprocessing, and in pip's *isolated* build
+# environment that resolves the newest GDAL bindings off PyPI -- which then
+# refuse to build ("Python bindings of GDAL 3.13.2 require at least libgdal
+# 3.13.2, but 3.10.3 was found"). InVEST deliberately keeps GDAL out of its own
+# build requirements for exactly this reason, so build it against the
+# conda-forge stack above instead of an isolated one. Everything else installs
+# normally; natcap.invest is already satisfied by then.
+RUN pip install --no-cache-dir --no-build-isolation natcap.invest==3.20.0 && \
+    pip install --no-cache-dir -r /tmp/server.txt
 
 # Application code (compose also bind-mounts ./ over /app for live editing).
 COPY --chown=$MAMBA_USER:$MAMBA_USER . /app

@@ -4,16 +4,19 @@ Instead of hand-writing one WPS process per model (see invest_wy.py), this modul
 introspects InVEST's model registry and each model's ``MODEL_SPEC`` to build a
 pywps ``Process`` automatically:
 
-  * inputs  <- MODEL_SPEC["args"]    (typed: number/boolean/option/path/...)
+  * inputs  <- MODEL_SPEC.inputs   (typed: number/boolean/option/path/...)
   * execute -> module.execute(args)
-  * outputs <- MODEL_SPEC["outputs"] (rasters/vectors published to GeoServer)
+  * outputs <- MODEL_SPEC.outputs  (rasters/vectors published to GeoServer)
 
 ``wpsserver.py`` discovers the module-level ``get_processes()`` factory and
 registers the resulting processes alongside the legacy single-model processes.
 
-References:
-  - natcap.invest.model_metadata.MODEL_METADATA  -> {model_id: _MODELMETA(pyname, ...)}
-  - <model>.MODEL_SPEC                            -> {"args": {...}, "outputs": {...}}
+References (InVEST >= 3.20):
+  - natcap.invest.models.model_id_to_pyname -> {model_id: "natcap.invest.pkg.mod"}
+  - <model>.MODEL_SPEC                      -> spec.ModelSpec, whose ``inputs`` and
+    ``outputs`` are lists of ``spec.Input`` / ``spec.Output`` objects. Each input
+    carries its type as a class attribute ('raster', 'csv', 'number', ...); each
+    file output carries its workspace-relative ``path``.
 """
 import importlib
 import logging
@@ -28,7 +31,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 import easyows
 
 import natcap.invest
-from natcap.invest import model_metadata
+from natcap.invest import models
+from natcap.invest import spec as invest_spec
 
 logger = logging.getLogger("invest_models")
 
@@ -40,23 +44,23 @@ _SKIP_ARGS = {"workspace_dir", "n_workers"}
 _WORKSPACE_ROOT = os.environ.get("WPS_WORKSPACE_ROOT", tempfile.gettempdir())
 
 
-def _literal_input(arg_id, spec):
-    """Map a single MODEL_SPEC arg spec to a pywps LiteralInput.
+def _literal_input(inp):
+    """Map a single MODEL_SPEC input to a pywps LiteralInput.
 
-    Spatial/file args (raster, vector, csv, file, directory) are exposed as
+    Spatial/file inputs (raster, vector, csv, file, workspace) are exposed as
     strings: a local path inside the container or an OWS URL that easyows.Job
     fetches at run time — matching the existing invest_wy.py convention.
     """
-    arg_type = spec.get("type")
-    title = spec.get("name") or arg_id
-    abstract = spec.get("about", "") or ""
-    required = spec.get("required", False)
+    arg_type = getattr(inp, "type", "")
+    title = inp.name or inp.id
+    abstract = inp.about or ""
+    required = inp.required
     # `required` may be a literal bool or a conditional expression string; only a
     # literal True maps to a mandatory WPS input.
     min_occurs = 1 if required is True else 0
 
     kwargs = dict(
-        identifier=arg_id,
+        identifier=inp.id,
         title=title,
         abstract=abstract,
         min_occurs=min_occurs,
@@ -70,17 +74,13 @@ def _literal_input(arg_id, spec):
     if arg_type == "boolean":
         return pywps.LiteralInput(data_type="boolean", **kwargs)
     if arg_type == "option_string":
-        options = spec.get("options")
-        allowed = None
-        if isinstance(options, dict):
-            allowed = list(options.keys())
-        elif isinstance(options, (list, tuple)):
-            allowed = list(options)
+        # options is a list of spec.Option; the key is the value to submit.
+        allowed = [str(o.key) for o in (getattr(inp, "options", None) or [])]
         if allowed:
             return pywps.LiteralInput(data_type="string",
                                       allowed_values=allowed, **kwargs)
         return pywps.LiteralInput(data_type="string", **kwargs)
-    # freestyle_string + path-like types (raster/vector/csv/file/directory) -> string
+    # string + path-like types (raster/vector/raster_or_vector/csv/file/workspace)
     return pywps.LiteralInput(data_type="string", **kwargs)
 
 
@@ -95,25 +95,25 @@ class InvestProcess(pywps.Process):
         spec = module.MODEL_SPEC
 
         inputs = []
-        for arg_id, arg_spec in spec["args"].items():
-            if arg_id in _SKIP_ARGS:
+        for inp in spec.inputs:
+            if inp.id in _SKIP_ARGS:
                 continue
             try:
-                inputs.append(_literal_input(arg_id, arg_spec))
+                inputs.append(_literal_input(inp))
             except Exception as exc:  # noqa: BLE001 - never let one arg kill the model
                 logger.warning("Could not build input %s for %s: %s",
-                               arg_id, model_id, exc)
+                               inp.id, model_id, exc)
 
         outputs = [pywps.LiteralOutput("response",
                                        "Published layers or workspace path",
                                        data_type="string")]
 
-        abstract = (module.__doc__ or spec.get("model_name", model_id) or "").strip()
+        abstract = (module.__doc__ or spec.model_title or model_id or "").strip()
 
         super().__init__(
             self._handler,
             identifier=model_id,
-            title=spec.get("model_name", model_id),
+            title=spec.model_title or model_id,
             abstract=abstract[:4000],
             version=natcap.invest.__version__,
             inputs=inputs,
@@ -124,7 +124,8 @@ class InvestProcess(pywps.Process):
 
     def _collect_args(self, request, spec):
         args = {}
-        for arg_id in spec["args"]:
+        for inp in spec.inputs:
+            arg_id = inp.id
             if arg_id in _SKIP_ARGS:
                 continue
             if arg_id in request.inputs and len(request.inputs[arg_id]):
@@ -137,19 +138,24 @@ class InvestProcess(pywps.Process):
         return args
 
     def _build_uploads(self, ws, workspace_dir, spec):
-        """Predict raster/vector outputs from MODEL_SPEC["outputs"].
+        """Predict raster/vector outputs from MODEL_SPEC.outputs.
 
-        Returns {"ws:layer": path}. Missing files (conditional outputs that were
-        not produced) are skipped by easyows.Job.run at publish time.
+        Returns {"ws:layer": path}. Missing files (outputs whose ``created_if``
+        condition did not hold) are skipped by easyows.Job.run at publish time.
         """
         uploads = {}
-        outputs = spec.get("outputs", {})
-        for filename, ospec in outputs.items():
-            if not isinstance(ospec, dict):
+        for output in spec.outputs:
+            # Only file outputs have a workspace-relative path; numeric/string
+            # outputs are metadata and have nothing to publish.
+            filename = getattr(output, "path", None)
+            if not filename:
                 continue
             lower = filename.lower()
-            is_raster = lower.endswith(".tif") or "bands" in ospec
-            is_vector = lower.endswith((".shp", ".gpkg")) or "geometries" in ospec
+            is_raster = isinstance(output, (invest_spec.SingleBandRasterOutput,
+                                            invest_spec.RasterOutput)) \
+                or lower.endswith(".tif")
+            is_vector = isinstance(output, invest_spec.VectorOutput) \
+                or lower.endswith((".shp", ".gpkg"))
             if not (is_raster or is_vector):
                 continue
             path = os.path.join(workspace_dir, filename)
@@ -210,13 +216,13 @@ def get_processes():
     """Build one InvestProcess per importable model in the InVEST registry."""
     processes = []
     skipped = []
-    for model_id, meta in model_metadata.MODEL_METADATA.items():
+    for model_id, pyname in models.model_id_to_pyname.items():
         try:
-            module = importlib.import_module(meta.pyname)
+            module = importlib.import_module(pyname)
             if not (hasattr(module, "MODEL_SPEC") and hasattr(module, "execute")):
                 skipped.append((model_id, "no MODEL_SPEC/execute"))
                 continue
-            processes.append(InvestProcess(model_id, meta.pyname, module))
+            processes.append(InvestProcess(model_id, pyname, module))
         except Exception as exc:  # noqa: BLE001 - skip + log, never abort startup
             skipped.append((model_id, repr(exc)))
 

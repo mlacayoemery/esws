@@ -490,7 +490,7 @@ window.runMermaid = runMermaid;</script>
   n6[&quot;sub-watersheds&lt;br/&gt;sub_watersheds_path &amp;middot; vector&quot;]:::inputOptional
   n7[&quot;biophysical table&lt;br/&gt;biophysical_table_path &amp;middot; csv&quot;]:::inputRequired
   n8[&quot;z parameter&lt;br/&gt;seasonality_constant &amp;middot; number&quot;]:::inputRequired
-  n9[&quot;water demand table&lt;br/&gt;demand_table_path &amp;middot; csv&quot;]:::inputOptional
+  n9[&quot;water demand table&lt;br/&gt;demand_table_path &amp;middot; csv&lt;br/&gt;only if: valuation_table_path&quot;]:::inputConditional
   n10[&quot;hydropower valuation table&lt;br/&gt;valuation_table_path &amp;middot; csv&quot;]:::inputOptional
   root --&gt; n0
   root --&gt; n1
@@ -501,7 +501,7 @@ window.runMermaid = runMermaid;</script>
   root --&gt; n6
   root --&gt; n7
   root --&gt; n8
-  root --&gt; n9
+  n10 --&gt; n9
   root --&gt; n10
     </pre></section>
 </section>

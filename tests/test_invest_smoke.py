@@ -18,7 +18,7 @@ def test_carbon_executes_and_publishes(wps_url, geoserver_url):
     assert os.path.exists(POOLS), "missing test table %s" % POOLS
 
     data_inputs = ";".join([
-        "lulc_cur_path=%s" % LULC,
+        "lulc_bas_path=%s" % LULC,
         "carbon_pools_path=%s" % POOLS,
         "calc_sequestration=false",
     ])

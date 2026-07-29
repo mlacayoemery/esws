@@ -67,27 +67,31 @@ _COLORS = {
 # --------------------------------------------------------------------------- #
 # spec resolution
 # --------------------------------------------------------------------------- #
-def _normalize_args(spec_args):
-    """MODEL_SPEC['args'] -> [{id, name, type, required}] (required: True|False|str)."""
+def _normalize_inputs(inputs):
+    """MODEL_SPEC.inputs -> [{id, name, type, required}] (required: True|False|str).
+
+    ``inputs`` is a list of ``natcap.invest.spec.Input`` objects. The concrete
+    subclass carries the type as a ``type`` class attribute ('raster', 'vector',
+    'csv', 'number', ...), which is what the diagrams label nodes with.
+    """
     out = []
-    for arg_id, a in spec_args.items():
-        req = a.get("required", True)  # InVEST default: required when key absent
+    for inp in inputs:
+        req = inp.required  # bool, or an expression string for conditional inputs
         req = req if isinstance(req, str) else bool(req)
         out.append({
-            "id": arg_id,
-            "name": str(a.get("name", arg_id)),
-            "type": str(a.get("type", "")),
+            "id": inp.id,
+            "name": str(inp.name or inp.id),
+            "type": str(getattr(inp, "type", "") or ""),
             "required": req,
         })
     return out
 
 
 def _load_model(model_id):
-    """Return (model_name, [arg, ...]) from the installed natcap.invest package."""
-    from natcap.invest import model_metadata
-    meta = model_metadata.MODEL_METADATA[model_id]
-    spec = importlib.import_module(meta.pyname).MODEL_SPEC
-    return str(spec.get("model_name") or model_id), _normalize_args(spec["args"])
+    """Return (model_title, [arg, ...]) from the installed natcap.invest package."""
+    from natcap.invest import models
+    spec = models.model_id_to_spec[model_id]
+    return str(spec.model_title or model_id), _normalize_inputs(spec.inputs)
 
 
 # --------------------------------------------------------------------------- #

@@ -1,4 +1,4 @@
-# ESWS application image — modern InVEST 3.14.3 geospatial stack + Django dashboard.
+# ESWS application image — modern InVEST 3.20.0 geospatial stack + Django dashboard.
 #
 # A single image (docker/Dockerfile.invest) backs every Python service: the pywps
 # server, the file server, and the Django dashboard. The dashboard's views import
@@ -11,10 +11,12 @@
 # Supersedes the InVEST 3.8.0 / Django 2.2 era pins in ../requirements_py3.txt.
 
 # --- InVEST + geoprocessing ---
-natcap.invest==3.14.3
-pygeoprocessing>=2.4.6
+# No Linux wheels are published for natcap.invest, so this builds from sdist
+# against the conda-forge GDAL; 3.20.0 requires gdal==3.10.*, which is why the
+# Dockerfile pins that exact series.
+natcap.invest==3.20.0
+pygeoprocessing>=2.4.10
 taskgraph[niced_processes]>=0.11.0
-Pyro4==4.77            # still pinned exactly by InVEST 3.14.3 / taskgraph
 pint
 Babel
 

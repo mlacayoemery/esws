@@ -478,8 +478,9 @@ node, and an edge runs from each parameter to the one that enables it – so an
 optional toggle branches to the inputs it switches on. Nodes are coloured by
 requirement: <strong>green</strong> = required, <strong>amber</strong> = conditional (the condition is
 printed on the node), <strong>grey</strong> = optional.</p>
-<p>The runner-only arguments <code class="docutils literal notranslate"><span class="pre">workspace_dir</span></code>, <code class="docutils literal notranslate"><span class="pre">n_workers</span></code> and
-<code class="docutils literal notranslate"><span class="pre">results_suffix</span></code> are omitted throughout.</p>
+<p><code class="docutils literal notranslate"><span class="pre">workspace_dir</span></code> and <code class="docutils literal notranslate"><span class="pre">n_workers</span></code> are not shown: the WPS manages them itself
+and does not accept them as process inputs. <code class="docutils literal notranslate"><span class="pre">results_suffix</span></code> is left out of
+the diagrams too, but every process does accept it.</p>
 <section id="annual-water-yield">
 <h2>Annual Water Yield<a class="headerlink" href="#annual-water-yield" title="Link to this heading">¶</a></h2>
 <pre  class="mermaid">

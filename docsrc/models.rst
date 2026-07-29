@@ -11,8 +11,9 @@ optional toggle branches to the inputs it switches on. Nodes are coloured by
 requirement: **green** = required, **amber** = conditional (the condition is
 printed on the node), **grey** = optional.
 
-The runner-only arguments ``workspace_dir``, ``n_workers`` and
-``results_suffix`` are omitted throughout.
+``workspace_dir`` and ``n_workers`` are not shown: the WPS manages them itself
+and does not accept them as process inputs. ``results_suffix`` is left out of
+the diagrams too, but every process does accept it.
 
 Annual Water Yield
 ==================

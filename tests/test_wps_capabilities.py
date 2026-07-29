@@ -15,19 +15,14 @@ EXPECTED_MODELS = {"carbon", "annual_water_yield", "sdr", "ndr",
 
 
 def _expected_model_ids():
-    """The model ids invest_models.get_processes() should expose, computed the
-    same way (registry minus models that fail to import)."""
-    import importlib
-    from natcap.invest import model_metadata
-    ids = []
-    for model_id, meta in model_metadata.MODEL_METADATA.items():
-        try:
-            module = importlib.import_module(meta.pyname)
-        except Exception:
-            continue
-        if hasattr(module, "MODEL_SPEC") and hasattr(module, "execute"):
-            ids.append(model_id)
-    return set(ids)
+    """The model ids invest_models.get_processes() should expose.
+
+    natcap.invest.models builds this registry at import time by walking the
+    package and keeping every module that looks like a model, which is the same
+    set the wrapper iterates.
+    """
+    from natcap.invest import models
+    return set(models.model_id_to_pyname)
 
 
 def test_getcapabilities_lists_all_invest_models(wps_url):
@@ -100,7 +95,9 @@ def test_describeprocess_carbon_exposes_spec_args(wps_url):
     wps = WebProcessingService(wps_url, version="1.0.0")
     carbon = wps.describeprocess("carbon")
     input_ids = {i.identifier for i in carbon.dataInputs}
-    assert "lulc_cur_path" in input_ids
+    # InVEST 3.20 renamed carbon's scenarios current/future -> baseline/alternate
+    # and dropped the REDD scenario entirely.
+    assert "lulc_bas_path" in input_ids
     assert "carbon_pools_path" in input_ids
     assert "calc_sequestration" in input_ids
 

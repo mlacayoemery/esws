@@ -3,7 +3,7 @@ import owslib.wps
 server_url = "http://127.0.0.1:5000/wps" #PyWPS
 process_id = "routedem"
 
-wps = owslib.wps.WebProcessingService(server_url, verbose=False, skip_caps=True)
+wps = owslib.wps.WebProcessingService(server_url, skip_caps=True)
 process = wps.describeprocess(process_id)
 
 process_input = []

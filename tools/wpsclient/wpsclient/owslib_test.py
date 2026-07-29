@@ -15,7 +15,7 @@ describe_processes = ["JTS:area"]
 test_processid = "geo:centroid"
 
 wps_url = geoserver + "/geoserver/ows"
-wps = owslib.wps.WebProcessingService(wps_url, verbose=False, skip_caps=True)
+wps = owslib.wps.WebProcessingService(wps_url, skip_caps=True)
 
 
 if list_capabilities:
@@ -93,8 +93,7 @@ print ("\nTesting modified XML request for process %s" % processid)
 execution = owslib.wps.WPSExecution(version="1.0.0",
                                     url= geoserver + "/geoserver/ows",
                                     username=None,
-                                    password=None,
-                                    verbose=False)
+                                    password=None)
 
 requestElement = execution.buildRequest(processid,
                                         inputs)#,

@@ -24,7 +24,9 @@ services:
       - gisdata:/gisdata
     environment:
       GEOSERVER_URL: http://geoserver:8080/geoserver
-      GEOSERVER_PUBLIC_URL: http://localhost:8080/geoserver
+      # Advertised to WPS clients in the WMS URLs of published layers, so it has
+      # to follow the host mapping below -- not the container port.
+      GEOSERVER_PUBLIC_URL: http://localhost:${GEOSERVER_HOST_PORT:-8080}/geoserver
       GEOSERVER_USER: ${GEOSERVER_USER:-admin}
       GEOSERVER_PASS: ${GEOSERVER_PASS:-geoserver}
       WPS_WORKSPACE_PREFIX: esws-

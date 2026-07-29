@@ -115,20 +115,3 @@ class Job(models.Model):
 ##        args = JSONField()
 ##        
 
-class WaterYieldModel(models.Model):
-##    depth = ServerElement.objects.filter(server__server_type="WCS")
-##    precipitation = ServerElement.objects.filter(server__server_type="WCS")
-##    pawc = ServerElement.objects.filter(server__server_type="WCS")
-##    evapotranspiration = ServerElement.objects.filter(server__server_type="WCS")
-##    lulc = ServerElement.objects.filter(server__server_type="WCS")
-##    watersheds = ServerElement.objects.filter(server__server_type="WFS")
-##    biophysical = ServerElement.objects.filter(server__server_type="CSV")
-
-    precipitation_path = models.ForeignKey(ElementWCS, related_name="precipitation", on_delete=models.CASCADE, default=6)
-    eto_path = models.ForeignKey(ElementWCS, related_name="evapotranspiration", on_delete=models.CASCADE, default=3)    
-    depth_to_root_rest_layer_path = models.ForeignKey(ElementWCS, related_name="depth", on_delete=models.CASCADE, default=2)
-    pawc_path = models.ForeignKey(ElementWCS, related_name="pawc", on_delete=models.CASCADE, default=4)
-    lulc_path = models.ForeignKey(ElementWCS, related_name="lulc", on_delete=models.CASCADE, default=5)
-    watersheds_path = models.ForeignKey(ElementWFS, related_name="watersheds", on_delete=models.CASCADE, default=7)
-    biophysical_table_path = models.ForeignKey(ElementCSV, related_name="biophysical", on_delete=models.CASCADE, default=1)
-    seasonality_constant = models.IntegerField(default=5)

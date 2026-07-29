@@ -60,6 +60,43 @@ def test_dashboard_lists_wps_processes(registered_wps_server, dashboard_url):
     assert "annual_water_yield" in r.text, r.text[:1000]
 
 
+def test_generated_form_renders_for_every_process(registered_wps_server,
+                                                  dashboard_url, wps_url):
+    """Every advertised process must produce a job form.
+
+    The form is generated from DescribeProcess, so a process whose inputs the
+    generator cannot map would 500 here rather than at the moment a user picks
+    it out of the list.
+    """
+    caps = requests.get(wps_url, params={"service": "WPS", "version": "1.0.0",
+                                         "request": "GetCapabilities"}, timeout=60)
+    ids = sorted(set(re.findall(r"<ows:Identifier>([^<]+)</ows:Identifier>", caps.text)))
+    assert len(ids) >= 20, ids
+
+    broken = []
+    for process_id in ids:
+        r = requests.get("%s/server/%d/execute/%s/" % (dashboard_url,
+                                                       registered_wps_server,
+                                                       process_id), timeout=120)
+        if r.status_code != 200:
+            broken.append("%s -> %s" % (process_id, r.status_code))
+    assert not broken, broken
+
+
+def test_generated_form_offers_registered_data(registered_wps_server, dashboard_url):
+    """Spatial inputs become dropdowns of registered sources, not free text.
+
+    This is what the hand-built water yield form did for one model; the
+    generated form derives it for all of them from the InVEST type the WPS
+    publishes on each input.
+    """
+    r = requests.get("%s/server/%d/execute/annual_water_yield/"
+                     % (dashboard_url, registered_wps_server), timeout=120)
+    assert r.status_code == 200, r.text[:1000]
+    # lulc_path is a raster input, so it must render as a select
+    assert re.search(r'<select[^>]*name="lulc_path"', r.text), r.text[:2000]
+
+
 def test_dashboard_wps_process_detail(registered_wps_server, dashboard_url):
     """Describes a process through owslib -- the path that raised
     TypeError: WebProcessingService.__init__() got an unexpected keyword

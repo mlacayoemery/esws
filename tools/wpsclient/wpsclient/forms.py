@@ -1,12 +1,15 @@
+import re
+
 from django import forms
 
+from .models import ElementCSV
+from .models import ElementWCS
+from .models import ElementWFS
 from .models import ServerCSV
 from .models import ServerWCS
 from .models import ServerWFS
 from .models import ServerWPS
 from .models import ServerElement
-
-from .models import WaterYieldModel
 
 from .models import Job
 
@@ -82,6 +85,91 @@ class testForm(forms.Form):
 ##
 
 
+_INVEST_TRAILER = re.compile(r"\[invest:([^\]]*)\]")
+
+
+def parse_input_metadata(parameter):
+    """Split a DescribeProcess abstract into (prose, {key: value}).
+
+    The WPS publishes the InVEST type of each input as a trailer on the
+    abstract -- ``[invest:type=raster invest:required=...]`` -- because pywps
+    drops ows:Metadata from LiteralInput. Strip it back off for display.
+    """
+    abstract = parameter.abstract or ""
+    meta = {}
+    match = _INVEST_TRAILER.search(abstract)
+    if match:
+        for token in ("invest:" + match.group(1)).split():
+            key, _sep, value = token.partition("=")
+            if value:
+                meta[key.replace("invest:", "")] = value
+        abstract = _INVEST_TRAILER.sub("", abstract).strip()
+    return abstract, meta
+
+
+class ProcessForm(forms.Form):
+    """A form generated from a WPS DescribeProcess response.
+
+    This is the generalisation of the hand-built water yield form: an input
+    that wants spatial data becomes a dropdown of registered sources of the
+    matching OWS type, and scalars become typed fields -- rather than one
+    free-text JSON blob for the whole process.
+
+    The mapping from InVEST type to element type is the same one the water
+    yield form encoded by hand in its ForeignKeys: rasters come from WCS,
+    vectors from WFS, tables over plain HTTP.
+    """
+
+    ELEMENT_SOURCES = {
+        "raster": ElementWCS,
+        "singleband_raster": ElementWCS,
+        "raster_or_vector": ElementWCS,
+        "vector": ElementWFS,
+        "csv": ElementCSV,
+        "file": ElementCSV,
+    }
+
+    def __init__(self, *args, **kwargs):
+        parameters = kwargs.pop("parameters")
+        super().__init__(*args, **kwargs)
+
+        # Remembered so the view can turn a chosen element back into an OWS
+        # URL, and so it knows which fields are element references at all.
+        self.element_fields = {}
+
+        for parameter in parameters:
+            abstract, meta = parse_input_metadata(parameter)
+            invest_type = meta.get("type", "")
+            identifier = parameter.identifier
+
+            common = {
+                "label": parameter.title or identifier,
+                "help_text": abstract,
+                # A conditional input is not required up front: whether it
+                # applies depends on the values of other inputs.
+                "required": str(getattr(parameter, "minOccurs", 0)) not in ("0", "None"),
+            }
+
+            source = self.ELEMENT_SOURCES.get(invest_type)
+            if source is not None:
+                self.fields[identifier] = forms.ModelChoiceField(
+                    queryset=source.objects.all().order_by("identifier"),
+                    empty_label="---------", **common)
+                self.element_fields[identifier] = invest_type
+            elif invest_type in ("number", "ratio", "percent"):
+                self.fields[identifier] = forms.FloatField(**common)
+            elif invest_type == "integer":
+                self.fields[identifier] = forms.IntegerField(**common)
+            elif invest_type == "boolean":
+                common["required"] = False
+                self.fields[identifier] = forms.BooleanField(**common)
+            elif getattr(parameter, "allowedValues", None):
+                choices = [(str(v), str(v)) for v in parameter.allowedValues]
+                self.fields[identifier] = forms.ChoiceField(choices=choices, **common)
+            else:
+                self.fields[identifier] = forms.CharField(**common)
+
+
 class JobDynamic(forms.ModelForm):
     class Meta:
         model = Job
@@ -99,25 +187,3 @@ class JobDynamic(forms.ModelForm):
             yield (self.fields[name].label, value)
         
 
-class WaterYieldForm(forms.ModelForm):
-    class Meta:
-        model = WaterYieldModel
-        fields = ("precipitation_path",
-                  "eto_path",
-                  "depth_to_root_rest_layer_path",
-                  "pawc_path",
-                  "lulc_path",
-                  "watersheds_path",
-                  "biophysical_table_path",
-                  "seasonality_constant")
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-##        self.fields["depth"].queryset = ServerElement.objects.filter(server__server_type="WCS")
-##        self.fields["precipitation"].queryset = ServerElement.objects.filter(server__server_type="WCS")
-##        self.fields["pawc"].queryset = ServerElement.objects.filter(server__server_type="WCS")
-##        self.fields["evapotranspiration"].queryset = ServerElement.objects.filter(server__server_type="WCS")
-##        self.fields["lulc"].queryset = ServerElement.objects.filter(server__server_type="WCS")
-##        self.fields["watersheds"].queryset = ServerElement.objects.filter(server__server_type="WFS")
-##        self.fields["biophysical"].queryset = ServerElement.objects.filter(server__server_type="CSV")

@@ -59,6 +59,24 @@ def _literal_input(inp):
     # literal True maps to a mandatory WPS input.
     min_occurs = 1 if required is True else 0
 
+    # Path-like inputs all go out as strings, which loses the distinction
+    # between a raster, a vector and a table -- exactly what a client needs in
+    # order to offer the right data to choose from. Publish the InVEST type in
+    # the abstract as a machine-readable trailer so it survives DescribeProcess
+    # and any WPS client can act on it, instead of clients guessing from the
+    # identifier or importing natcap.invest themselves.
+    #
+    # It rides in the abstract rather than ows:Metadata because pywps 4.6 drops
+    # metadata from LiteralInput when rendering DescribeProcess -- the element
+    # simply never appears in the response.
+    trailer = []
+    if arg_type:
+        trailer.append("invest:type=%s" % arg_type)
+    if isinstance(required, str):
+        trailer.append("invest:required=%s" % required)
+    if trailer:
+        abstract = ("%s\n\n[%s]" % (abstract, " ".join(trailer))).strip()
+
     kwargs = dict(
         identifier=inp.id,
         title=title,

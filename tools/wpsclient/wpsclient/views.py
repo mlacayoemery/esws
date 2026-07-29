@@ -13,7 +13,6 @@ from .models import ElementWCS
 from .models import ElementWFS
 from .models import ElementWPS
 
-from .models import WaterYieldModel
 
 from .models import ServerElement
 from .models import Job
@@ -23,7 +22,7 @@ from .forms import ServerFormWCS
 from .forms import ServerFormWFS
 from .forms import ServerFormWPS
 
-from .forms import WaterYieldForm
+from .forms import ProcessForm
 
 from .forms import JobForm
 
@@ -138,8 +137,13 @@ def server_register(request, server_type, title, url):
 
     ServerClass = server_dict[server_type]
 
-    server = ServerClass(title=title, url=url)
-    server.save()
+    # Keyed on the URL so re-registering a source updates rather than
+    # duplicating it -- the demo loader is meant to be safe to re-run.
+    server, created = ServerClass.objects.get_or_create(
+        url=url, defaults={"title": title})
+    if not created and server.title != title:
+        server.title = title
+        server.save()
 
     return server_detail(request, server.pk, server_type)
 
@@ -318,8 +322,10 @@ def server_element_register(request, server_type, server_pk, element_id):
     
     server = get_object_or_404(ServerClass, pk=server_pk)
 
-    element = ElementClass(server=server,identifier=element_id)
-    element.save()
+    # Same reasoning as server_register: registering an element twice should
+    # be a no-op, not a duplicate row in every dropdown.
+    element, _created = ElementClass.objects.get_or_create(
+        server=server, identifier=element_id)
 
     server.registrations = server.registrations + 1
     server.save()
@@ -581,61 +587,48 @@ def job_new(request, server_pk, process_id):
     #link = server.url + "?service=wps&version=1.0.0&request=DescribeProcess&IDENTIFIER=" + process_id
     #description = requests.get(link)
 
-    args = collections.OrderedDict()
-
     wps = owslib.wps.WebProcessingService(server.url, skip_caps=True)
     process = wps.describeprocess(process_id)
-
-    for parameter in process.dataInputs:            
-        if parameter.dataType == "double":
-            args[parameter.identifier] = float(0)
-        elif parameter.dataType == "int":
-            args[parameter.identifier] = int(0)                
-        else:
-            args[parameter.identifier] = ""
+    parameters = process.dataInputs
 
     if request.method == "POST":
-        form = testForm(request.POST)
+        form = ProcessForm(request.POST, parameters=parameters)
+        if form.is_valid():
+            args = collections.OrderedDict()
+            for name, value in form.cleaned_data.items():
+                if value is None or value == "":
+                    continue
+                if name in form.element_fields:
+                    # A chosen data source becomes the URL the WPS will fetch,
+                    # the same conversion the water yield form used to do.
+                    value = get_ows_data_url(value.element_type,
+                                             value.server.url,
+                                             value.identifier)
+                elif isinstance(value, bool):
+                    value = "true" if value else "false"
+                args[name] = str(value)
 
-##        l.warning(str(dir(form)))
-##        l.warning(str(form.data))
-        data = copy.copy(form.data)
-        del data["csrfmiddlewaretoken"]
-        keys=list(data.keys())
-        key_values = []
-        strip_index=len("data__")
-        for k in keys:
-            key_values.append((k[strip_index:], type(args[k[strip_index:]])(data[k])))
-        
-        #form.data.pop('QueryDict')
+            job = Job(server=server, identifier=process_id, args=args)
+            job.status = "Run"
+            status_url = (server.url +
+                          "?service=wps&version=1.0.0&request=Execute&IDENTIFIER=" +
+                          job.identifier + "&datainputs=")
+            status_url += ";".join("%s=%s" % (k, quote(quote(v)))
+                                   for k, v in args.items())
+            job.status_url = status_url
+            job.save()
 
-##        l.warning(str(list(request.POST.keys())))
-##        keys = list(request.POST.keys())
-##        keys.pop(0)
-##        values = json()
-##        for k in keys:
-##            json[
+            server.jobs = server.jobs + 1
+            server.save()
 
-        #form.data["csrfmiddlewaretoken"].delete()
-            
-        args= collections.OrderedDict(key_values)
-        job = Job(server=server,identifier=process_id,args=args)
+            return redirect('job_detail', job_pk=job.pk)
+    else:
+        form = ProcessForm(parameters=parameters)
 
-        job.status = "Run"
-        status_url = server.url + "?service=wps&version=1.0.0&request=Execute&IDENTIFIER=" + job.identifier + "&datainputs="
-        status_url = status_url + ";".join(["%s=%s" % (k, quote(quote(job.args[k]))) for k in job.args.keys()])
-        job.status_url = status_url
-        
-        job.save()
-
-        server.jobs = server.jobs + 1
-        server.save()
-        
-        return redirect('job_detail', job_pk=job.pk)
-    else:        
-        form = testForm(request.POST or None, initial={'data': args})
-        
-    return render(request, 'wpsclient/job_edit.html', {'form': form})
+    return render(request, 'wpsclient/job_edit.html',
+                  {'form': form,
+                   'server_title': server.title,
+                   'process_id': process_id})
 
 def job_edit(request, job_pk):
     l = logging.getLogger('django.request')
@@ -702,49 +695,20 @@ def get_ows_data_url(server_type, server_url, identifier):
     return ows_templates[server_type] % (server_url, identifier)
  
 def water_yield(request):
-    if request.method == "POST":
-        form = WaterYieldForm(request.POST)
+    """Redirect to the generated form for the annual water yield model.
 
-        #clean up data and convert server element ids to gettable URLs
-        data = copy.copy(form.data)
-        del data["csrfmiddlewaretoken"]
+    This used to be a hand-built form: a fixed set of fields, each a dropdown
+    of registered data sources, wired to a WaterYieldModel whose ForeignKeys
+    hardcoded which element type every input wanted -- and to server_pk="4".
+    ProcessForm now derives exactly that from DescribeProcess for any process,
+    so the bespoke page, form and model are gone and this only redirects.
+    """
+    server = ServerWPS.objects.order_by("pk").first()
+    if server is None:
+        return redirect("server_list", server_type="WPS")
+    return redirect("job_new", server_pk=server.pk,
+                    process_id="annual_water_yield")
 
-        keys = set(data.keys())
-        keys.remove("seasonality_constant")
-
-        for k in keys:
-            element = get_server_element(data[k])
-            data[k] = get_ows_data_url(element.element_type,element.server.url,element.identifier)      
-
-        #save data to a job and redirect to details
-        args = data
-        server_pk="4"
-        server = get_object_or_404(ServerWPS, pk=server_pk)
-        process_id="natcap.invest.hydropower.hydropower_water_yield"
-
-        #cat = easyows.Catalog()
-        name = str(uuid.uuid1())
-        #cat.gs_cat.create_workspace(name)
-        args["workspace_dir"] = name
-        
-        job = Job(server=server,identifier=process_id,args=args)
-
-        job.status = "Run"
-        status_url = server.url + "?service=wps&version=1.0.0&request=Execute&IDENTIFIER=natcap.invest.hydropower.hydropower_water_yield&datainputs="
-        status_url = status_url + ";".join(["%s=%s" % (k, quote(quote(job.args[k]))) for k in job.args.keys()])
-        job.status_url = status_url
-        
-        job.save()               
-
-        server.jobs = server.jobs + 1
-        server.save()
-        
-        return redirect('job_detail', job_pk=job.pk)        
-            
-    else: #elif request.method == "GET"
-        form = WaterYieldForm()
-
-    return render(request, 'wpsclient/water_yield.html', {'form': form})
 
 def job_to_wps_url(job):
     url = job.server.url + "?service=wps&version=1.0.0&request=Execute&IDENTIFIER=" + job.identifier + "&datainputs="

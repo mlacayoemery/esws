@@ -26,6 +26,29 @@ import zipfile
 class MissingResource(Exception):
     pass
 
+
+class _GeoServer3Catalog(geoserver.catalog.Catalog):
+    """geoserver-restconfig with the trailing slashes GeoServer 3 rejects.
+
+    The client (2.0.16, the latest release) builds some REST paths with a
+    trailing slash -- ``create_workspace`` posts to ``/rest/namespaces/``.
+    GeoServer 2.x tolerated that; 3.0 routes strictly and answers::
+
+        404 {"detail":"No endpoint POST /geoserver/rest/namespaces/."}
+
+    while the identical request to ``/rest/namespaces`` returns 201. Normalising
+    the path here fixes every call site at once rather than only the workspace
+    creation that happens to fail first. Harmless against GeoServer 2.x, which
+    accepts the path either way.
+    """
+
+    def http_request(self, url, data=None, method='get', headers=None):
+        head, sep, query = url.partition('?')
+        if head.endswith('/'):
+            url = head.rstrip('/') + sep + query
+        return super().http_request(url, data=data, method=method,
+                                    headers=headers or {})
+
 class Catalog:
     def __init__(self,
                  gs_url = "http://localhost:8080/geoserver",
@@ -58,9 +81,9 @@ class Catalog:
         "Creates connection to catalog"
         self.logger.debug("Connecting to catalog %s" % rest_url)
         
-        return geoserver.catalog.Catalog(rest_url,
-                                         username = self.username,
-                                         password = self.password)
+        return _GeoServer3Catalog(rest_url,
+                                  username = self.username,
+                                  password = self.password)
 
     def make_named_workspace(self, ws_uuid=None):
         "Creates workspace with UUID and returns name"

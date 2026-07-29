@@ -1,0 +1,17 @@
+[Unit]
+Description=ESWS GeoServer
+After=network.target
+
+[Service]
+Type=simple
+; Installed by scripts/install-geoserver.sh, which uses GeoServer's
+; platform-independent binary -- Jetty is bundled, so there is no servlet
+; container to manage. GeoServer 3.0 requires Java 17.
+WorkingDirectory=/opt/geoserver
+Environment=GEOSERVER_HOME=/opt/geoserver
+Environment=GEOSERVER_DATA_DIR=/opt/geoserver_data
+ExecStart=/usr/bin/java -Xms512m -Xmx2g -DGEOSERVER_DATA_DIR=/opt/geoserver_data -jar /opt/geoserver/start.jar
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

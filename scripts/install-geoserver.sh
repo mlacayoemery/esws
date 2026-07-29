@@ -13,6 +13,14 @@
 #
 # GeoServer 3.0 requires Java 17 (see RUNNING.html in the distribution).
 #
+# The GeoServer WPS extension is deliberately not installed. The old 2.17 step
+# added it, but nothing in the stack calls GeoServer's WPS -- ESWS serves WPS
+# itself from pywps (tools/wpsserver), and GeoServer is used only as the OGC
+# endpoint that model outputs are published to. The container does not install
+# it either, so installing it here would put bare metal ahead of what is
+# actually tested. Add it back with GeoServer's own extension install if a
+# deployment needs it.
+#
 # Env overrides: GS_VERSION, GEOSERVER_HOME, GEOSERVER_DATA_DIR
 set -euo pipefail
 

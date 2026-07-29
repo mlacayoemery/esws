@@ -22,6 +22,9 @@ services:
       - ./:/app
       - wps_outputs:/tmp/wpsoutputs
       - gisdata:/gisdata
+      # InVEST sample data, cached outside the repo by
+      # scripts/fetch_invest_samples.sh. Read-only: it is reference data.
+      - ${INVEST_SAMPLES:-/store/invest/samples}:/data/invest:ro
     environment:
       GEOSERVER_URL: http://geoserver:8080/geoserver
       # Advertised to WPS clients in the WMS URLs of published layers, so it has
@@ -45,6 +48,9 @@ services:
     volumes:
       - ./:/app
       - gisdata:/gisdata
+      # Served under /invest/, so demo tables (CSVs) have an HTTP URL the
+      # dashboard can register as CSV elements.
+      - ${INVEST_SAMPLES:-/store/invest/samples}:/app/data/invest:ro
 
   dashboard:
     image: esws/wps  # see fileserver

@@ -1,7 +1,12 @@
 from django.urls import re_path as url
 from . import views
 
-element_id = '[-a-zA-Z0-9_:.]+'
+# Slashes are allowed: CSV elements are paths relative to the file server root
+# (get_ows_data_url joins them as "<server_url>/<identifier>"), so nested sample
+# data like "invest/pollination/guild_table.csv" has to round-trip. The patterns
+# using this are anchored and the preceding segments are fixed, so the greedy
+# match still ends at the trailing slash.
+element_id = '[-a-zA-Z0-9_:./]+'
 server_title = '[a-zA-Z0-9\W]+'
 server_url = 'http[a-zA-Z0-9:./]+'
 server_type = 'CSV|WCS|WFS|WPS'

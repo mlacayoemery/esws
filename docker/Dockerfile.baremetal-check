@@ -1,0 +1,61 @@
+# Verification aid — NOT part of the running stack.
+#
+# The bare-metal install path (install.sh + requirements_py3.txt) has no other
+# test, which is how its pins drifted to InVEST 3.8.0 / Django 2.2 / GDAL 2.4.4
+# and stopped being installable at all. This image simulates a clean machine and
+# runs the same commands install.sh options 2 and 4 run, then asserts the
+# resulting environment is the one the code actually needs.
+#
+#   make check-baremetal
+#
+# Slow (it builds InVEST from sdist), so it is not part of `make smoke`.
+FROM ubuntu:24.04
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        curl bzip2 ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN useradd -m esws
+USER esws
+WORKDIR /home/esws/esws
+
+COPY --chown=esws:esws requirements_py3.txt ./requirements_py3.txt
+COPY --chown=esws:esws requirements ./requirements
+COPY --chown=esws:esws tools/wpsclient/requirements_py3.txt ./tools/wpsclient/requirements_py3.txt
+
+# --- install.sh option 2: geo stack from conda-forge -------------------------
+RUN mkdir -p "$HOME/.local/bin" && \
+    curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest \
+        | tar -xj -C "$HOME/.local" bin/micromamba
+
+RUN "$HOME/.local/bin/micromamba" create -y -p "$HOME/esws-invest" -c conda-forge \
+        python=3.11 \
+        "gdal=3.10.*" \
+        "pygeoprocessing>=2.4.10" \
+        c-compiler cxx-compiler cython numpy \
+        setuptools setuptools_scm wheel pip babel
+
+# --- install.sh option 4: python stack --------------------------------------
+RUN "$HOME/.local/bin/micromamba" run -p "$HOME/esws-invest" \
+        pip install --no-build-isolation -r requirements_py3.txt
+
+# --- assert the installed stack is the one the code needs -------------------
+RUN "$HOME/.local/bin/micromamba" run -p "$HOME/esws-invest" python -c "\
+import natcap.invest, django, pywps, owslib, svgwrite, flask, bs4, geoserver.catalog; \
+from osgeo import gdal; \
+from natcap.invest import models; \
+print('invest', natcap.invest.__version__); \
+print('gdal', gdal.__version__); \
+print('django', django.get_version()); \
+print('models', len(models.model_id_to_pyname)); \
+assert natcap.invest.__version__ == '3.20.0', natcap.invest.__version__; \
+assert django.get_version().startswith('4.2'), django.get_version(); \
+assert gdal.__version__.startswith('3.10'), gdal.__version__; \
+assert len(models.model_id_to_pyname) == 26, len(models.model_id_to_pyname); \
+assert 'lulc_bas_path' in [i.id for i in models.model_id_to_spec['carbon'].inputs]; \
+print('BARE-METAL INSTALL OK')"
+
+# --- the dashboard-only subset must resolve against it too -------------------
+RUN "$HOME/.local/bin/micromamba" run -p "$HOME/esws-invest" \
+        pip install --dry-run -r tools/wpsclient/requirements_py3.txt \
+    && echo "DASHBOARD SUBSET OK"

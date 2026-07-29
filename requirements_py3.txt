@@ -1,32 +1,23 @@
-pip
-GDAL==2.4.4
-Cython
-Pyro4==4.77
-pandas>=0.22.0
-numpy>=1.11.0,!=1.16.0
-Rtree>=0.8.2,!=0.9.1
-scipy>=0.16.1
-Shapely>=1.6.4,<1.7.0
-six
-pygeoprocessing>=1.9.2
-taskgraph[niced_processes]>=0.8.2
-psutil>=5.6.6
-chardet>=3.0.4
-matplotlib
-xlrd>=1.2.0
-xlwt
-natcap.invest==3.8.0
-virtualenv
--e git+https://github.com/mlacayoemery/django-SplitJSONWidget-form.git@77c458d3fd17a97d8bb4753baaed71b3a6f1028c#egg=django-split-json-widget
-django==2.2.28
-django-extensions
-jsonfield
-bs4
-pyparsing
-pydot
-flask
-pywps
-gisdata==0.5.4
-requests>=2.14.0
--e git+https://github.com/boundlessgeo/gsconfig.git@d05a4dc152aa3fb97171f418d7dc09f5f45445a5#egg=gsconfig-py
+# Python requirements for the bare-metal (non-container) install; see install.sh.
+#
+# The application stack is defined once, in requirements/server.txt, which the
+# container image installs too. This file used to be a second, independent copy
+# of it -- which is exactly how it drifted to InVEST 3.8.0 / Django 2.2 / GDAL
+# 2.4.4 while the code moved on to InVEST 3.20 / Django 4.2, leaving pins that
+# could not install at all (GDAL 2.4.4 is source-only and needs libgdal 2.x;
+# natcap.invest 3.8.0 ships only a cp37 wheel). Deferring instead of copying
+# makes that drift impossible.
+#
+# GDAL is deliberately not listed, here or in requirements/server.txt:
+# natcap.invest pins gdal==3.10.*, and pip cannot satisfy that without a
+# matching libgdal already present. Install the geo stack from conda-forge
+# first (install.sh option 2), then install this file into that environment.
+#
+# InVEST also has to be built with --no-build-isolation -- it publishes no Linux
+# wheels, and in an isolated build environment its pygeoprocessing build
+# requirement pulls the newest GDAL bindings off PyPI, which then refuse to
+# build against an older libgdal. install.sh option 4 does this.
+-r requirements/server.txt
+
+# Not part of the services: used only by the docs helper docsrc/svg_invest.py.
 svgwrite

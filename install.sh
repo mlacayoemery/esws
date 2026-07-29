@@ -10,8 +10,8 @@ MENU="Choose one of the following options:"
 
 OPTIONS=(0 "Clone ESWS repository"
          1 "Install system requirements"
-         2 "Install GDAL from source with Python 2 and 3 bindings"
-         3 "Install PROJ.4 from source for Shapely Python library"
+         2 "Install geo stack (conda-forge GDAL 3.10)"
+         3 "PROJ.4 (now part of option 2)"
          4 "Install Python requirements"
          5 "Setup OneTjs"
          6 "Setup WPS client"
@@ -51,67 +51,45 @@ read -p "Press [Enter] key to continue..."
 ;;
 
 2)
-sudo pip3 install numpy
-sudo apt-get install sqlite3 libsqlite3-dev
-#install GDAL with Python 3 bindings
-cd ..
-if [[ $LD_LIBRARY_PATH == *"/usr/local/lib"* ]]; then
-    echo "LD_LIBRARY_PATH already set"
-else
-    export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
-    sudo ldconfig
+# Install the geo stack from conda-forge, mirroring docker/Dockerfile.invest.
+# natcap.invest pins gdal==3.10.*, and pip cannot satisfy that on its own --
+# building GDAL's Python bindings needs a matching libgdal. conda-forge ships
+# libgdal, PROJ and GEOS together, which is why building GDAL and PROJ from
+# source (what this option used to do, at 2.4.4 and 7.0.0) is no longer needed.
+ESWS_ENV="${ESWS_ENV:-$HOME/esws-invest}"
+if [ ! -x "$HOME/.local/bin/micromamba" ]; then
+    mkdir -p "$HOME/.local/bin"
+    curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest \
+        | tar -xj -C "$HOME/.local" bin/micromamba
 fi
-if [ -f "gdal-2.4.4.tar.gz" ]; then
-    echo "GDAL already downloaded"
-else
-    wget http://download.osgeo.org/gdal/2.4.4/gdal-2.4.4.tar.gz
-fi
-tar -xvf gdal-2.4.4.tar.gz
-cd gdal-2.4.4
-./configure --with-python --with-sqlite3
-make
-sudo make install
-sudo pip3 install swig/python
-cd ../esws
+"$HOME/.local/bin/micromamba" create -y -p "$ESWS_ENV" -c conda-forge \
+    python=3.11 \
+    "gdal=3.10.*" \
+    "pygeoprocessing>=2.4.10" \
+    c-compiler cxx-compiler cython numpy \
+    setuptools setuptools_scm wheel pip babel
+echo "Geo stack installed in $ESWS_ENV"
 read -p "Press [Enter] key to continue..."
 ;;
 
 3)
-#install PROJ.4 for shapely
-cd ..
-if [ -f "proj-7.0.0.tar.gz" ]; then
-    echo "PROJ.4 already downloaded"
-else
-    wget http://download.osgeo.org/proj/proj-7.0.0.tar.gz
-fi
-tar -xvf proj-7.0.0.tar.gz
-if [ -f "proj-datumgrid-1.8.zip" ]; then
-    echo "PROJ.4 datum grid already downloaded"
-else
-    wget http://download.osgeo.org/proj/proj-datumgrid-1.8.zip
-fi
-unzip proj-datumgrid-1.8.zip -d proj-7.0.0/nad
-cd proj-7.0.0
-./configure
-make
-sudo make install
-cd ../esws
+# PROJ.4 used to be built from source here for Shapely. conda-forge ships it
+# with the geo stack, so there is nothing left to do.
+echo "PROJ is provided by the conda-forge geo stack -- use option 2 instead."
 read -p "Press [Enter] key to continue..."
 ;;
 
 4)
-#install Python requirements
-#sudo pip3 install --upgrade pip
-
-#sudo pip3 install --upgrade Cython
-#sudo pip3 install --upgrade numpy>=1.11.0
-#sudo pip3 install --upgrade flask
-#sudo pip3 install --upgrade pywps
-#sudo pip3 install --upgrade -e git+https://github.com/boundlessgeo/gsconfig.git@d05a4dc152aa3fb97171f418d7dc09f5f45445a5#egg=gsconfig-py
-#sudo pip3 install --upgrade -r requirements_py2.txt
-#sudo pip3 install --upgrade -r requirements_py3.txt
-
-sudo xargs pip3 install --upgrade < requirements_py3.txt
+# Install the Python stack into the environment from option 2.
+#
+# --no-build-isolation is required: natcap.invest publishes no Linux wheels, so
+# it builds from sdist, and in an isolated build environment its pygeoprocessing
+# build requirement pulls the newest GDAL bindings off PyPI -- which then refuse
+# to build against the conda libgdal ("Python bindings of GDAL 3.13.2 require at
+# least libgdal 3.13.2, but 3.10.3 was found").
+ESWS_ENV="${ESWS_ENV:-$HOME/esws-invest}"
+"$HOME/.local/bin/micromamba" run -p "$ESWS_ENV" \
+    pip install --no-build-isolation -r requirements_py3.txt
 
 read -p "Press [Enter] key to continue..."
 ;;

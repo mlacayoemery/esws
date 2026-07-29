@@ -1,5 +1,5 @@
 # ESWS containerized stack — common operations.
-.PHONY: build up down logs smoke test
+.PHONY: build up down logs smoke test check-baremetal
 
 build:        ## Build the app + dashboard images
 	docker compose build
@@ -15,5 +15,8 @@ logs:         ## Follow logs from all services
 
 smoke:        ## Build, start the stack, run the pytest smoke suite, tear down
 	./scripts/smoke.sh
+
+check-baremetal:  ## Verify install.sh / requirements_py3.txt still install on a clean machine
+	docker build -f docker/Dockerfile.baremetal-check -t esws/baremetal-check .
 
 test: smoke

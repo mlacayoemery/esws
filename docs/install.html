@@ -84,8 +84,13 @@ though they are re-checked, which repairs any that an earlier load left disabled
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">make unit         # seconds: needs neither the stack nor InVEST. What CI runs.</span>
 <span class="go">make smoke        # builds, starts the stack, runs the suite, tears down</span>
 <span class="go">make smoke-demo   # the same with the demo loaded, so no test skips</span>
+<span class="go">make verify       # smoke-demo, but leaves the stack up afterwards</span>
 </pre></div>
 </div>
+<p><code class="docutils literal notranslate"><span class="pre">smoke</span></code> and <code class="docutils literal notranslate"><span class="pre">smoke-demo</span></code> end in <code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">compose</span> <span class="pre">down</span> <span class="pre">-v</span></code>: they are for
+checking a change, and they clean up after themselves, which means they also
+destroy a stack you were using and everything loaded into it. <code class="docutils literal notranslate"><span class="pre">verify</span></code> runs the
+same suite and leaves it standing.</p>
 </section>
 </section>
 <section id="bare-metal">

@@ -372,10 +372,10 @@ def server_element_detail(request, server_type, server_pk, element_id):
         "CSV" : server_csv_element_detail,        
         "WCS" : server_wcs_element_detail,
         "WFS" : server_wfs_element_detail,
-        "WPS" : server_wps_element_detail
+        "WPS" : server_wps_element_detail,
+        # A template describes its processes exactly like the WPS it points at.
+        "TPL" : server_wps_element_detail
         }
-
-    print(server_type)
 
     return server_dict[server_type](request, server_pk, element_id)
 

@@ -34,8 +34,30 @@
           <div class="body" role="main">
             
   <section id="raster-data">
-<h1>Raster Data<a class="headerlink" href="#raster-data" title="Link to this heading">¶</a></h1>
-<p>The ESWS WCS address is <a class="reference external" href="http://192.168.56.104:8080/gs215/ows?service=wcs&amp;version=1.0.0&amp;request=GetCapabilities">http://192.168.56.104:8080/gs215/ows</a>.</p>
+<span id="rasters"></span><h1>Raster Data<a class="headerlink" href="#raster-data" title="Link to this heading">¶</a></h1>
+<p>Rasters are served by GeoServer as a <a class="reference external" href="https://www.opengeospatial.org/standards/wcs">Web Coverage Service</a>.</p>
+<ul class="simple">
+<li><p>Capabilities: <a class="reference external" href="http://localhost:8080/geoserver/ows?service=wcs&amp;version=2.0.0&amp;request=GetCapabilities">http://localhost:8080/geoserver/ows?service=wcs&amp;version=2.0.0&amp;request=GetCapabilities</a></p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">demo</span></code> publishes every raster in the InVEST sample data into the <code class="docutils literal notranslate"><span class="pre">invest</span></code>
+workspace and registers each as a WCS element in the dashboard, where it becomes
+selectable for any model input that wants a raster.</p>
+<p>A job given a WCS URL has the coverage fetched for it before the model runs.</p>
+<section id="layers-without-a-usable-crs">
+<span id="crs-caveat"></span><h2>Layers without a usable CRS<a class="headerlink" href="#layers-without-a-usable-crs" title="Link to this heading">¶</a></h2>
+<p>GeoServer leaves a layer <strong>disabled</strong> when it cannot resolve the data’s native
+coordinate reference system to an authority code, and then answers every request
+with <em>Could not locate coverage</em> – even though publishing reported success.</p>
+<p>Publishing therefore identifies the CRS itself where GeoServer could not, and
+declares it, which covers definitions written in ESRI style (<code class="docutils literal notranslate"><span class="pre">RGF93_Lambert_93</span></code>)
+or tagged against a non-EPSG authority (<code class="docutils literal notranslate"><span class="pre">IGNF:LAMB93</span></code>, which is EPSG:2154).</p>
+<p>A match below 90% confidence is refused rather than guessed: declaring the wrong
+CRS silently puts the data in the wrong place, which is worse than a layer that
+plainly does not work. Two rasters in the InVEST samples carry an unnamed
+projection whose best candidates are three different UTM zone 21S datums at 70%
+apiece; they stay unpublished and <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">demo</span></code> names them. Lower the bar with
+<code class="docutils literal notranslate"><span class="pre">EASYOWS_CRS_MIN_CONFIDENCE</span></code> if you accept that trade for your own data.</p>
+</section>
 </section>
 
 
@@ -69,7 +91,10 @@
 <li class="toctree-l1"><a class="reference internal" href="run.html">Running</a></li>
 <li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration &amp; Maintenance</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tables.html">Tabular Data</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Raster Data</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Raster Data</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#layers-without-a-usable-crs">Layers without a usable CRS</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="vectors.html">Vector Data</a></li>
 <li class="toctree-l1"><a class="reference internal" href="processes.html">Processes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="models.html">Model Inputs</a></li>

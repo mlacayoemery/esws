@@ -34,8 +34,17 @@
           <div class="body" role="main">
             
   <section id="vector-data">
-<h1>Vector Data<a class="headerlink" href="#vector-data" title="Link to this heading">¶</a></h1>
-<p>The ESWS WFS address is <a class="reference external" href="http://192.168.56.104:8080/gs215/ows?service=wfs&amp;version=1.0.0&amp;request=GetCapabilities">http://192.168.56.104:8080/gs215/ows</a>.</p>
+<span id="vectors"></span><h1>Vector Data<a class="headerlink" href="#vector-data" title="Link to this heading">¶</a></h1>
+<p>Vectors are served by GeoServer as a <a class="reference external" href="https://www.opengeospatial.org/standards/wfs">Web Feature Service</a>.</p>
+<ul class="simple">
+<li><p>Capabilities: <a class="reference external" href="http://localhost:8080/geoserver/ows?service=wfs&amp;version=1.0.0&amp;request=GetCapabilities">http://localhost:8080/geoserver/ows?service=wfs&amp;version=1.0.0&amp;request=GetCapabilities</a></p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">demo</span></code> publishes every vector in the InVEST sample data into the <code class="docutils literal notranslate"><span class="pre">invest</span></code>
+workspace and registers each as a WFS element, selectable for any model input that
+wants a vector.</p>
+<p>A job given a WFS URL has the features fetched as a zipped shapefile and unpacked
+before the model runs. The same CRS caveat applies as for rasters
+(<a class="reference internal" href="rasters.html#crs-caveat"><span class="std std-ref">Layers without a usable CRS</span></a>).</p>
 </section>
 
 

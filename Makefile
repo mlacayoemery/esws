@@ -1,5 +1,6 @@
 # ESWS containerized stack — common operations.
-.PHONY: build up down logs smoke test demo demo-data check-baremetal check-geoserver
+.PHONY: build up down logs unit smoke smoke-demo demo demo-data \
+	check-baremetal check-geoserver
 
 build:        ## Build the app + dashboard images
 	docker compose build

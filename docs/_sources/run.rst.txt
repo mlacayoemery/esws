@@ -1,16 +1,98 @@
+.. _run:
+
 =======
 Running
 =======
 
-Dashboard
-=========
+Services
+========
 
-The ESWS dashboard address is `http://192.168.56.104:8000 <http://192.168.56.104:8000>`_.
+``make up`` brings up four services. The ports below are the defaults; each is
+overridable in ``.env`` (see :ref:`configuration`), so check yours if the stack is
+sharing a host.
 
+.. list-table::
+   :header-rows: 1
+   :widths: 18 30 52
 
-GeoServer
-=========
+   * - Service
+     - Address
+     - What it is
+   * - Dashboard
+     - http://localhost:8000
+     - The web client: registers sources, builds jobs, tracks them
+   * - WPS
+     - http://localhost:5000/wps
+     - Every InVEST model as a WPS 1.0 process
+   * - GeoServer
+     - http://localhost:8080/geoserver
+     - WCS and WFS for raster and vector data
+   * - File server
+     - http://localhost:8001
+     - Static HTTP for tables, and where table outputs are uploaded
 
-The ESWS GeoServer address is `http://192.168.56.104:8080/gs215 <http://192.168.56.104:8080/gs215>`_.
+GeoServer's default credentials are **admin** / **geoserver**.
 
-The default user name is **admin** and the default password is **geoserver**.
+.. code-block:: console
+
+    make logs     # follow every service
+    make down     # stop the stack and remove its volumes
+
+The dashboard
+=============
+
+The front page lists sources by kind. Each section holds servers you have
+registered, and each server lists the elements bookmarked on it.
+
+WCS, WFS, HTTP
+    Data sources. Their elements are the layers and tables a job can be given as
+    input.
+
+WPS
+    Process sources. Their elements are the processes the server advertises --
+    with the InVEST WPS, 26 models.
+
+Templates
+    The same processes, but their job forms arrive prefilled with InVEST's own
+    sample arguments. "InVEST Demo" is registered by ``make demo``. Use it to run
+    a model without hunting for inputs first.
+
+Jobs
+    Every job you have created, with its status.
+
+Running a model
+===============
+
+1. Open a process source and pick a process. The page shows its inputs, its
+   outputs, and its licence and user guide links (see :ref:`processes`).
+2. Follow **New Job**. The form is generated from the process description: an
+   input that wants a raster becomes a dropdown of registered WCS layers, a
+   vector one of WFS layers, a table one of HTTP tables, and numbers carry the
+   model's own bounds. From a Templates source it comes prefilled.
+3. Submit. The job is created but not sent.
+4. Follow **Run**. The job is submitted asynchronously -- the WPS answers with a
+   status location rather than holding the connection open, which matters because
+   some models take minutes.
+5. **Status** polls it. When the run finishes, the outputs it produced are
+   registered against whichever servers you chose.
+
+Results
+=======
+
+Every run returns its outputs as fetchable references. Two extra inputs on each
+form decide whether they are also published somewhere permanent:
+
+Upload model results
+    Publish this run's results to servers you choose -- rasters to a WCS, vectors
+    to a WFS, tables to an HTTP file server. Only results are published, not the
+    intermediate files a model writes while working.
+
+    While the job runs, the outputs it is expected to produce are listed under the
+    "Local Pending" sources, so you can see what is coming. On completion they
+    move to the destinations you picked.
+
+Unique results for each run
+    Add a short token to the results suffix on every run, so running the same job
+    again does not overwrite the previous run's outputs. Without it, a second run
+    replaces the first. Once a job has finished, **Run Again** on its page
+    resubmits it and says which of the two will happen.

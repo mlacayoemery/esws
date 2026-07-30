@@ -34,63 +34,81 @@
           <div class="body" role="main">
             
   <section id="installation">
-<h1>Installation<a class="headerlink" href="#installation" title="Link to this heading">¶</a></h1>
-<section id="virtualbox">
-<h2>VirtualBox<a class="headerlink" href="#virtualbox" title="Link to this heading">¶</a></h2>
-<p>Install the latest version of <a class="reference external" href="https://www.virtualbox.org/">VirtualBox</a></p>
-<section id="host-network-manager">
-<h3>Host Network Manager<a class="headerlink" href="#host-network-manager" title="Link to this heading">¶</a></h3>
-<p>Create an internal network for your computer to connect to VirtualBox virtual machines.</p>
-<section id="gui">
-<h4>GUI<a class="headerlink" href="#gui" title="Link to this heading">¶</a></h4>
-<ol class="arabic simple">
-<li><p>Select <strong>File &gt; Host Network Manager</strong> from the menu</p></li>
-</ol>
-</section>
-<section id="linux-commandline">
-<h4>Linux Commandline<a class="headerlink" href="#linux-commandline" title="Link to this heading">¶</a></h4>
-<ol class="arabic simple">
-<li><p>Create a new interface on the host OS</p></li>
-</ol>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">VBoxManage hostonlyif create</span>
-<span class="go">VBoxManage hostonlyif ipconfig vboxnet0 --ip 192.168.56.1</span>
-<span class="go">VBoxManage dhcpserver add --ifname vboxnet0 --ip 192.168.56.1 --netmask 255.255.255.0 --lowerip 192.168.56.100 --upperip 192.168.56.200</span>
-</pre></div>
-</div>
-<ol class="arabic simple" start="2">
-<li><p>If necessary modify the DHCP server settings</p></li>
-</ol>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">VBoxManage dhcpserver modify --ifname vboxnet0 --ip 192.168.56.1 --netmask 255.255.255.0 --lowerip 192.168.56.100 --upperip 192.168.56.200</span>
-<span class="go">VBoxManage dhcpserver modify --ifname vboxnet0 --enable</span>
-</pre></div>
-</div>
+<span id="install"></span><h1>Installation<a class="headerlink" href="#installation" title="Link to this heading">¶</a></h1>
+<p>ESWS runs as four containers: the WPS server, the dashboard, a GeoServer, and a
+static file server. Docker Compose is the supported way to run it.</p>
+<section id="docker-compose">
+<h2>Docker Compose<a class="headerlink" href="#docker-compose" title="Link to this heading">¶</a></h2>
+<section id="requirements">
+<h3>Requirements<a class="headerlink" href="#requirements" title="Link to this heading">¶</a></h3>
 <ul class="simple">
-<li><p>Optionally confirm that the settings are in effect</p></li>
+<li><p>Docker Engine with the Compose plugin (<code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">compose</span></code>, not
+<code class="docutils literal notranslate"><span class="pre">docker-compose</span></code>)</p></li>
+<li><p>Around 8 GB of disk for the images, and another 2 GB if you load the InVEST
+sample data</p></li>
 </ul>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">VBoxManage list hostonlyifs</span>
-<span class="go">VBoxManage list dhcpservers</span>
+</section>
+<section id="quick-start">
+<h3>Quick start<a class="headerlink" href="#quick-start" title="Link to this heading">¶</a></h3>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">git clone https://github.com/mlacayoemery/esws.git</span>
+<span class="go">cd esws</span>
+<span class="go">cp .env.example .env      # optional: adjust ports and credentials</span>
+<span class="go">make build</span>
+<span class="go">make up</span>
+</pre></div>
+</div>
+<p>The build takes a while: the WPS image installs GDAL and InVEST from conda-forge.
+<code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">up</span></code> on its own builds only images that do not exist yet, so run
+<code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">build</span></code> after anything that changes what gets installed.</p>
+<p>See <a class="reference internal" href="run.html#run"><span class="std std-ref">Running</span></a> for the addresses the services come up on, and
+<a class="reference internal" href="configuration.html#configuration"><span class="std std-ref">Configuration &amp; Maintenance</span></a> for what <code class="docutils literal notranslate"><span class="pre">.env</span></code> controls.</p>
+</section>
+<section id="loading-the-sample-data">
+<h3>Loading the sample data<a class="headerlink" href="#loading-the-sample-data" title="Link to this heading">¶</a></h3>
+<p>The stack starts empty on purpose: nothing is registered and no data is
+published. One command fills it in.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">make demo</span>
+</pre></div>
+</div>
+<p>That downloads the InVEST sample datasets (about 2 GB, cached outside the
+repository under <code class="docutils literal notranslate"><span class="pre">/store/invest</span></code> by default), publishes every raster and vector
+they contain to GeoServer, serves the tables over HTTP, and registers all of it in
+the dashboard along with a WPS source and a Templates source.</p>
+<p>The download is the slow part and is skipped once cached, so <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">demo</span></code> is
+cheap to repeat. It is idempotent: layers already published are left in place,
+though they are re-checked, which repairs any that an earlier load left disabled
+(see <a class="reference internal" href="rasters.html#crs-caveat"><span class="std std-ref">Layers without a usable CRS</span></a>).</p>
+</section>
+<section id="tests">
+<h3>Tests<a class="headerlink" href="#tests" title="Link to this heading">¶</a></h3>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">make unit         # seconds: needs neither the stack nor InVEST. What CI runs.</span>
+<span class="go">make smoke        # builds, starts the stack, runs the suite, tears down</span>
+<span class="go">make smoke-demo   # the same with the demo loaded, so no test skips</span>
 </pre></div>
 </div>
 </section>
 </section>
-<section id="import-appliance">
-<h3>Import Appliance<a class="headerlink" href="#import-appliance" title="Link to this heading">¶</a></h3>
-<ul class="simple">
-<li><p>Download the <a class="reference external" href="https://drive.google.com/file/d/1YtR5WWwU8OS5ozW-WGaL_6NcDnmMGdFq/view?usp=sharing">ESWS OVA</a> and save it as <strong>esws.ova</strong></p></li>
-</ul>
-<section id="id2">
-<h4>GUI<a class="headerlink" href="#id2" title="Link to this heading">¶</a></h4>
-<ol class="arabic simple">
-<li><p>Select <strong>File &gt; Import Appliance</strong> from the menu</p></li>
-</ol>
-</section>
-<section id="id3">
-<h4>Linux Commandline<a class="headerlink" href="#id3" title="Link to this heading">¶</a></h4>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">VBoxManage import esws.ova --vsys 0 --vmname &quot;ESWS&quot;</span>
+<section id="bare-metal">
+<h2>Bare metal<a class="headerlink" href="#bare-metal" title="Link to this heading">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">install.sh</span></code> installs ESWS directly onto Ubuntu, without containers. It is kept
+working, but it is the harder path: it needs a system GDAL matching the InVEST
+build, a Java runtime for GeoServer, and root.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">sudo ./install.sh</span>
+</pre></div>
+</div>
+<p>Two targets check that path still works, each in a throwaway container:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">make check-baremetal   # install.sh + the requirements install on a clean machine</span>
+<span class="go">make check-geoserver   # the GeoServer step produces a GeoServer that serves</span>
 </pre></div>
 </div>
 </section>
-</section>
+<section id="legacy-virtual-machine">
+<h2>Legacy virtual machine<a class="headerlink" href="#legacy-virtual-machine" title="Link to this heading">¶</a></h2>
+<p>Before containers, ESWS was distributed as a VirtualBox appliance running every
+service in one Ubuntu guest, at fixed addresses on a host-only network
+(192.168.56.104), with an older InVEST and GeoServer 2.15 under <code class="docutils literal notranslate"><span class="pre">/gs215</span></code>.</p>
+<p>That appliance is no longer available for download, and nothing else in this
+documentation describes it. Use Compose.</p>
 </section>
 </section>
 
@@ -122,19 +140,15 @@
 <script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Installation</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#virtualbox">VirtualBox</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#host-network-manager">Host Network Manager</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#gui">GUI</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#linux-commandline">Linux Commandline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#docker-compose">Docker Compose</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#requirements">Requirements</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#quick-start">Quick start</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loading-the-sample-data">Loading the sample data</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#tests">Tests</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="#import-appliance">Import Appliance</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#id2">GUI</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#id3">Linux Commandline</a></li>
-</ul>
-</li>
-</ul>
-</li>
+<li class="toctree-l2"><a class="reference internal" href="#bare-metal">Bare metal</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#legacy-virtual-machine">Legacy virtual machine</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="run.html">Running</a></li>

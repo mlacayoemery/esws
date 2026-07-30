@@ -124,6 +124,10 @@ def publish(cat, files):
 
         name = layer_name(path)
         if name in existing:
+            # Already there, but still worth checking: a layer left disabled by
+            # an earlier load -- GeoServer could not resolve its CRS -- is
+            # repaired here rather than staying quietly unusable.
+            cat.ensure_srs(name, WORKSPACE, path)
             published[kind].append(name)
             continue
 
@@ -139,6 +143,11 @@ def publish(cat, files):
             continue
         published[kind].append(name)
         log("   + %-8s %s" % (kind, name))
+
+    unservable = getattr(cat, "unservable", [])
+    if unservable:
+        log("   %d layer(s) published but not servable (no identifiable CRS): %s"
+            % (len(unservable), ", ".join(sorted(unservable))))
 
     return published
 

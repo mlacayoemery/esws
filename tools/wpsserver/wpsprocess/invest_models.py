@@ -35,6 +35,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 import easyows
 from invest_outputs import (anticipated_outputs, output_is_expected,
                             resolved_output_paths)
+from invest_tables import localise_tables
 
 import natcap.invest
 from natcap.invest import models
@@ -626,9 +627,15 @@ class InvestProcess(pywps.Process):
 
         uploads = self._build_uploads(ws, args["workspace_dir"], spec, args)
 
+        # An InVEST table can name other data files; when the table arrives as a
+        # URL those names have to be fetched too, or the model stops on a path
+        # into the download directory. See invest_tables.
+        references = tempfile.mkdtemp(prefix="esws-refs-", dir=_WORKSPACE_ROOT)
         job = easyows.Job(module.execute, args, uploads,
                           "InVEST %s WPS job %s" % (self.model_id, ws),
-                          0, cat, logger)
+                          0, cat, logger,
+                          on_localised=lambda job_args, sources: localise_tables(
+                              spec, job_args, sources, references))
 
         published = []
         ran = False

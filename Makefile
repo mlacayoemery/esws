@@ -1,5 +1,5 @@
 # ESWS containerized stack — common operations.
-.PHONY: build up down logs update unit smoke smoke-demo demo demo-data \
+.PHONY: build up down logs update unit smoke smoke-demo verify demo demo-data \
 	check-baremetal check-geoserver
 
 build:        ## Build the app + dashboard images
@@ -25,6 +25,9 @@ smoke:        ## Build, start the stack, run the pytest smoke suite, tear down
 
 smoke-demo:   ## smoke, but with the demo data loaded so no test skips
 	DEMO=1 ./scripts/smoke.sh
+
+verify:       ## smoke-demo without tearing the stack down afterwards
+	KEEP_UP=1 DEMO=1 ./scripts/smoke.sh
 
 demo-data:    ## Download + unpack the InVEST sample datasets (cached, ~380MB)
 	./scripts/fetch_invest_samples.sh

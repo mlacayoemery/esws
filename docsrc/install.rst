@@ -64,6 +64,12 @@ Tests
     make unit         # seconds: needs neither the stack nor InVEST. What CI runs.
     make smoke        # builds, starts the stack, runs the suite, tears down
     make smoke-demo   # the same with the demo loaded, so no test skips
+    make verify       # smoke-demo, but leaves the stack up afterwards
+
+``smoke`` and ``smoke-demo`` end in ``docker compose down -v``: they are for
+checking a change, and they clean up after themselves, which means they also
+destroy a stack you were using and everything loaded into it. ``verify`` runs the
+same suite and leaves it standing.
 
 Bare metal
 ==========

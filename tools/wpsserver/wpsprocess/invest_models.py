@@ -29,6 +29,8 @@ import pywps
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 import easyows
+from invest_outputs import (anticipated_outputs, output_is_expected,
+                            resolved_output_paths)
 
 import natcap.invest
 from natcap.invest import models
@@ -157,102 +159,6 @@ _OUTPUT_FORMATS = {
 }
 _DEFAULT_OUTPUT_FORMAT = "application/octet-stream"
 
-
-class _Falsey(dict):
-    """Missing names are False, not an error."""
-
-    def __missing__(self, key):
-        return False
-
-
-def output_is_expected(output, args):
-    """Whether ``output``'s created_if condition holds for ``args``.
-
-    created_if is either a bool or an expression naming other inputs, e.g.
-    "sub_watersheds_path" or "do_valuation and (not price_table)". An input the
-    caller never supplied is falsey -- that is the whole point of the condition,
-    and evaluating it as a NameError would wrongly mark the output as expected.
-    """
-    condition = getattr(output, "created_if", True)
-    if isinstance(condition, bool):
-        return condition
-    if args is None:
-        return True
-    env = _Falsey((key, bool(value)) for key, value in args.items())
-    try:
-        return bool(eval(condition, {"__builtins__": {}}, env))  # noqa: S307
-    except Exception:  # noqa: BLE001 - an unparseable condition is not fatal
-        logger.debug("Could not evaluate created_if %r; assuming produced",
-                     condition)
-        return True
-
-
-def anticipated_outputs(spec, args=None):
-    """The file outputs a run with ``args`` is expected to produce.
-
-    With args omitted this is every file output the model declares, which is
-    what DescribeProcess has to advertise -- WPS has no way to say that an
-    output only appears under some conditions.
-    """
-    expected = []
-    for output in spec.outputs:
-        # Only file outputs have a workspace-relative path; numeric and string
-        # outputs are metadata with nothing to fetch or publish.
-        if not getattr(output, "path", None):
-            continue
-        if not output_is_expected(output, args):
-            continue
-        expected.append(output)
-    return expected
-
-
-def resolved_output_paths(spec, workspace_dir, args=None):
-    """[(output, absolute path)] for the outputs a run is expected to produce.
-
-    A list of pairs rather than a dict: spec.Output is a pydantic model carrying
-    a set field (VectorOutput.geometry_types), so it is not hashable and cannot
-    be a key.
-
-    Paths come from InVEST's own FileRegistry, which is what applies
-    results_suffix: a suffixed run writes c_storage_bas_gura.tif, not
-    c_storage_bas.tif, so joining ``output.path`` onto the workspace finds
-    nothing whenever a suffix is set -- and the sample datastacks nearly all set
-    one. Output ids containing a bracketed pattern are substituted per run and
-    cannot be resolved generically, so those fall back to the declared path.
-    """
-    # FileRegistry concatenates path + file_suffix + extension, so the separator
-    # has to be part of the suffix: "gura" yields wyieldgura.tif, while InVEST
-    # actually writes wyield_gura.tif. Normalise once and use the same value for
-    # the manual fallback below.
-    suffix = None
-    if args:
-        raw = args.get("results_suffix") or None
-        if raw:
-            suffix = raw if str(raw).startswith("_") else "_%s" % raw
-
-    registry = None
-    try:
-        from natcap.invest.file_registry import FileRegistry
-        registry = FileRegistry(spec.outputs, workspace_dir, file_suffix=suffix)
-    except Exception as exc:  # noqa: BLE001 - fall back to manual suffixing
-        logger.debug("No FileRegistry (%s); suffixing by hand", exc)
-
-    resolved = []
-    for output in anticipated_outputs(spec, args):
-        path = None
-        if registry is not None and "[" not in (output.id or ""):
-            try:
-                path = registry[output.id]
-            except Exception:  # noqa: BLE001 - not every id indexes cleanly
-                path = None
-        if not path:
-            relative = output.path
-            if suffix:
-                stem, ext = os.path.splitext(relative)
-                relative = "%s%s%s" % (stem, suffix, ext)
-            path = os.path.join(workspace_dir, relative)
-        resolved.append((output, path))
-    return resolved
 
 
 def _output_identifier(output):

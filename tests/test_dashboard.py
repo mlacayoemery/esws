@@ -1,5 +1,6 @@
 """Django dashboard smoke tests — key views return 200 on Django 4.2."""
 import re
+import time
 
 import pytest
 import requests
@@ -163,6 +164,34 @@ def test_template_form_is_prefilled_from_the_sample_datastack(registered_templat
                          % (dashboard_url, registered_wps_server), timeout=120)
     assert plain.status_code == 200, plain.text[:1000]
     assert 'value="gura"' not in plain.text
+
+
+def test_generated_form_offers_upload_and_destinations(registered_wps_server,
+                                                      dashboard_url):
+    """The wrapper's own inputs render as a checkbox and server pickers.
+
+    They come from DescribeProcess like everything else, but a bare anyURI would
+    render as a text box; the useful destinations are the servers already
+    registered, so they are choices.
+    """
+    r = requests.get("%s/server/%d/execute/carbon/" % (dashboard_url,
+                                                       registered_wps_server),
+                     timeout=120)
+    assert r.status_code == 200, r.text[:1000]
+    assert re.search(r'<input type="checkbox" name="upload_results"', r.text), \
+        r.text[:2000]
+    for kind in ("wcs", "wfs", "http"):
+        assert re.search(r'<select name="destination_%s"' % kind, r.text), kind
+
+
+# The full upload round trip -- anticipated -> Local Pending -> published ->
+# registered -- is not automated here. Driving it needs a *valid* job, and the
+# generated form takes element ids rather than paths, so a test has to pick
+# inputs that genuinely belong together or the model rightly fails. Verified by
+# hand against a loaded demo: carbon with upload_results listed its anticipated
+# outputs under Local Pending WCS/HTTP at Run, and on Succeeded the entries were
+# cleared and results:c_*_willamette appeared on the destination source.
+# Worth automating once there is a fixture that builds a known-good job.
 
 
 def test_dashboard_wps_process_detail(registered_wps_server, dashboard_url):

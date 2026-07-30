@@ -27,6 +27,7 @@ import sys
 import tempfile
 
 import pywps
+from pywps.app.Common import Metadata
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 import easyows
@@ -87,6 +88,41 @@ def _upload_table(path):
         logger.warning("Could not upload table %s: %s", name, exc)
         return None
     return "%s/%s" % (_TABLE_UPLOAD_PATH.strip("/"), name)
+
+
+# Licensing. A process runs someone else's model through this wrapper, so both
+# licences apply and a client cannot infer either from the response: the wrapper
+# is MIT (see LICENSE), the models are InVEST's Apache-2.0.
+_LICENSES = (
+    ("MIT (ESWS WPS wrapper)",
+     "https://github.com/mlacayoemery/esws/blob/master/LICENSE"),
+    ("Apache-2.0 (InVEST model implementation)",
+     "https://github.com/natcap/invest/blob/main/LICENSE.txt"),
+)
+# The user guide is published per-language under /latest/ only -- there is no
+# version-pinned path, so a 3.20.0 process still documents itself from latest.
+_USERGUIDE_BASE = os.environ.get(
+    "INVEST_USERGUIDE_BASE",
+    "https://storage.googleapis.com/releases.naturalcapitalproject.org"
+    "/invest-userguide/latest/en")
+
+
+def _process_metadata(spec):
+    """ows:Metadata for a process: what it may be used under, and its manual.
+
+    WPS 1.0 has no licence field, and ows:Metadata is the only place in a
+    ProcessDescription for a typed external reference, so licences are carried as
+    links with role set to the OGC licence URN.
+    """
+    metadata = [Metadata(title, href=href,
+                               role="urn:ogc:def:role:OGC:1.0:license")
+                for title, href in _LICENSES]
+    userguide = getattr(spec, "userguide", None)
+    if userguide:
+        metadata.append(Metadata(
+            "User guide", href="%s/%s" % (_USERGUIDE_BASE, userguide),
+            role="urn:ogc:def:role:OGC:1.0:documentation"))
+    return metadata
 
 
 def _upload_inputs():
@@ -302,6 +338,7 @@ class InvestProcess(pywps.Process):
             version=natcap.invest.__version__,
             inputs=inputs,
             outputs=outputs,
+            metadata=_process_metadata(spec),
             store_supported=True,
             status_supported=True,
         )

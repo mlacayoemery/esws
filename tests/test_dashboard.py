@@ -127,6 +127,24 @@ def test_template_lists_the_same_processes(registered_template, dashboard_url):
     assert "annual_water_yield" in r.text
 
 
+def test_template_process_detail_and_its_new_job_link(registered_template,
+                                                      dashboard_url):
+    """Walk the click-through: template -> process -> new job.
+
+    Every per-type dispatch table in views has to know about TPL. The process
+    detail page was missed and raised KeyError, so this covers the whole path
+    rather than just the list and the form.
+    """
+    detail = requests.get("%s/server/TPL/%d/element/annual_water_yield/"
+                          % (dashboard_url, registered_template), timeout=120)
+    assert detail.status_code == 200, detail.text[:1000]
+
+    # The "new job" link must carry the template's pk, or the form it opens
+    # would be the unprefilled one.
+    assert 'href="/server/%d/execute/annual_water_yield/"' % registered_template \
+        in detail.text, detail.text[:2000]
+
+
 def test_template_form_is_prefilled_from_the_sample_datastack(registered_template,
                                                               registered_wps_server,
                                                               dashboard_url):

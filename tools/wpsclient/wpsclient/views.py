@@ -29,6 +29,7 @@ from .forms import ServerFormTemplate
 
 from .forms import ProcessForm
 from .forms import UNIQUE_RUN_FIELD
+from .forms import REACTIVE_FIELD
 
 from .forms import JobForm
 
@@ -507,7 +508,8 @@ def job_detail(request, job_pk):
                    # Only a finished job is worth resubmitting; while it is still
                    # running, job_run is the poll.
                    'can_rerun': job.status in _JOB_FINISHED,
-                   'unique_run': wants_unique_run(job)})
+                   'unique_run': wants_unique_run(job),
+                   'reactive': wants_reaction(job)})
 
 ##def job_new(request, server_pk, process_id):
 ##    server = get_object_or_404(ServerWPS, pk=server_pk)
@@ -871,6 +873,10 @@ def job_new(request, server_pk, process_id):
         if form.is_valid():
             args = collections.OrderedDict()
             for name, value in form.cleaned_data.items():
+                if name == REACTIVE_FIELD:
+                    if value:
+                        args[REACTIVE_OPTION] = "true"
+                    continue
                 if name == UNIQUE_RUN_FIELD:
                     # Ours, not the WPS's: recorded under its namespaced key so
                     # effective_args keeps it out of the Execute request.
@@ -1070,6 +1076,8 @@ def water_yield(request):
 _OPTION_PREFIX = "esws:"
 UNIQUE_RUN_OPTION = _OPTION_PREFIX + "unique_run"
 RUN_TOKEN_OPTION = _OPTION_PREFIX + "run_token"
+REACTIVE_OPTION = _OPTION_PREFIX + "reactive"
+LAST_RUN_OPTION = _OPTION_PREFIX + "last_run"
 
 
 def wants_unique_run(job):
@@ -1087,6 +1095,96 @@ def rotate_run_token(job):
     if not wants_unique_run(job):
         return
     job.args[RUN_TOKEN_OPTION] = uuid.uuid4().hex[:8]
+
+
+def wants_reaction(job):
+    return str(job.args.get(REACTIVE_OPTION, "")).lower() in ("true", "1", "yes")
+
+
+def job_input_elements(job):
+    """The registered elements a job's arguments point at.
+
+    Matched by rebuilding each element's data URL and comparing: the job stores
+    the URL it will hand the WPS, not the row it was chosen from, because that is
+    what the WPS needs.
+    """
+    wanted = {str(value) for value in job.args.values() if str(value).startswith("http")}
+    if not wanted:
+        return []
+
+    matched = []
+    for server_type, ServerClass in _CHECKABLE.items():
+        for element in ServerElement.objects.filter(
+                server__in=ServerClass.objects.filter(is_pending=False)):
+            url = get_ows_data_url(server_type, element.server.url,
+                                   element.identifier)
+            if url in wanted:
+                matched.append((element, server_type))
+    return matched
+
+
+def react_to_changes(job):
+    """Re-run ``job`` if any of its inputs changed since it last ran.
+
+    Returns (action, changed identifiers). Checking is the point: a job cannot
+    react to a change nobody has looked for, so this fingerprints the inputs
+    itself rather than trusting whenever they were last checked.
+    """
+    inputs = job_input_elements(job)
+    if not inputs:
+        return "no inputs", []
+
+    last_run = job.args.get(LAST_RUN_OPTION) or ""
+    changed = []
+    for element, server_type in inputs:
+        state = check_element(element, server_type)
+        if state != "changed":
+            continue
+        record = ElementFingerprint.objects.filter(element=element).first()
+        # Only a change since the job ran is a reason to run it again.
+        if record and record.changed_at and (
+                not last_run or record.changed_at.isoformat() > last_run):
+            changed.append(element.identifier)
+
+    if not changed:
+        return "unchanged", []
+
+    job.status = "Run"
+    job.status_location = ""
+    rotate_run_token(job)
+    job.save()
+    return "rerun", changed
+
+
+def job_react(request, job_pk):
+    """Check one job's inputs and re-run it if they changed."""
+    job = get_object_or_404(Job, pk=job_pk)
+    action, changed = react_to_changes(job)
+    if action == "rerun":
+        return redirect("job_run", job_pk=job.pk)
+    return render(request, "wpsclient/job_react.html",
+                  {"jobs": [(job, action, changed)]})
+
+
+def job_react_all(request):
+    """Check every job that asked to react, and re-run those whose inputs changed.
+
+    Re-runs are submitted here rather than redirected to, since there may be more
+    than one. Meant to be reachable from cron as well as from the page.
+    """
+    results = []
+    for job in Job.objects.order_by("pk"):
+        if not wants_reaction(job):
+            continue
+        action, changed = react_to_changes(job)
+        if action == "rerun":
+            try:
+                job_run(request, job.pk)
+            except Exception as exc:  # noqa: BLE001 - report the rest regardless
+                l.warning("Could not resubmit job %s: %s", job.pk, exc)
+                action = "rerun failed: %s" % str(exc)[:80]
+        results.append((job, action, changed))
+    return render(request, "wpsclient/job_react.html", {"jobs": results})
 
 
 def effective_args(job):
@@ -1224,6 +1322,9 @@ def job_run(request, job_pk):
     elif job.status == "Run":
         # Submit and return: the response carries a statusLocation, not results.
         rotate_run_token(job)
+        # Reference point for reacting to input changes: a change matters only if
+        # it happened after the run that used the data.
+        job.args[LAST_RUN_OPTION] = timezone.now().isoformat()
         job.status_url = job_to_wps_url(job)
         try:
             with urllib.request.urlopen(job.status_url, timeout=120) as response:

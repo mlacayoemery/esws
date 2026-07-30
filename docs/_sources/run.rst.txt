@@ -113,6 +113,30 @@ fetched twice seconds apart has different bytes. Archives are therefore fingerpr
 by their members rather than their bytes; otherwise every check would report every
 vector as changed, which is the same as reporting nothing.
 
+Re-running when the data changes
+================================
+
+A job can ask to be re-run when the data it used is replaced. Tick **Re-run when
+input data changes** on its form, and then either
+
+* **Check inputs and re-run if changed** on the job's own page, or
+* **Check inputs and re-run what changed** on the job list, which does it for every
+  job that asked.
+
+Both fingerprint the job's inputs -- matched back to registered elements from the
+URLs the job holds -- and resubmit it if any of them changed *since the run that
+used them*. A change from before that run is not a reason to run again.
+
+There is no scheduler here: nothing polls on its own. The job-list action is a
+single URL, so a cron entry that fetches it gives you periodic reaction:
+
+.. code-block:: console
+
+    */30 * * * * curl -s -o /dev/null http://localhost:8000/job/react/
+
+Combine it with **Unique results for each run** and each reaction publishes its own
+set of results rather than replacing the last.
+
 Results
 =======
 

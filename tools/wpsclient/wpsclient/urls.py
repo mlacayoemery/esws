@@ -35,6 +35,8 @@ urlpatterns = [
     #add server specific job list
     url(r'^server/(?P<server_pk>\d+)/job/$', views.server_job_list, name='server_job_list'),
     
+    # Before job_detail: its job_pk pattern would swallow "react".
+    url(r'^job/react/$', views.job_react_all, name='job_react_all'),
     url(r'^job/(?P<job_pk>[a-zA-Z0-9_\.:]+)/$', views.job_detail, name='job_detail'),
     url(r'^job/(?P<job_pk>[a-zA-Z0-9_\.:]+)/edit/$', views.job_edit, name='job_edit'),
 
@@ -50,5 +52,6 @@ urlpatterns = [
     url(r'^test/wy/$', views.water_yield, name='water_yield'),
     url(r'^job/(?P<job_pk>[a-zA-Z0-9_:]+)/run/$', views.job_run, name='job_run'),
     url(r'^job/(?P<job_pk>[a-zA-Z0-9_:]+)/rerun/$', views.job_rerun, name='job_rerun'),
+    url(r'^job/(?P<job_pk>[a-zA-Z0-9_:]+)/react/$', views.job_react, name='job_react'),
     url(r'^job/(?P<job_pk>[a-zA-Z0-9_:]+)/status/$', views.job_status, name='job_status'),    
 ]

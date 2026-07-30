@@ -184,14 +184,107 @@ def test_generated_form_offers_upload_and_destinations(registered_wps_server,
         assert re.search(r'<select name="destination_%s"' % kind, r.text), kind
 
 
-# The full upload round trip -- anticipated -> Local Pending -> published ->
-# registered -- is not automated here. Driving it needs a *valid* job, and the
-# generated form takes element ids rather than paths, so a test has to pick
-# inputs that genuinely belong together or the model rightly fails. Verified by
-# hand against a loaded demo: carbon with upload_results listed its anticipated
-# outputs under Local Pending WCS/HTTP at Run, and on Succeeded the entries were
-# cleared and results:c_*_willamette appeared on the destination source.
-# Worth automating once there is a fixture that builds a known-good job.
+def _pending_counts(session, dashboard_url, job_pk):
+    """{server type: entries for this job} across the Local Pending sources."""
+    counts = {}
+    for server_type in ("WCS", "WFS", "CSV"):
+        listing = session.get("%s/server/%s/" % (dashboard_url, server_type),
+                              timeout=60).text
+        for row in re.findall(r"<tr>(.*?)</tr>", listing, re.S):
+            if "Local Pending" not in row:
+                continue
+            pk = re.search(r"<td>(\d+)</td>", row).group(1)
+            elements = session.get("%s/server/%s/%s/element/"
+                                   % (dashboard_url, server_type, pk),
+                                   timeout=60).text
+            counts[server_type] = len(re.findall(r"job%d:" % job_pk, elements))
+    return counts
+
+
+def test_upload_round_trip_moves_outputs_to_their_destinations(dashboard_url):
+    """anticipated -> Local Pending -> published -> registered, for all three kinds.
+
+    Driven through the Templates source so the model arguments are InVEST's own
+    sample set: the form takes element ids, and picking an arbitrary option per
+    dropdown builds a job that is valid to Django and nonsense to InVEST, which
+    then rightly fails.
+
+    annual_water_yield rather than carbon because it emits rasters, vectors and
+    tables, so every destination kind is exercised in one run.
+    """
+    templates = requests.get(dashboard_url + "/server/TPL/", timeout=30).text
+    template_pk = None
+    for row in re.findall(r"<tr>(.*?)</tr>", templates, re.S):
+        if "InVEST Demo" not in row:
+            continue
+        # The title is a plain cell; the row's own element link carries the pk.
+        found = re.search(r"/server/TPL/(\d+)/element/", row)
+        if found:
+            template_pk = int(found.group(1))
+    if template_pk is None:
+        pytest.skip("needs the demo loaded (make demo): no InVEST Demo template")
+
+    session = requests.Session()
+    form_url = "%s/server/%d/execute/annual_water_yield/" % (dashboard_url, template_pk)
+    page = session.get(form_url, timeout=180).text
+    token = re.search(r'name="csrfmiddlewaretoken" value="([^"]+)"', page).group(1)
+
+    data = {"csrfmiddlewaretoken": token, "upload_results": "on"}
+    destinations = {}
+    for match in re.finditer(r'<select name="([a-z_]+)"(.*?)</select>', page, re.S):
+        name, body = match.group(1), match.group(2)
+        if name.startswith("destination_"):
+            option = re.search(r'<option value="(\d+)">', body)
+            if option:
+                destinations[name] = option.group(1)
+            continue
+        chosen = re.search(r'<option value="(\d+)" selected>', body)
+        if chosen:
+            data[name] = chosen.group(1)
+    assert len(destinations) == 3, destinations
+    data.update(destinations)
+
+    for match in re.finditer(r'<input type="[a-z]+" name="([a-z_]+)"[^>]*value="([^"]*)"',
+                             page):
+        if match.group(1) != "csrfmiddlewaretoken" and match.group(2):
+            data.setdefault(match.group(1), match.group(2))
+
+    posted = session.post(form_url, data=data, headers={"Referer": form_url},
+                          timeout=300)
+    assert posted.status_code == 200, posted.text[:1000]
+    job = re.search(r"/job/(\d+)/", posted.url)
+    assert job, "form did not validate: %s" % posted.url
+    job_pk = int(job.group(1))
+
+    session.get("%s/job/%d/run/" % (dashboard_url, job_pk), timeout=180)
+
+    listed = _pending_counts(session, dashboard_url, job_pk)
+    assert listed.get("WCS"), listed
+    assert listed.get("WFS"), listed
+    assert listed.get("CSV"), listed
+
+    for _ in range(60):
+        status = session.get("%s/job/%d/status/" % (dashboard_url, job_pk),
+                             timeout=180).text
+        state = re.search(r"<b>Status: </b>([A-Za-z]+)", status)
+        if state and state.group(1) in ("Succeeded", "Failed"):
+            break
+        time.sleep(4)
+    assert state and state.group(1) == "Succeeded", status[:2000]
+
+    # Every pending entry for this job is gone...
+    cleared = _pending_counts(session, dashboard_url, job_pk)
+    assert not any(cleared.values()), cleared
+
+    # ...and the results are registered against the chosen destinations.
+    for field, server_type, expected in (
+            ("destination_wcs", "WCS", "results:fractp"),
+            ("destination_wfs", "WFS", "results:watershed_results_wyield"),
+            ("destination_http", "CSV", "watershed_results_wyield")):
+        elements = session.get("%s/server/%s/%s/element/"
+                               % (dashboard_url, server_type, destinations[field]),
+                               timeout=120).text
+        assert expected in elements, (server_type, expected, elements[:1500])
 
 
 def test_dashboard_wps_process_detail(registered_wps_server, dashboard_url):

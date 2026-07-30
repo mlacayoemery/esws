@@ -83,12 +83,21 @@ Updating
 
 .. code-block:: console
 
-    git pull
-    make build   # only needed if the pull changed what gets installed
-    make up
+    make update
+
+Fetches, shows what is coming, fast-forwards, and brings the stack up on it. It
+rebuilds only when something that goes *into* an image changed -- ``docker/``,
+``requirements/``, ``docker-compose.yml`` -- since a pull that only touches Python
+does not need a rebuild. Application code is bind-mounted, but a running server
+holds its modules in memory, so the services are restarted when that code changes;
+without that the stack keeps serving what it started with.
+
+It stops rather than act if the working tree has uncommitted changes, or if the
+branch tracks no upstream. ``NO_RESTART=1`` pulls and rebuilds but leaves the
+running stack alone.
 
 A pull that touches the InVEST or GDAL pins means a WPS image rebuild, which takes
-several minutes.
+several minutes. Check the result with ``make smoke``.
 
 State
 -----

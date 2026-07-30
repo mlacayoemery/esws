@@ -15,13 +15,13 @@
 # against the conda-forge GDAL; 3.20.0 requires gdal==3.10.*, which is why the
 # Dockerfile pins that exact series.
 natcap.invest==3.20.0
-pygeoprocessing>=2.4.10
+pygeoprocessing>=2.4.11
 taskgraph[niced_processes]>=0.11.0
 pint
 Babel
 
 # --- WPS middleware ---
-pywps>=4.5,<4.7
+pywps>=4.7.0,<4.8
 Flask
 flask-cors
 
@@ -32,7 +32,10 @@ flask-cors
 geoserver-restconfig
 
 # --- Django dashboard (tools/wpsclient) ---
-Django==4.2.*
+# 4.2's extended support ended in April 2026; 5.2 is the current LTS, supported
+# to April 2028. Django 6.0 requires Python >= 3.12 and the image is on 3.11,
+# pinned by the InVEST conda environment, so 5.2 is as far as this can go.
+Django==5.2.*
 django-extensions
 owslib
 beautifulsoup4

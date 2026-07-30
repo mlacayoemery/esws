@@ -97,6 +97,9 @@ services:
     volumes:
       - gisdata:/gisdata
       - geoserver_data:/opt/geoserver_data
+      # CRSs with no EPSG code, chiefly the MODIS sinusoidal grid. Without this
+      # GeoServer cannot name them and leaves those layers disabled.
+      - ./docker/geoserver/epsg.properties:/opt/geoserver_data/user_projections/epsg.properties:ro
 
 volumes:
   wps_outputs:

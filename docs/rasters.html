@@ -48,15 +48,41 @@ selectable for any model input that wants a raster.</p>
 <p>GeoServer leaves a layer <strong>disabled</strong> when it cannot resolve the data’s native
 coordinate reference system to an authority code, and then answers every request
 with <em>Could not locate coverage</em> – even though publishing reported success.</p>
-<p>Publishing therefore identifies the CRS itself where GeoServer could not, and
-declares it, which covers definitions written in ESRI style (<code class="docutils literal notranslate"><span class="pre">RGF93_Lambert_93</span></code>)
-or tagged against a non-EPSG authority (<code class="docutils literal notranslate"><span class="pre">IGNF:LAMB93</span></code>, which is EPSG:2154).</p>
-<p>A match below 90% confidence is refused rather than guessed: declaring the wrong
-CRS silently puts the data in the wrong place, which is worse than a layer that
-plainly does not work. Two rasters in the InVEST samples carry an unnamed
-projection whose best candidates are three different UTM zone 21S datums at 70%
-apiece; they stay unpublished and <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">demo</span></code> names them. Lower the bar with
-<code class="docutils literal notranslate"><span class="pre">EASYOWS_CRS_MIN_CONFIDENCE</span></code> if you accept that trade for your own data.</p>
+<p>Publishing therefore identifies the CRS itself where GeoServer could not, by three
+routes, in order of how much each assumes.</p>
+<p><strong>The CRS can be named outright.</strong> This covers definitions written in ESRI style
+(<code class="docutils literal notranslate"><span class="pre">RGF93_Lambert_93</span></code>) and those tagged against a non-EPSG authority
+(<code class="docutils literal notranslate"><span class="pre">IGNF:LAMB93</span></code>, which is plainly EPSG:2154).</p>
+<p><strong>The CRS is one a vendor publishes without a code.</strong> The MODIS sinusoidal grid is
+the case that matters here: NASA prints its WKT verbatim in the LP DAAC product
+guides, <code class="docutils literal notranslate"><span class="pre">DATUM[&quot;D_unknown&quot;]</span></code> and all, so a file carrying it is complete rather
+than damaged. It has no EPSG code and never has – a spherical projection
+referenced to WGS 84 is not something the EPSG model expresses. It is registered in
+<code class="docutils literal notranslate"><span class="pre">docker/geoserver/epsg.properties</span></code> under 996842, following the convention of the
+retired SR-ORG:6842, <em>“MODIS Sinusoidal”</em>.</p>
+<blockquote>
+<div><p>Note the 99 prefix. That file extends the EPSG namespace, and <strong>EPSG:6842 is
+already assigned</strong>, to NAD83(2011) / Oregon Coast zone. Registering 6842 does not
+fail: GeoServer keeps its own definition and serves correct coordinates under a
+projection from the wrong side of the planet.</p>
+</div></blockquote>
+<p><strong>Only the datum is missing.</strong> A file can state its projection in full and name no
+datum – InVEST’s Brazilian samples say UTM zone 21S on a GRS 1980 ellipsoid, then
+<code class="docutils literal notranslate"><span class="pre">DATUM[&quot;D_unknown&quot;]</span></code>. The datum is genuinely absent, not merely unlabelled: 230
+datums share that ellipsoid. It makes no difference to placement, because every
+modern datum on GRS 1980 or WGS 84 is geocentric and they agree to within about a
+metre, so the projection is read on WGS 84. The candidate is accepted only if its
+parameters match the file’s exactly.</p>
+<p>That last route is restricted to those two ellipsoids on purpose. A sphere, or an
+older ellipsoid such as SAD69’s International 1924, means the datum really does
+differ and assuming WGS 84 would move the data tens of metres. Anything else is
+refused rather than guessed, and <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">demo</span></code> reports what it could not name.
+<code class="docutils literal notranslate"><span class="pre">EASYOWS_CRS_MIN_CONFIDENCE</span></code> lowers the bar for the first route if you accept
+that trade for your own data.</p>
+<p>One consequence for clients: a layer served under a private code carries an
+<code class="docutils literal notranslate"><span class="pre">AUTHORITY</span></code> reference no client’s PROJ can resolve, and PROJ fails on the lookup
+rather than falling back to the definition beside it. Data fetched for a job has
+such a reference stripped, leaving a CRS every client can read on its own terms.</p>
 </section>
 </section>
 

@@ -16,7 +16,7 @@
 # Dockerfile pins that exact series.
 natcap.invest==3.20.0
 pygeoprocessing>=2.4.11
-taskgraph[niced_processes]>=0.11.0
+taskgraph[niced_processes]>=0.11.2
 pint
 Babel
 

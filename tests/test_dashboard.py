@@ -324,3 +324,30 @@ def test_dashboard_wps_process_detail(registered_wps_server, dashboard_url):
                                                           registered_wps_server),
         timeout=120)
     assert r.status_code == 200, r.text[:1000]
+
+
+def test_generated_form_enforces_the_declared_range(registered_wps_server,
+                                                    dashboard_url):
+    """A value the model would reject is rejected by the form.
+
+    forest_carbon_edge_effect's conversion factor is a ratio, so 1.5 is out of
+    range; annual_water_yield's seasonality constant must exceed 0, so 0 is too.
+    Both bounds come from the WPS, not from anything hard-coded here.
+    """
+    ratio = requests.get("%s/server/%d/execute/forest_carbon_edge_effect/"
+                         % (dashboard_url, registered_wps_server), timeout=120)
+    assert ratio.status_code == 200, ratio.text[:1000]
+    field = re.search(r'<input[^>]*name="biomass_to_carbon_conversion_factor"[^>]*>',
+                      ratio.text)
+    assert field, ratio.text[:2000]
+    assert 'min="0.0"' in field.group(0), field.group(0)
+    assert 'max="1.0"' in field.group(0), field.group(0)
+
+    # An exclusive bound has no HTML equivalent, so it is nudged one step: the
+    # smallest accepted value is just above 0, not 0 itself.
+    exclusive = requests.get("%s/server/%d/execute/annual_water_yield/"
+                             % (dashboard_url, registered_wps_server), timeout=120)
+    field = re.search(r'<input[^>]*name="seasonality_constant"[^>]*>',
+                      exclusive.text)
+    assert field, exclusive.text[:2000]
+    assert 'min="1e-09"' in field.group(0), field.group(0)

@@ -28,6 +28,8 @@ import tempfile
 
 import pywps
 from pywps.app.Common import Metadata
+from pywps.inout.basic import UOM
+from pywps.inout.literaltypes import ALLOWEDVALUETYPE, AllowedValue
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 import easyows
@@ -160,6 +162,99 @@ def _upload_inputs():
 _WORKSPACE_ROOT = os.environ.get("WPS_WORKSPACE_ROOT", tempfile.gettempdir())
 
 
+# A numeric constraint in MODEL_SPEC is a Python expression over `value`, e.g.
+# "value > 0" or "2012 <= value <= 2017". These cover every form InVEST 3.20 uses
+# except "float(value).is_integer()", which is a kind rather than a bound.
+_BOUND = re.compile(r"""^\s*(?:
+      value \s* (?P<vop>[<>]=?) \s* (?P<vnum>-?\d+(?:\.\d+)?)
+    | (?P<nnum>-?\d+(?:\.\d+)?) \s* (?P<nop>[<>]=?) \s* value
+    )\s*$""", re.X)
+_CHAIN = re.compile(r"""^\s* (?P<lo>-?\d+(?:\.\d+)?) \s* (?P<lop><=?) \s*
+                        value \s* (?P<uop><=?) \s* (?P<hi>-?\d+(?:\.\d+)?) \s*$""",
+                    re.X)
+# Ratio and percent carry their bounds in the type rather than an expression.
+_IMPLICIT_RANGES = {"ratio": (0.0, 1.0), "percent": (0.0, 100.0)}
+
+
+def _numeric_range(inp, arg_type):
+    """(minval, maxval, closure) for a numeric input, or None if unbounded.
+
+    closure is the WPS rangeClosure: whether each end is inclusive. InVEST writes
+    strict and non-strict comparisons both ("value > 0" vs "value >= 0"), and the
+    difference matters -- a seasonality constant of 0 is rejected by the model.
+    """
+    low = high = None
+    low_open = high_open = False
+
+    expression = getattr(inp, "expression", None) or ""
+    chained = _CHAIN.match(expression)
+    if chained:
+        low, high = float(chained.group("lo")), float(chained.group("hi"))
+        low_open = chained.group("lop") == "<"
+        high_open = chained.group("uop") == "<"
+    elif expression:
+        for clause in expression.split(" and "):
+            bound = _BOUND.match(clause)
+            if not bound:
+                continue
+            if bound.group("vop"):
+                op, number = bound.group("vop"), float(bound.group("vnum"))
+            else:
+                # "0 <= value" bounds value from below, so the operator flips.
+                op = {"<": ">", "<=": ">=", ">": "<", ">=": "<="}[bound.group("nop")]
+                number = float(bound.group("nnum"))
+            if op.startswith(">"):
+                low, low_open = number, op == ">"
+            else:
+                high, high_open = number, op == "<"
+
+    if low is None and high is None:
+        implicit = _IMPLICIT_RANGES.get(arg_type)
+        if not implicit:
+            return None
+        low, high = implicit
+
+    if arg_type == "integer":
+        # An integer input's bound is an integer: 2012, not 2012.0.
+        low = None if low is None else int(low)
+        high = None if high is None else int(high)
+
+    if low is None or high is None:
+        # Only one end is bounded, so the closure describes just that end:
+        # "value > 0" is an open lower bound with no upper bound at all.
+        closure = "open" if (low_open or high_open) else "closed"
+    else:
+        closure = {(False, False): "closed", (True, True): "open",
+                   (True, False): "open-closed",
+                   (False, True): "closed-open"}[(low_open, high_open)]
+    return low, high, closure
+
+
+def _numeric_kwargs(inp, arg_type):
+    """allowed_values and uoms for a numeric input, as far as MODEL_SPEC says.
+
+    A range lets a client validate before submitting instead of discovering the
+    bound in a model traceback, and the unit says what the number means -- "24
+    meter" and "24 hectare" are not the same input.
+    """
+    kwargs = {}
+    bounds = _numeric_range(inp, arg_type)
+    # Both ends or nothing: pywps 4.6 renders ows:MaximumValue unconditionally, so
+    # a half-open range comes out as <ows:MaximumValue>None</ows:MaximumValue>.
+    # One-sided bounds travel in the abstract trailer instead (see _literal_input),
+    # which is where this wrapper already puts what pywps cannot express.
+    if bounds and bounds[0] is not None and bounds[1] is not None:
+        low, high, closure = bounds
+        kwargs["allowed_values"] = [AllowedValue(
+            allowed_type=ALLOWEDVALUETYPE.RANGE,
+            minval=low, maxval=high, range_closure=closure)]
+    units = getattr(inp, "units", None)
+    # "none" is InVEST's dimensionless marker, not a unit worth advertising.
+    if units is not None and str(units) not in ("none", ""):
+        kwargs["uoms"] = [UOM(str(units))]
+    return kwargs
+
+
 def _literal_input(inp):
     """Map a single MODEL_SPEC input to a pywps LiteralInput.
 
@@ -190,6 +285,19 @@ def _literal_input(inp):
         trailer.append("invest:type=%s" % arg_type)
     if isinstance(required, str):
         trailer.append("invest:required=%s" % required)
+    # Numeric bounds go here as well as in ows:AllowedValues, because a half-open
+    # range cannot be expressed there (see _numeric_kwargs). A client gets every
+    # bound from the trailer, and standards-only clients get the two-sided ones
+    # from AllowedValues.
+    bounds = _numeric_range(inp, arg_type)
+    if bounds:
+        low, high, closure = bounds
+        if low is not None:
+            trailer.append("invest:min=%s" % low)
+        if high is not None:
+            trailer.append("invest:max=%s" % high)
+        if closure != "closed":
+            trailer.append("invest:exclusive=%s" % closure)
     if trailer:
         abstract = ("%s\n\n[%s]" % (abstract, " ".join(trailer))).strip()
 
@@ -202,9 +310,11 @@ def _literal_input(inp):
     )
 
     if arg_type in ("number", "ratio", "percent"):
-        return pywps.LiteralInput(data_type="float", **kwargs)
+        return pywps.LiteralInput(data_type="float",
+                                  **_numeric_kwargs(inp, arg_type), **kwargs)
     if arg_type == "integer":
-        return pywps.LiteralInput(data_type="integer", **kwargs)
+        return pywps.LiteralInput(data_type="integer",
+                                  **_numeric_kwargs(inp, arg_type), **kwargs)
     if arg_type == "boolean":
         return pywps.LiteralInput(data_type="boolean", **kwargs)
     if arg_type == "option_string":

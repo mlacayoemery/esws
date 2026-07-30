@@ -113,6 +113,28 @@ def parse_input_metadata(parameter):
     return abstract, meta
 
 
+def _numeric_bounds(meta, cast):
+    """min_value/max_value for a numeric field, from the input's declared range.
+
+    The WPS publishes the model's own constraint -- a ratio is 0 to 1, a
+    seasonality constant must exceed 0 -- so the form can reject a value before a
+    job is submitted rather than after the model raises. An exclusive bound is
+    nudged by one step, which is the closest Django's validators can express.
+    """
+    bounds = {}
+    step = 1 if cast is int else 1e-9
+    closure = meta.get("exclusive", "closed")
+    if "min" in meta:
+        low = cast(float(meta["min"]))
+        bounds["min_value"] = (low + step if closure in ("open", "open-closed")
+                               else low)
+    if "max" in meta:
+        high = cast(float(meta["max"]))
+        bounds["max_value"] = (high - step if closure in ("open", "closed-open")
+                               else high)
+    return bounds
+
+
 class ProcessForm(forms.Form):
     """A form generated from a WPS DescribeProcess response.
 
@@ -190,9 +212,11 @@ class ProcessForm(forms.Form):
                     empty_label="---------", **common)
                 self.element_fields[identifier] = invest_type
             elif invest_type in ("number", "ratio", "percent"):
-                self.fields[identifier] = forms.FloatField(**common)
+                self.fields[identifier] = forms.FloatField(
+                    **_numeric_bounds(meta, float), **common)
             elif invest_type == "integer":
-                self.fields[identifier] = forms.IntegerField(**common)
+                self.fields[identifier] = forms.IntegerField(
+                    **_numeric_bounds(meta, int), **common)
             elif invest_type == "boolean" or parameter.dataType == "boolean":
                 common["required"] = False
                 self.fields[identifier] = forms.BooleanField(**common)

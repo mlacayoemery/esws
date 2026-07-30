@@ -32,7 +32,10 @@ flask-cors
 geoserver-restconfig
 
 # --- Django dashboard (tools/wpsclient) ---
-Django==4.2.*
+# 4.2's extended support ended in April 2026; 5.2 is the current LTS, supported
+# to April 2028. Django 6.0 requires Python >= 3.12 and the image is on 3.11,
+# pinned by the InVEST conda environment, so 5.2 is as far as this can go.
+Django==5.2.*
 django-extensions
 owslib
 beautifulsoup4

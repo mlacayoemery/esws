@@ -203,17 +203,8 @@ def _pending_counts(session, dashboard_url, job_pk):
     return counts
 
 
-def test_upload_round_trip_moves_outputs_to_their_destinations(dashboard_url):
-    """anticipated -> Local Pending -> published -> registered, for all three kinds.
-
-    Driven through the Templates source so the model arguments are InVEST's own
-    sample set: the form takes element ids, and picking an arbitrary option per
-    dropdown builds a job that is valid to Django and nonsense to InVEST, which
-    then rightly fails.
-
-    annual_water_yield rather than carbon because it emits rasters, vectors and
-    tables, so every destination kind is exercised in one run.
-    """
+def _demo_template_pk(dashboard_url):
+    """The pk of the demo Templates source, or None if the demo is not loaded."""
     templates = requests.get(dashboard_url + "/server/TPL/", timeout=30).text
     template_pk = None
     for row in re.findall(r"<tr>(.*?)</tr>", templates, re.S):
@@ -223,15 +214,23 @@ def test_upload_round_trip_moves_outputs_to_their_destinations(dashboard_url):
         found = re.search(r"/server/TPL/(\d+)/element/", row)
         if found:
             template_pk = int(found.group(1))
-    if template_pk is None:
-        pytest.skip("needs the demo loaded (make demo): no InVEST Demo template")
+    return template_pk
 
-    session = requests.Session()
-    form_url = "%s/server/%d/execute/annual_water_yield/" % (dashboard_url, template_pk)
+
+def _submit_template_job(session, dashboard_url, template_pk, process_id,
+                         extra=None):
+    """Fill a template's job form with its own prefilled values and submit it.
+
+    Returns (job_pk, {destination field: server pk}). The prefilled values are
+    InVEST's sample arguments; picking an arbitrary option per dropdown instead
+    would build a job that is valid to Django and nonsense to InVEST.
+    """
+    form_url = "%s/server/%d/execute/%s/" % (dashboard_url, template_pk, process_id)
     page = session.get(form_url, timeout=180).text
     token = re.search(r'name="csrfmiddlewaretoken" value="([^"]+)"', page).group(1)
 
     data = {"csrfmiddlewaretoken": token, "upload_results": "on"}
+    data.update(extra or {})
     destinations = {}
     for match in re.finditer(r'<select name="([a-z_]+)"(.*?)</select>', page, re.S):
         name, body = match.group(1), match.group(2)
@@ -256,7 +255,40 @@ def test_upload_round_trip_moves_outputs_to_their_destinations(dashboard_url):
     assert posted.status_code == 200, posted.text[:1000]
     job = re.search(r"/job/(\d+)/", posted.url)
     assert job, "form did not validate: %s" % posted.url
-    job_pk = int(job.group(1))
+    return int(job.group(1)), destinations
+
+
+def _await_job(session, dashboard_url, job_pk, tries=60):
+    """Poll a job to completion, returning the final status page."""
+    status = ""
+    for _ in range(tries):
+        status = session.get("%s/job/%d/status/" % (dashboard_url, job_pk),
+                             timeout=180).text
+        state = re.search(r"<b>Status: </b>([A-Za-z]+)", status)
+        if state and state.group(1) in ("Succeeded", "Failed"):
+            return state.group(1), status
+        time.sleep(4)
+    return None, status
+
+
+def test_upload_round_trip_moves_outputs_to_their_destinations(dashboard_url):
+    """anticipated -> Local Pending -> published -> registered, for all three kinds.
+
+    Driven through the Templates source so the model arguments are InVEST's own
+    sample set: the form takes element ids, and picking an arbitrary option per
+    dropdown builds a job that is valid to Django and nonsense to InVEST, which
+    then rightly fails.
+
+    annual_water_yield rather than carbon because it emits rasters, vectors and
+    tables, so every destination kind is exercised in one run.
+    """
+    template_pk = _demo_template_pk(dashboard_url)
+    if template_pk is None:
+        pytest.skip("needs the demo loaded (make demo): no InVEST Demo template")
+
+    session = requests.Session()
+    job_pk, destinations = _submit_template_job(session, dashboard_url, template_pk,
+                                                "annual_water_yield")
 
     session.get("%s/job/%d/run/" % (dashboard_url, job_pk), timeout=180)
 
@@ -265,14 +297,8 @@ def test_upload_round_trip_moves_outputs_to_their_destinations(dashboard_url):
     assert listed.get("WFS"), listed
     assert listed.get("CSV"), listed
 
-    for _ in range(60):
-        status = session.get("%s/job/%d/status/" % (dashboard_url, job_pk),
-                             timeout=180).text
-        state = re.search(r"<b>Status: </b>([A-Za-z]+)", status)
-        if state and state.group(1) in ("Succeeded", "Failed"):
-            break
-        time.sleep(4)
-    assert state and state.group(1) == "Succeeded", status[:2000]
+    state, status = _await_job(session, dashboard_url, job_pk)
+    assert state == "Succeeded", status[:2000]
 
     # Every pending entry for this job is gone...
     cleared = _pending_counts(session, dashboard_url, job_pk)
@@ -351,3 +377,49 @@ def test_generated_form_enforces_the_declared_range(registered_wps_server,
                       exclusive.text)
     assert field, exclusive.text[:2000]
     assert 'min="1e-09"' in field.group(0), field.group(0)
+
+
+def test_unique_run_does_not_overwrite_the_previous_runs_outputs(dashboard_url):
+    """Running a job twice with the flag set leaves both runs' results in place.
+
+    Output filenames -- and so the layer names they are published under -- derive
+    from results_suffix, so without a per-run token the second run republishes
+    over the first. With the flag, each run adds its own token and both sets of
+    layers survive.
+    """
+    template_pk = _demo_template_pk(dashboard_url)
+    if template_pk is None:
+        pytest.skip("needs the demo loaded (make demo): no InVEST Demo template")
+
+    session = requests.Session()
+    job_pk, destinations = _submit_template_job(
+        session, dashboard_url, template_pk, "annual_water_yield",
+        extra={"esws_unique_run": "on"})
+
+    detail = session.get("%s/job/%d/" % (dashboard_url, job_pk), timeout=60).text
+    assert "esws:unique_run" in detail, detail[:2000]
+
+    def wyield_layers():
+        elements = session.get("%s/server/WCS/%s/element/"
+                               % (dashboard_url, destinations["destination_wcs"]),
+                               timeout=120).text
+        return set(re.findall(r"results:(wyield_[A-Za-z0-9_]+)", elements))
+
+    # Measured as a delta: other tests publish to the same destination.
+    before = wyield_layers()
+    session.get("%s/job/%d/run/" % (dashboard_url, job_pk), timeout=180)
+    state, status = _await_job(session, dashboard_url, job_pk)
+    assert state == "Succeeded", status[:2000]
+    first = wyield_layers()
+    assert len(first - before) == 1, (before, first)
+
+    # "Run Again" is its own action: job_run on a finished job is the status poll.
+    assert "/job/%d/rerun/" % job_pk in session.get(
+        "%s/job/%d/" % (dashboard_url, job_pk), timeout=60).text
+    session.get("%s/job/%d/rerun/" % (dashboard_url, job_pk), timeout=180)
+    state, status = _await_job(session, dashboard_url, job_pk)
+    assert state == "Succeeded", status[:2000]
+
+    second = wyield_layers()
+    assert first < second, (first, second)
+    assert len(second - before) == 2, (before, second)

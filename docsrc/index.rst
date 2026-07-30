@@ -24,9 +24,14 @@ ESWS workflows are:
 * redistributable
 * open
 
+ESWS runs as four containers -- a WPS server exposing every
+`InVEST <https://naturalcapitalproject.stanford.edu/software/invest>`_ model, a
+GeoServer, a file server, and a dashboard that ties them together. Pick data from
+whichever server holds it, run a model on it, and have the results published back
+to a server of your choosing.
+
 Resources:
 ----------
-* `VirtualBox 6.0 virtual machine (OVA) <https://drive.google.com/file/d/1YtR5WWwU8OS5ozW-WGaL_6NcDnmMGdFq/view?usp=sharing>`_
 * `GitHub Repository <https://github.com/mlacayoemery/esws>`_
 
 

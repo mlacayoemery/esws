@@ -10,10 +10,10 @@ Data Needs
 ----------
 As described in the
 `InVEST User Guide
-<http://data.naturalcapitalproject.org/nightly-build/invest-users-guide/html>`_
+<https://storage.googleapis.com/releases.naturalcapitalproject.org/invest-userguide/latest/en/index.html>`_
 under the
 `Annual Water Yield
-<http://data.naturalcapitalproject.org/nightly-build/invest-users-guide/html/reservoirhydropowerproduction.html>`_
+<https://storage.googleapis.com/releases.naturalcapitalproject.org/invest-userguide/latest/en/annual_water_yield.html>`_
 model the data needed for this model is as follows:
 
 
@@ -52,7 +52,7 @@ Precipitation
 Average Annual Reference Evapotranspiration
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Global annual reference evapotranspiration may be obtained from the CGIAR CSI dataset (based on WorldClim data): http://www.cgiar-csi.org/data/global-aridity-and-pet-database. The Annual Global-PET dataset is provided for non-commercial use in standard ARC/INFO Grid format, at 30 arc seconds (~ 1km at equator), to support studies contributing to sustainable development, biodiversity and environmental conservation, poverty alleviation, and adaption to climate change globally, and in particular in developing countries.
+Global annual reference evapotranspiration may be obtained from the CGIAR CSI dataset (based on WorldClim data): https://doi.org/10.6084/m9.figshare.7504448. The Annual Global-PET dataset is provided for non-commercial use in standard ARC/INFO Grid format, at 30 arc seconds (~ 1km at equator), to support studies contributing to sustainable development, biodiversity and environmental conservation, poverty alleviation, and adaption to climate change globally, and in particular in developing countries.
 
 Citation: Zomer RJ, Bossio DA, Trabucco A, Yuanjie L, Gupta DC & Singh VP, 2007. Trees and Water: Smallholder Agroforestry on Irrigated Lands in Northern India. Colombo, Sri Lanka: International Water Management Institute. pp 45. (IWMI Research Report 122).
 
@@ -67,14 +67,14 @@ Citation: FAO/IIASA/ISRIC/ISSCAS/JRC, 2012. Harmonized World Soil Database (vers
 Plant Available Water Content
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Plant available water fraction can be found in the ISRIC Soil Information system at: http://www.isric.org/data/isric-wise-derived-soil-properties-5-5-arc-minutes-global-grid-version-12. This harmonized dataset of derived soil properties for the World was created using: (1) the soil distribution shown on the 1:5 million scale FAO-Unesco Soil Map of the World (DSMW 1995) and (2) soil parameter estimates derived from ISRIC's global WISE soil profile database. The dataset considers 19 soil variables that are commonly required for agro-ecological zoning, land evaluation, crop growth simulation, modeling of soil gaseous emissions, and analyses of global environmental change.
+Plant available water fraction can be found in the ISRIC Soil Information system at: https://www.isric.org/explore/wise-databases. This harmonized dataset of derived soil properties for the World was created using: (1) the soil distribution shown on the 1:5 million scale FAO-Unesco Soil Map of the World (DSMW 1995) and (2) soil parameter estimates derived from ISRIC's global WISE soil profile database. The dataset considers 19 soil variables that are commonly required for agro-ecological zoning, land evaluation, crop growth simulation, modeling of soil gaseous emissions, and analyses of global environmental change.
 
 Citation : Batjes NH 2016. Harmonised soil property values for broad-scale modelling (WISE30sec) with estimates of global soil carbon stocks.  Geoderma 2016(269), 61-68 (doi: 10.1016/j.geoderma.2016.01.034), with supplemental information
 
 Land Use Land Cover
 ^^^^^^^^^^^^^^^^^^^
 
-Global land use data for 2009 is available at 300m resolution from: the European Space Agency: http://due.esrin.esa.int/page_globcover.php. GlobCover is an ESA initiative that began in 2005 in partnership with JRC, EEA, FAO, UNEP, GOFC-GOLD and IGBP. The aim of the project was to develop a service capable of delivering global composites and land cover maps using as input observations from the 300m MERIS sensor on board the ENVISAT satellite mission.
+Global land use data for 2009 is available at 300m resolution from: the European Space Agency: https://www.esa-landcover-cci.org/. GlobCover is an ESA initiative that began in 2005 in partnership with JRC, EEA, FAO, UNEP, GOFC-GOLD and IGBP. The aim of the project was to develop a service capable of delivering global composites and land cover maps using as input observations from the 300m MERIS sensor on board the ENVISAT satellite mission.
 
 Citation: Arino O., J. Ramos, V. Kalogirou, P. Defourny and F. Achard. GlobCover 2009. ESA Living Planet Symposium, 27 June . 2 July 2010, Bergen, Norwa
 
@@ -90,7 +90,7 @@ Biophysical Table
 
 For data sources and estimation methods see InVEST User Guide Annual Water Yield
 `Appendix 1: Data Sources
-<http://data.naturalcapitalproject.org/nightly-build/invest-users-guide/html/reservoirhydropowerproduction.html#appendix-1-data-sources>`_.
+<https://storage.googleapis.com/releases.naturalcapitalproject.org/invest-userguide/latest/en/annual_water_yield.html#appendix-1-data-sources>`_.
 
 The following resources are suggested:
     
@@ -103,4 +103,4 @@ Z Parameter
 
 For data sources and estimation methods see InVEST User Guide Annual Water Yield
 `Appendix 1: Data Sources - Z Parameter
-<http://data.naturalcapitalproject.org/nightly-build/invest-users-guide/html/reservoirhydropowerproduction.html#z-parameter>`_.
+<https://storage.googleapis.com/releases.naturalcapitalproject.org/invest-userguide/latest/en/annual_water_yield.html#z-parameter>`_.

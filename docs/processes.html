@@ -470,10 +470,80 @@ window.runMermaid = runMermaid;</script>
           <div class="body" role="main">
             
   <section id="processes">
-<h1>Processes<a class="headerlink" href="#processes" title="Link to this heading">¶</a></h1>
+<span id="id1"></span><h1>Processes<a class="headerlink" href="#processes" title="Link to this heading">¶</a></h1>
+<p>The WPS exposes every InVEST model as a <a class="reference external" href="https://www.opengeospatial.org/standards/wps">Web Processing Service</a> 1.0 process – 26 of them, built
+from InVEST’s own model registry rather than written by hand.</p>
+<ul class="simple">
+<li><p>Capabilities: <a class="reference external" href="http://localhost:5000/wps?service=WPS&amp;version=1.0.0&amp;request=GetCapabilities">http://localhost:5000/wps?service=WPS&amp;version=1.0.0&amp;request=GetCapabilities</a></p></li>
+</ul>
+<p><a class="reference internal" href="models.html#models"><span class="std std-ref">Model Inputs</span></a> has the inputs of each model as a diagram.</p>
+<section id="what-a-process-description-carries">
+<h2>What a process description carries<a class="headerlink" href="#what-a-process-description-carries" title="Link to this heading">¶</a></h2>
+<section id="inputs">
+<h3>Inputs<a class="headerlink" href="#inputs" title="Link to this heading">¶</a></h3>
+<p>Each model argument becomes a process input, typed as the model types it. WPS has
+no way to say “this input wants a raster”, so the InVEST type travels in the
+input’s abstract as a machine-readable trailer:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">invest</span><span class="p">:</span><span class="nb">type</span><span class="o">=</span><span class="n">raster</span> <span class="n">invest</span><span class="p">:</span><span class="n">required</span><span class="o">=</span><span class="n">do_valuation</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>which is what lets the dashboard offer registered WCS layers for it instead of a
+text box. <code class="docutils literal notranslate"><span class="pre">invest:required</span></code> appears when an input is conditional: whether it
+applies depends on the values of other inputs.</p>
+</section>
+<section id="bounds-and-units">
+<h3>Bounds and units<a class="headerlink" href="#bounds-and-units" title="Link to this heading">¶</a></h3>
+<p>A numeric input publishes the model’s own constraint, so a value the model would
+reject can be caught before a job is submitted. 80 of the 101 numeric inputs have
+one.</p>
+<p>Two-sided bounds are <code class="docutils literal notranslate"><span class="pre">ows:AllowedValues</span></code> with an <code class="docutils literal notranslate"><span class="pre">ows:Range</span></code>, whose closure
+distinguishes strict from non-strict: a ratio is 0 to 1 inclusive, while a
+seasonality constant must be <em>greater</em> than 0. One-sided bounds travel in the
+abstract trailer instead (<code class="docutils literal notranslate"><span class="pre">invest:min</span></code>, <code class="docutils literal notranslate"><span class="pre">invest:max</span></code>, <code class="docutils literal notranslate"><span class="pre">invest:exclusive</span></code>),
+because a range with no upper bound cannot be expressed there.</p>
+<p>Units are <code class="docutils literal notranslate"><span class="pre">ows:UOM</span></code>: “24 meter” and “24 hectare” are not the same input.</p>
+</section>
+<section id="outputs">
+<h3>Outputs<a class="headerlink" href="#outputs" title="Link to this heading">¶</a></h3>
+<p>Every file a model produces is declared as its own output and returned as a URL
+rather than inline. What a <em>given</em> run will produce is worked out before it starts,
+conditional outputs included, which is what lets the dashboard list a job’s
+outputs while it is still queued.</p>
+</section>
+<section id="licence-and-documentation">
+<h3>Licence and documentation<a class="headerlink" href="#licence-and-documentation" title="Link to this heading">¶</a></h3>
+<p>A process runs an InVEST model through this wrapper, so two licences apply and
+neither could otherwise be inferred from the service. Both are declared as
+<code class="docutils literal notranslate"><span class="pre">ows:Metadata</span></code> with the OGC licence role, alongside the model’s own manual:</p>
+<ul class="simple">
+<li><p>MIT – the ESWS WPS wrapper</p></li>
+<li><p>Apache-2.0 – the InVEST model implementation</p></li>
+<li><p>the InVEST user guide page for that model</p></li>
+</ul>
+<p>The dashboard shows all three on the process page.</p>
+</section>
+</section>
+<section id="extra-inputs">
+<h2>Extra inputs<a class="headerlink" href="#extra-inputs" title="Link to this heading">¶</a></h2>
+<p>Four inputs on every process are the wrapper’s own rather than the model’s. They
+decide where results go; see <a class="reference internal" href="run.html#run"><span class="std std-ref">Running</span></a>.</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">upload_results</span></code></dt><dd><p>Publish this run’s results to the servers named below.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">destination_wcs</span></code>, <code class="docutils literal notranslate"><span class="pre">destination_wfs</span></code>, <code class="docutils literal notranslate"><span class="pre">destination_http</span></code></dt><dd><p>Where rasters, vectors and tables go respectively. The dashboard fills these
+in from the servers you have registered.</p>
+</dd>
+</dl>
+</section>
+<section id="asynchronous-execution">
+<h2>Asynchronous execution<a class="headerlink" href="#asynchronous-execution" title="Link to this heading">¶</a></h2>
+<p>Runs are submitted with <code class="docutils literal notranslate"><span class="pre">storeExecuteResponse</span></code>, so the server answers
+immediately with a status location and the client polls it. Some models take
+minutes – scenic quality is around four – and a synchronous request would hold
+the connection open for the whole run.</p>
+</section>
 <section id="invest-average-annual-water-yield">
 <h2>InVEST Average Annual Water Yield<a class="headerlink" href="#invest-average-annual-water-yield" title="Link to this heading">¶</a></h2>
-<p>The ESWS address for the InVEST Water Yield process is <a class="reference external" href="http://192.168.56.104:8000/test/wy">http://192.168.56.104:8000/test/wy</a>.</p>
 <pre  class="mermaid">
         flowchart LR
   classDef inputRequired fill:#e8f5e9,stroke:#2e7d32,color:#222;
@@ -540,6 +610,15 @@ window.runMermaid = runMermaid;</script>
 <li class="toctree-l1"><a class="reference internal" href="rasters.html">Raster Data</a></li>
 <li class="toctree-l1"><a class="reference internal" href="vectors.html">Vector Data</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Processes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#what-a-process-description-carries">What a process description carries</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#inputs">Inputs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#bounds-and-units">Bounds and units</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#outputs">Outputs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#licence-and-documentation">Licence and documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#extra-inputs">Extra inputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#asynchronous-execution">Asynchronous execution</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#invest-average-annual-water-yield">InVEST Average Annual Water Yield</a></li>
 </ul>
 </li>

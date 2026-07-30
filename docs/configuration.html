@@ -34,28 +34,116 @@
           <div class="body" role="main">
             
   <section id="configuration-maintenance">
-<h1>Configuration &amp; Maintenance<a class="headerlink" href="#configuration-maintenance" title="Link to this heading">¶</a></h1>
-<p>These steps are <strong>optional</strong>.</p>
-<section id="login">
-<h2>Login<a class="headerlink" href="#login" title="Link to this heading">¶</a></h2>
-<p>The default user name and password are <strong>esws</strong></p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">ssh esws@192.168.56.104</span>
-</pre></div>
-</div>
+<span id="configuration"></span><h1>Configuration &amp; Maintenance<a class="headerlink" href="#configuration-maintenance" title="Link to this heading">¶</a></h1>
+<p>Everything here is optional: the defaults work.</p>
+<section id="environment">
+<h2>Environment<a class="headerlink" href="#environment" title="Link to this heading">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">docker-compose.yml</span></code> reads <code class="docutils literal notranslate"><span class="pre">.env</span></code>. Copy <code class="docutils literal notranslate"><span class="pre">.env.example</span></code> and edit it.</p>
+<section id="host-ports">
+<h3>Host ports<a class="headerlink" href="#host-ports" title="Link to this heading">¶</a></h3>
+<p>Container ports never change; these decide what the host publishes them on. Set
+them when the defaults collide with something else.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 32.0%" />
+<col style="width: 12.0%" />
+<col style="width: 56.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Variable</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Service</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">DASHBOARD_HOST_PORT</span></code></p></td>
+<td><p>8000</p></td>
+<td><p>Dashboard</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">WPS_HOST_PORT</span></code></p></td>
+<td><p>5000</p></td>
+<td><p>WPS</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">FILESERVER_HOST_PORT</span></code></p></td>
+<td><p>8001</p></td>
+<td><p>File server</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">GEOSERVER_HOST_PORT</span></code></p></td>
+<td><p>8080</p></td>
+<td><p>GeoServer</p></td>
+</tr>
+</tbody>
+</table>
+<p><code class="docutils literal notranslate"><span class="pre">GEOSERVER_HOST_PORT</span></code> and <code class="docutils literal notranslate"><span class="pre">WPS_HOST_PORT</span></code> do double duty: they also determine
+the addresses those services advertise to clients, since a URL handed out to a
+browser has to be reachable from the host rather than from inside the network.</p>
 </section>
-<section id="update-the-guest-os">
-<h2>Update the Guest OS<a class="headerlink" href="#update-the-guest-os" title="Link to this heading">¶</a></h2>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">sudo apt-get update</span>
-<span class="go">sudo apt-get dist-upgrade</span>
-<span class="go">sudo apt-get autoremove</span>
-</pre></div>
-</div>
+<section id="credentials">
+<h3>Credentials<a class="headerlink" href="#credentials" title="Link to this heading">¶</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">GEOSERVER_USER</span></code> and <code class="docutils literal notranslate"><span class="pre">GEOSERVER_PASS</span></code> (<strong>admin</strong> / <strong>geoserver</strong>) are used both
+by GeoServer itself and by the WPS when it publishes results.</p>
 </section>
-<section id="update-esws">
-<h2>Update ESWS<a class="headerlink" href="#update-esws" title="Link to this heading">¶</a></h2>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">git -C /home/esws/esws pull</span>
+<section id="data-and-results">
+<h3>Data and results<a class="headerlink" href="#data-and-results" title="Link to this heading">¶</a></h3>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 34.0%" />
+<col style="width: 66.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Variable</p></th>
+<th class="head"><p>Meaning</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">INVEST_SAMPLES</span></code></p></td>
+<td><p>Where the InVEST sample data is cached. Defaults to
+<code class="docutils literal notranslate"><span class="pre">/store/invest/samples</span></code>; kept outside the repository because it is
+around 2 GB. Mounted read-only.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">WPS_RESULTS_WORKSPACE</span></code></p></td>
+<td><p>GeoServer workspace uploaded results are published into (<code class="docutils literal notranslate"><span class="pre">results</span></code>).</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">WPS_TABLE_UPLOAD_DIR</span></code></p></td>
+<td><p>Directory table results are copied into. It is a volume the file server
+publishes, which is what makes an HTTP destination a real upload target: a
+plain file server has no upload protocol of its own. Leave it unset and
+tables are reported where the WPS already serves them from.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">WPS_TABLE_UPLOAD_PATH</span></code></p></td>
+<td><p>The path that directory appears at on the file server (<code class="docutils literal notranslate"><span class="pre">results</span></code>).</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">EASYOWS_CRS_MIN_CONFIDENCE</span></code></p></td>
+<td><p>How sure a CRS match must be, as a percentage, before it is declared for a
+published layer. Defaults to 90. See <a class="reference internal" href="rasters.html#crs-caveat"><span class="std std-ref">Layers without a usable CRS</span></a>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">INVEST_USERGUIDE_BASE</span></code></p></td>
+<td><p>Base URL each process links its manual under.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="maintenance">
+<h2>Maintenance<a class="headerlink" href="#maintenance" title="Link to this heading">¶</a></h2>
+<section id="updating">
+<h3>Updating<a class="headerlink" href="#updating" title="Link to this heading">¶</a></h3>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">git pull</span>
+<span class="go">make build   # only needed if the pull changed what gets installed</span>
+<span class="go">make up</span>
 </pre></div>
 </div>
+<p>A pull that touches the InVEST or GDAL pins means a WPS image rebuild, which takes
+several minutes.</p>
+</section>
+<section id="state">
+<h3>State<a class="headerlink" href="#state" title="Link to this heading">¶</a></h3>
+<p>The stack keeps its state in Docker volumes: GeoServer’s catalogue, the published
+raster and vector data, uploaded table results, and the WPS output store. The
+dashboard’s database lives inside its container, so recreating that container
+starts it empty – run <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">demo</span></code> again to repopulate.</p>
+<p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">down</span></code> removes all of it. There is no separate reset.</p>
+</section>
 </section>
 </section>
 
@@ -89,9 +177,17 @@
 <li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="run.html">Running</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Configuration &amp; Maintenance</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#login">Login</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#update-the-guest-os">Update the Guest OS</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#update-esws">Update ESWS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#environment">Environment</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#host-ports">Host ports</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#credentials">Credentials</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#data-and-results">Data and results</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#maintenance">Maintenance</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#updating">Updating</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#state">State</a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="tables.html">Tabular Data</a></li>

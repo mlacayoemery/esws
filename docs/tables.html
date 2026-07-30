@@ -34,8 +34,43 @@
           <div class="body" role="main">
             
   <section id="tabular-data">
-<h1>Tabular Data<a class="headerlink" href="#tabular-data" title="Link to this heading">¶</a></h1>
-<p>The ESWS pseudo-TJS address is <a class="reference external" href="http://192.168.56.104:8001">http://192.168.56.104:8001</a>.</p>
+<span id="tables"></span><h1>Tabular Data<a class="headerlink" href="#tabular-data" title="Link to this heading">¶</a></h1>
+<p>Tables are served over plain HTTP by the file server:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="http://localhost:8001">http://localhost:8001</a></p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">demo</span></code> serves every table in the InVEST sample data under <code class="docutils literal notranslate"><span class="pre">/invest/</span></code> and
+registers each as an HTTP element, selectable for any model input that wants a
+table.</p>
+<p>This stands in for the <a class="reference external" href="https://www.opengeospatial.org/standards/tjs">Table Join Service</a>: TJS describes how to publish a
+table and join it to a spatial framework, but there is no maintained
+implementation to serve or consume one, so tables move as files.</p>
+<section id="tables-that-reference-other-data">
+<h2>Tables that reference other data<a class="headerlink" href="#tables-that-reference-other-data" title="Link to this heading">¶</a></h2>
+<p>An InVEST table routinely names further files. A threats table lists a raster per
+threat; a snapshot table a raster per year; a wave table a vector per point set.
+Those names are paths relative to <strong>the table’s own directory</strong>.</p>
+<p>Fetching only the table therefore leaves its references dangling, and the model
+stops with something like:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Error</span> <span class="ow">in</span> <span class="n">column</span> <span class="s2">&quot;cur_path&quot;</span><span class="p">,</span> <span class="n">value</span> <span class="s2">&quot;/tmp/crops_c.tif&quot;</span><span class="p">:</span> <span class="n">File</span> <span class="ow">not</span> <span class="n">found</span>
+</pre></div>
+</div>
+<p>So a table fetched over HTTP has its references followed too: each is resolved
+against the URL the table itself came from, downloaded with any companion files a
+shapefile or raster needs, and the table is rewritten to point at the local
+copies. Tables that reference tables are followed as well.</p>
+<p>Which columns hold paths comes from the model’s own specification. Habitat risk
+assessment’s criteria table is the exception – a cell there holds either a number
+or a raster, depending on the criterion – so values naming a spatial file are
+tried in any column. A value that is not a reference simply fails to fetch and is
+left alone, so the model’s own error still names what is really missing.</p>
+</section>
+<section id="uploaded-results">
+<h2>Uploaded results<a class="headerlink" href="#uploaded-results" title="Link to this heading">¶</a></h2>
+<p>Table results from a run are uploaded to the file server under <code class="docutils literal notranslate"><span class="pre">/results/</span></code>, since
+a plain file server has no upload protocol of its own. See
+<code class="docutils literal notranslate"><span class="pre">WPS_TABLE_UPLOAD_DIR</span></code> in <a class="reference internal" href="configuration.html#configuration"><span class="std std-ref">Configuration &amp; Maintenance</span></a>.</p>
+</section>
 </section>
 
 
@@ -68,7 +103,11 @@
 <li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="run.html">Running</a></li>
 <li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration &amp; Maintenance</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Tabular Data</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Tabular Data</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#tables-that-reference-other-data">Tables that reference other data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#uploaded-results">Uploaded results</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="rasters.html">Raster Data</a></li>
 <li class="toctree-l1"><a class="reference internal" href="vectors.html">Vector Data</a></li>
 <li class="toctree-l1"><a class="reference internal" href="processes.html">Processes</a></li>

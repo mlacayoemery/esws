@@ -101,3 +101,32 @@ def test_a_resolvable_authority_is_left_alone(tmp_path):
     crs_identify.drop_unresolvable_authority(str(tmp_path),
                                         crs_identify.logging.getLogger("t"))
     assert prj.read_text() == original
+
+
+def test_the_shipped_geoserver_definitions_parse_and_are_what_they_claim():
+    """A typo in docker/geoserver/epsg.properties would not fail loudly.
+
+    GeoServer would decline the definition and go back to publishing those layers
+    disabled -- the state this file exists to fix -- so the file is checked here
+    rather than only in an integration run.
+    """
+    path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
+        os.path.abspath(__file__)))), "docker", "geoserver", "epsg.properties")
+    entries = {}
+    for line in open(path):
+        line = line.strip()
+        if line and not line.startswith("#"):
+            code, _, wkt = line.partition("=")
+            entries[code] = wkt
+
+    assert "996842" in entries, sorted(entries)
+    # Not 6842: that is NAD83(2011) / Oregon Coast zone, and this file extends the
+    # EPSG namespace, so registering it there is silently ignored in favour of the
+    # real definition.
+    assert "6842" not in entries, "6842 collides with an assigned EPSG code"
+
+    crs = CRS.from_wkt(entries["996842"])
+    assert "sinusoidal" in crs.coordinate_operation.method_name.lower()
+    assert crs.ellipsoid.semi_major_metre == 6371007.181
+    # The vendor table has to point at the code that is actually registered.
+    assert crs_identify._VENDOR_CRS[0]["code"] == "EPSG:996842"

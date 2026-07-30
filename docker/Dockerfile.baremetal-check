@@ -46,16 +46,27 @@ RUN "$HOME/.local/bin/micromamba" run -p "$HOME/esws-invest" \
         pip install --no-build-isolation -r requirements_py3.txt
 
 # --- assert the installed stack is the one the code needs -------------------
+#
+# Versions are read from requirements/server.txt rather than written out here.
+# They were hardcoded, and went stale the moment the stack moved to Django 5.2:
+# the check then failed on a correct install, which is the least useful way for a
+# check to fail. Comparing installed against declared still catches what matters
+# -- an install that did not honour its own pins.
+COPY --chown=esws:esws tools/crs_identify.py ./tools/crs_identify.py
 RUN "$HOME/.local/bin/micromamba" run -p "$HOME/esws-invest" python -c "\
-import natcap.invest, django, pywps, owslib, svgwrite, flask, bs4, geoserver.catalog; \
+import re, sys; \
+import natcap.invest, django, pywps, owslib, svgwrite, flask, bs4, geoserver.catalog, pyproj; \
+sys.path.insert(0, 'tools'); \
+import crs_identify; \
 from osgeo import gdal; \
 from natcap.invest import models; \
-print('invest', natcap.invest.__version__); \
-print('gdal', gdal.__version__); \
-print('django', django.get_version()); \
-print('models', len(models.model_id_to_pyname)); \
-assert natcap.invest.__version__ == '3.20.0', natcap.invest.__version__; \
-assert django.get_version().startswith('4.2'), django.get_version(); \
+pins = dict(re.findall(r'^([A-Za-z._-]+)==([0-9.]+)', open('requirements/server.txt').read(), re.M)); \
+print('pins', pins); \
+print('invest', natcap.invest.__version__, '| gdal', gdal.__version__, \
+      '| django', django.get_version(), '| pyproj', pyproj.__version__, \
+      '| models', len(models.model_id_to_pyname)); \
+assert natcap.invest.__version__ == pins['natcap.invest'], natcap.invest.__version__; \
+assert django.get_version().startswith(pins['Django'].rstrip('.')), django.get_version(); \
 assert gdal.__version__.startswith('3.10'), gdal.__version__; \
 assert len(models.model_id_to_pyname) == 26, len(models.model_id_to_pyname); \
 assert 'lulc_bas_path' in [i.id for i in models.model_id_to_spec['carbon'].inputs]; \

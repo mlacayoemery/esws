@@ -113,6 +113,37 @@ fetched twice seconds apart has different bytes. Archives are therefore fingerpr
 by their members rather than their bytes; otherwise every check would report every
 vector as changed, which is the same as reporting nothing.
 
+The pipeline jobs form
+======================
+
+Nothing in the dashboard asks you to draw a workflow, and yet one exists. A job's
+published outputs are registered as elements, and any later job can pick them from
+its input dropdowns like any other data. Point a job at another job's output and
+you have a pipeline.
+
+**Job pipeline**, from the job list, draws it. Each job is a node coloured by
+status; an arrow means the job it points at consumes something the other produced,
+labelled with the element that passed between them. None of it is declared -- it is
+read back from what each job was given and what it published.
+
+Export it as **BPMN 2.0** from the same page. The file validates against OMG's
+schema and opens in bpmn.io or Camunda Modeler.
+
+  A word on what that BPMN says. This graph is a dataflow -- an edge means "B
+  consumes what A produced" -- while BPMN is first a control-flow notation, where a
+  sequence flow means "B happens after A". They coincide here, since a job
+  consuming another's output must indeed run after it, so the sequence flows are
+  true as far as they go. They are not the whole truth, so each edge also carries a
+  data object naming the element and the associations that wrote and read it.
+
+Combine this with reactive jobs, below, and the pipeline maintains itself: change
+something at the top and every job downstream re-runs.
+
+  One caveat. **Unique results for each run** and chaining pull against each other.
+  With it set, a re-run publishes under a *new* name, so a downstream job pointed at
+  the old one keeps consuming what it always did rather than following along. Use it
+  to keep runs apart, not to feed a pipeline.
+
 Re-running when the data changes
 ================================
 

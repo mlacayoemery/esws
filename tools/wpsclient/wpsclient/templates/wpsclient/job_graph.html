@@ -1,0 +1,23 @@
+{% extends 'wpsclient/base.html' %}
+
+{% block content %}
+    <div class="server">
+        <h2>Job pipeline</h2>
+        <p>{{ job_count }} job{{ job_count|pluralize }},
+           {{ edge_count }} dependenc{{ edge_count|pluralize:"y,ies" }}.
+           An arrow means the job it points at consumes something the other
+           produced &mdash; nothing declares this, it is read back from what each
+           job was given and what it published.</p>
+
+        <pre class="mermaid">{{ diagram }}</pre>
+
+        <p><a href="{% url 'job_graph_bpmn' %}">Download as BPMN 2.0</a>
+           &mdash; opens in bpmn.io or Camunda Modeler</p>
+        <p><a href="{% url 'job_list' %}">All jobs</a></p>
+    </div>
+
+    <script type="module">
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.12.1/dist/mermaid.esm.min.mjs";
+      mermaid.initialize({ startOnLoad: true, securityLevel: "strict" });
+    </script>
+{% endblock %}

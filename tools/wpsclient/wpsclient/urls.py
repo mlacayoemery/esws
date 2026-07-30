@@ -37,6 +37,8 @@ urlpatterns = [
     
     # Before job_detail: its job_pk pattern would swallow "react".
     url(r'^job/react/$', views.job_react_all, name='job_react_all'),
+    url(r'^job/graph/$', views.job_graph_view, name='job_graph'),
+    url(r'^job/graph\.bpmn$', views.job_graph_bpmn, name='job_graph_bpmn'),
     url(r'^job/(?P<job_pk>[a-zA-Z0-9_\.:]+)/$', views.job_detail, name='job_detail'),
     url(r'^job/(?P<job_pk>[a-zA-Z0-9_\.:]+)/edit/$', views.job_edit, name='job_edit'),
 

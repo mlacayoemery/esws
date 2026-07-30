@@ -5,6 +5,8 @@ importable InVEST model, DescribeProcess should render every one of those specs
 (and expose the expected args for a known model), the runner-only arguments
 should stay hidden, and the echo process should round-trip.
 """
+import re
+
 import pytest
 import requests
 from owslib.wps import WebProcessingService
@@ -100,6 +102,61 @@ def test_describeprocess_carbon_exposes_spec_args(wps_url):
     assert "lulc_bas_path" in input_ids
     assert "carbon_pools_path" in input_ids
     assert "calc_sequestration" in input_ids
+
+
+def test_processes_declare_their_real_outputs(wps_url):
+    """Every model must advertise the outputs it produces, not one blob.
+
+    Each declared output is a ComplexOutput derived from MODEL_SPEC.outputs, so
+    a client can see what it will get and request individual outputs by
+    reference. `response` is retained alongside them for existing clients.
+    """
+    wps = WebProcessingService(wps_url, version="1.0.0")
+    carbon = wps.describeprocess("carbon")
+    identifiers = {o.identifier for o in carbon.processOutputs}
+
+    assert "response" in identifiers, identifiers
+    assert len(identifiers) > 5, identifiers
+    # a raster the model always produces
+    assert "c_storage_bas" in identifiers, sorted(identifiers)
+
+
+def test_executing_returns_fetchable_output_references(wps_url):
+    """A run's outputs come back as URLs that actually serve the file.
+
+    Exercises the whole chain that was broken: pywps needs a writable
+    outputpath, wpsserver has to serve it, and outputurl has to be reachable
+    from outside the container.
+    """
+    resp = requests.get(wps_url, params={
+        "service": "WPS",
+        "version": "1.0.0",
+        "request": "Execute",
+        "identifier": "carbon",
+        "DataInputs": ";".join([
+            "lulc_bas_path=/data/invest/Carbon/lulc_current_willamette.tif",
+            "carbon_pools_path=/data/invest/Carbon/carbon_pools_willamette.csv",
+            "calc_sequestration=false",
+        ]),
+    }, timeout=900)
+    assert resp.status_code == 200, resp.text[:1000]
+    assert "ProcessSucceeded" in resp.text, resp.text[:3000]
+
+    hrefs = [h for h in re.findall(r'href="([^"]+)"', resp.text) if h]
+    assert hrefs, resp.text[:3000]
+
+    # The advertised URL is the one external clients use (WPS_OUTPUT_URL, the
+    # host mapping). These tests run on the compose network, so point it back at
+    # the service instead of the published port.
+    from urllib.parse import urlsplit, urlunsplit
+    wps_parts = urlsplit(wps_url)
+    href_parts = urlsplit(hrefs[0])
+    internal = urlunsplit((wps_parts.scheme, wps_parts.netloc,
+                           href_parts.path, href_parts.query, ""))
+
+    fetched = requests.get(internal, timeout=120)
+    assert fetched.status_code == 200, internal
+    assert len(fetched.content) > 0, internal
 
 
 def test_echo_execute_roundtrips(wps_url):

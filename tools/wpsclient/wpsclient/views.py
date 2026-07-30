@@ -2,6 +2,8 @@ import logging
 import inspect
 
 from django.shortcuts import render, get_object_or_404, redirect
+from django.http import Http404
+from django.utils import timezone
 
 from .models import ServerCSV
 from .models import ServerWCS
@@ -17,6 +19,7 @@ from .models import ElementWPS
 
 from .models import ServerElement
 from .models import Job
+from .models import ElementFingerprint
 
 from .forms import ServerFormCSV
 from .forms import ServerFormWCS
@@ -332,8 +335,21 @@ def server_element_list(request, server_type, server_pk):
             if not (identifier in registered_element_list):
                 unregistered_element_list.append(identifier)
     
+    # Fingerprints for the bookmarked elements, so the list can show when each was
+    # last checked and last seen to change. Only data sources have them.
+    checkable = server_type in _CHECKABLE
+    recorded = {}
+    if checkable:
+        recorded = {f.element.identifier: f for f in
+                    ElementFingerprint.objects.filter(
+                        element__server__pk=server_pk).select_related("element")}
+    registered_rows = [(identifier, recorded.get(identifier))
+                       for identifier in registered_element_list]
+
     return render(request, 'wpsclient/server_element_list.html', {'server': server,
                                                                   'registered_element_list' : registered_element_list,
+                                                                  'registered_rows' : registered_rows,
+                                                                  'checkable' : checkable,
                                                                   'unregistered_element_list': unregistered_element_list})
 
 def server_element_register(request, server_type, server_pk, element_id):
@@ -964,6 +980,73 @@ def get_ows_data_url(server_type, server_url, identifier):
 
     return ows_templates[server_type] % (server_url, identifier)
  
+# Element kinds whose data can be fetched and so fingerprinted. A WPS process is
+# not data: there is nothing to hash.
+_CHECKABLE = {"CSV": ServerCSV, "WCS": ServerWCS, "WFS": ServerWFS}
+
+
+def check_element(element, kind):
+    """Fingerprint one element's data, recording whether it changed.
+
+    Returns "changed", "unchanged", or "unreachable". The three are distinct on
+    purpose: a source that cannot be reached is not a source that is the same.
+    """
+    tools = "/app/tools"
+    if tools not in sys.path:
+        sys.path.insert(0, tools)
+    from data_fingerprint import fingerprint
+
+    url = get_ows_data_url(kind, element.server.url, element.identifier)
+
+    record, _created = ElementFingerprint.objects.get_or_create(element=element)
+    previous = {"digest": record.digest, "etag": record.etag,
+                "last_modified": record.last_modified, "size": record.size}
+
+    result = fingerprint(url, previous=previous if record.digest else None)
+
+    record.checks += 1
+    record.checked_at = timezone.now()
+    if not result["digest"]:
+        record.unreachable = True
+        record.save()
+        return "unreachable"
+
+    record.unreachable = False
+    changed = bool(record.digest) and record.digest != result["digest"]
+    if changed:
+        record.changed_at = record.checked_at
+    record.digest = result["digest"]
+    record.etag = result["etag"] or ""
+    record.last_modified = result["last_modified"] or ""
+    record.size = result["size"]
+    record.save()
+    return "changed" if changed else "unchanged"
+
+
+def server_check(request, server_type, server_pk):
+    """Fingerprint every element bookmarked on a server.
+
+    Note that this fetches the data: a source offering neither ETag nor
+    Last-Modified -- which is every OWS response GeoServer generates -- has to be
+    downloaded to be hashed.
+    """
+    ServerClass = _CHECKABLE.get(server_type)
+    if ServerClass is None:
+        raise Http404("%s elements are not data" % server_type)
+
+    server = get_object_or_404(ServerClass, pk=server_pk)
+    tally = {"changed": [], "unchanged": [], "unreachable": []}
+    for element in ServerElement.objects.filter(server__pk=server_pk):
+        try:
+            tally[check_element(element, server_type)].append(element.identifier)
+        except Exception as exc:  # noqa: BLE001 - one bad element must not stop the sweep
+            l.warning("Could not check %s: %s", element.identifier, exc)
+            tally["unreachable"].append(element.identifier)
+
+    return render(request, "wpsclient/server_check.html",
+                  {"server": server, "server_type": server_type, "tally": tally})
+
+
 def water_yield(request):
     """Redirect to the generated form for the annual water yield model.
 

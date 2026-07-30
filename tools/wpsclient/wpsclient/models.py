@@ -103,6 +103,43 @@ class ElementWFS(ServerElement):
 class ElementWPS(ServerElement):
     element_type = models.CharField(max_length=3, default='WPS', editable=False)
 
+class ElementFingerprint(models.Model):
+    """What a registered element's data looked like the last time it was checked.
+
+    A registered element points at data on someone else's server and nothing
+    announces when that data is replaced, so noticing means recording a
+    fingerprint and comparing the next one against it.
+
+    Its own table rather than columns on ServerElement: the wpsclient app has
+    migrations disabled (MIGRATION_MODULES) and its tables come from
+    `migrate --run-syncdb`, which creates a missing table but cannot add a column
+    to one that already exists.
+    """
+
+    element = models.OneToOneField(ServerElement, on_delete=models.CASCADE,
+                                   related_name="fingerprint")
+
+    # Content hash, computed so that incidental variation does not count as a
+    # change -- see tools/data_fingerprint.py. Empty when the last check failed.
+    digest = models.CharField(max_length=64, default="")
+    # Validators, when the server offers them: they let a check skip the download.
+    etag = models.CharField(max_length=200, default="")
+    last_modified = models.CharField(max_length=64, default="")
+    size = models.BigIntegerField(null=True, blank=True)
+
+    checks = models.IntegerField(default=0)
+    checked_at = models.DateTimeField(null=True, blank=True)
+    # When the data was last seen to differ from the previous check. Null means it
+    # has not changed since it was first fingerprinted.
+    changed_at = models.DateTimeField(null=True, blank=True)
+    # Set when the last check could not reach the data at all, which is not the
+    # same as the data being unchanged.
+    unreachable = models.BooleanField(default=False)
+
+    def __str__(self):
+        return "%s@%s" % (self.element, self.digest[:12] or "unknown")
+
+
 class Job(models.Model):
     server = models.ForeignKey(ServerWPS, on_delete=models.CASCADE)   
     identifier = models.CharField(max_length=200)

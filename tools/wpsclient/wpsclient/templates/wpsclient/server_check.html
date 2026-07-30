@@ -1,0 +1,34 @@
+{% extends 'wpsclient/base.html' %}
+
+{% block content %}
+    <div class="server">
+        <h2><a href="{% url 'server_element_list' server_type=server_type server_pk=server.pk %}">{{ server.title }}</a></h2>
+        <p><b>Checked for changes in remote data</b></p>
+
+        <table border=1 frame=void rules=all>
+        <tr><td>Changed</td><td align="right">{{ tally.changed|length }}</td></tr>
+        <tr><td>Unchanged</td><td align="right">{{ tally.unchanged|length }}</td></tr>
+        <tr><td>Unreachable</td><td align="right">{{ tally.unreachable|length }}</td></tr>
+        </table>
+
+        {% if tally.changed %}
+        <p><b>Changed since the last check</b></p>
+        <table border=1 frame=void rules=all>
+        {% for identifier in tally.changed %}
+        <tr><td><a href="{% url 'server_element_detail' server_type=server_type server_pk=server.pk element_id=identifier %}">{{ identifier }}</a></td></tr>
+        {% endfor %}
+        </table>
+        {% endif %}
+
+        {% if tally.unreachable %}
+        <p><b>Could not be reached</b> &mdash; not the same as unchanged</p>
+        <table border=1 frame=void rules=all>
+        {% for identifier in tally.unreachable %}
+        <tr><td>{{ identifier }}</td></tr>
+        {% endfor %}
+        </table>
+        {% endif %}
+
+        <p><a href="{% url 'server_check' server_type=server_type server_pk=server.pk %}">Check again</a></p>
+    </div>
+{% endblock %}

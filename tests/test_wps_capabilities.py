@@ -169,3 +169,33 @@ def test_echo_execute_roundtrips(wps_url):
     }, timeout=30)
     assert resp.status_code == 200, resp.text[:500]
     assert "hello-esws" in resp.text
+
+
+def test_every_invest_process_declares_a_licence_and_its_manual(wps_url):
+    """A process is someone else's model behind this wrapper, so both licences
+    have to be discoverable from the service itself.
+
+    WPS 1.0 has no licence field; ows:Metadata carrying the OGC licence role is
+    the standard place for it. Checked through DescribeProcess for all models at
+    once so a newly wrapped model cannot ship without one.
+    """
+    from natcap.invest import models
+
+    ids = sorted(models.model_id_to_pyname)
+    resp = requests.get(wps_url, params={
+        "service": "WPS", "version": "1.0.0", "request": "DescribeProcess",
+        "identifier": ",".join(ids)}, timeout=180)
+    assert resp.status_code == 200, resp.text[:1000]
+
+    descriptions = re.findall(r"<ProcessDescription.*?</ProcessDescription>",
+                              resp.text, re.S)
+    assert len(descriptions) == len(ids), (len(descriptions), len(ids))
+
+    missing = []
+    for description in descriptions:
+        identifier = re.search(r"<ows:Identifier>([^<]+)", description).group(1)
+        roles = re.findall(r'xlink:role="urn:ogc:def:role:OGC:1\.0:(\w+)"',
+                           description)
+        if roles.count("license") < 2 or "documentation" not in roles:
+            missing.append("%s -> %s" % (identifier, roles))
+    assert not missing, missing

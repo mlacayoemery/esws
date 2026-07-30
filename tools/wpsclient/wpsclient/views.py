@@ -456,10 +456,16 @@ def server_wps_element_detail(request, server_pk, element_id):
         process_output.append(parameter_details)
     
     
+    # ows:Metadata the process declares -- its licences and its user guide. owslib
+    # names the link `url`, not `href`.
+    process_metadata = [(m.title, m.url, (m.role or "").rsplit(":", 1)[-1])
+                        for m in getattr(process, "metadata", None) or []]
+
     return render(request, 'wpsclient/server_wps_describe_process.html', {'server': server,
                                                                       'process_id': element_id,
                                                                       'process_title' : process.title,
                                                                       'process_abstract' : process.abstract,
+                                                                      'process_metadata' : process_metadata,
                                                                       'process_input' : process_input,
                                                                       'process_output' : process_output,
                                                                       'xml': description})    

@@ -10,6 +10,15 @@
         <p><b>Id</b></p><p>{{ process_id}}</p>
         <p><b>Title</b></p><p>{{ process_title}}</p>
         <p><b>Abstract</b></p><p>{{ process_abstract}}</p>        
+        {% if process_metadata %}
+        <p><b>Licence and documentation</b></p>
+        <table border=1 frame=void rules=all>
+        <tr><td>Role</td><td>Title</td><td>Link</td></tr>
+        {% for title,url,role in process_metadata %}
+        <tr><td>{{role}}</td><td>{{title}}</td><td><a href="{{url}}">{{url}}</a></td></tr>
+        {% endfor %}
+        </table>
+        {% endif %}
         <p><b>Inputs</b></p>
         <table border=1 frame=void rules=all>
         <tr><td>Id</td><td>Title<td width="50%">Abstract</td><td>Data Type</td><td>Min Occurs</td><td>Max Occurs</td></tr>

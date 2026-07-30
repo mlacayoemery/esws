@@ -102,6 +102,124 @@ def _literal_input(inp):
     return pywps.LiteralInput(data_type="string", **kwargs)
 
 
+# MODEL_SPEC output class -> the mime type to advertise for it.
+_OUTPUT_FORMATS = {
+    invest_spec.SingleBandRasterOutput: "image/tiff",
+    invest_spec.RasterOutput: "image/tiff",
+    invest_spec.VectorOutput: "application/zip",   # shapefile + sidecars
+    invest_spec.CSVOutput: "text/csv",
+}
+_DEFAULT_OUTPUT_FORMAT = "application/octet-stream"
+
+
+class _Falsey(dict):
+    """Missing names are False, not an error."""
+
+    def __missing__(self, key):
+        return False
+
+
+def output_is_expected(output, args):
+    """Whether ``output``'s created_if condition holds for ``args``.
+
+    created_if is either a bool or an expression naming other inputs, e.g.
+    "sub_watersheds_path" or "do_valuation and (not price_table)". An input the
+    caller never supplied is falsey -- that is the whole point of the condition,
+    and evaluating it as a NameError would wrongly mark the output as expected.
+    """
+    condition = getattr(output, "created_if", True)
+    if isinstance(condition, bool):
+        return condition
+    if args is None:
+        return True
+    env = _Falsey((key, bool(value)) for key, value in args.items())
+    try:
+        return bool(eval(condition, {"__builtins__": {}}, env))  # noqa: S307
+    except Exception:  # noqa: BLE001 - an unparseable condition is not fatal
+        logger.debug("Could not evaluate created_if %r; assuming produced",
+                     condition)
+        return True
+
+
+def anticipated_outputs(spec, args=None):
+    """The file outputs a run with ``args`` is expected to produce.
+
+    With args omitted this is every file output the model declares, which is
+    what DescribeProcess has to advertise -- WPS has no way to say that an
+    output only appears under some conditions.
+    """
+    expected = []
+    for output in spec.outputs:
+        # Only file outputs have a workspace-relative path; numeric and string
+        # outputs are metadata with nothing to fetch or publish.
+        if not getattr(output, "path", None):
+            continue
+        if not output_is_expected(output, args):
+            continue
+        expected.append(output)
+    return expected
+
+
+def _output_identifier(output):
+    """A WPS-safe identifier for a declared output."""
+    ident = output.id or os.path.splitext(os.path.basename(output.path))[0]
+    return re.sub(r"[^0-9A-Za-z_.-]+", "_", str(ident)).strip("_") or "output"
+
+
+def _zip_shapefile(shp_path):
+    """Zip a shapefile and its sidecars; returns the archive path or None."""
+    import zipfile
+
+    stem = os.path.splitext(shp_path)[0]
+    members = [stem + ext for ext in (".shp", ".shx", ".dbf", ".prj", ".cpg",
+                                      ".sbn", ".sbx", ".qix")]
+    members = [m for m in members if os.path.isfile(m)]
+    if not members:
+        return None
+
+    archive = stem + ".zip"
+    try:
+        with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as zf:
+            for member in members:
+                zf.write(member, os.path.basename(member))
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Could not zip %s: %s", shp_path, str(exc)[:200])
+        return None
+    return archive
+
+
+def _complex_outputs(spec):
+    """One pywps ComplexOutput per file output the model declares."""
+    outputs, seen = [], set()
+    for output in anticipated_outputs(spec):
+        identifier = _output_identifier(output)
+        if identifier in seen:
+            continue
+        seen.add(identifier)
+
+        mime = _DEFAULT_OUTPUT_FORMAT
+        for cls, fmt in _OUTPUT_FORMATS.items():
+            if isinstance(output, cls):
+                mime = fmt
+                break
+
+        abstract = (output.about or "").strip()
+        # Conditional outputs cannot be expressed in DescribeProcess -- there is
+        # no output-side minOccurs -- so say so in the abstract instead.
+        condition = getattr(output, "created_if", True)
+        if isinstance(condition, str):
+            abstract = ("%s\n\n[invest:created_if=%s]" % (abstract, condition)).strip()
+
+        outputs.append(pywps.ComplexOutput(
+            identifier,
+            output.path,
+            abstract=abstract[:4000],
+            supported_formats=[pywps.Format(mime)],
+            as_reference=True,
+        ))
+    return outputs
+
+
 class InvestProcess(pywps.Process):
     """A pywps Process for one InVEST model, derived from its MODEL_SPEC."""
 
@@ -122,9 +240,14 @@ class InvestProcess(pywps.Process):
                 logger.warning("Could not build input %s for %s: %s",
                                inp.id, model_id, exc)
 
+        # `response` is retained for backward compatibility: it carries the
+        # published WMS URLs and existing clients read it. The per-output
+        # ComplexOutputs are the real declaration -- WPS supports any number of
+        # outputs, and until now every model advertised only this one string.
         outputs = [pywps.LiteralOutput("response",
                                        "Published layers or workspace path",
                                        data_type="string")]
+        outputs.extend(_complex_outputs(spec))
 
         abstract = (module.__doc__ or spec.model_title or model_id or "").strip()
 
@@ -155,19 +278,18 @@ class InvestProcess(pywps.Process):
                 args[arg_id] = value
         return args
 
-    def _build_uploads(self, ws, workspace_dir, spec):
-        """Predict raster/vector outputs from MODEL_SPEC.outputs.
+    def _build_uploads(self, ws, workspace_dir, spec, args=None):
+        """The raster/vector layers this run is expected to publish.
 
-        Returns {"ws:layer": path}. Missing files (outputs whose ``created_if``
-        condition did not hold) are skipped by easyows.Job.run at publish time.
+        Returns {"ws:layer": path}. When ``args`` is given, each output's
+        ``created_if`` condition is evaluated against them, so the result is the
+        set the run should actually produce rather than every output the model
+        could ever emit. Anything still missing on disk afterwards is skipped by
+        easyows.Job.run.
         """
         uploads = {}
-        for output in spec.outputs:
-            # Only file outputs have a workspace-relative path; numeric/string
-            # outputs are metadata and have nothing to publish.
-            filename = getattr(output, "path", None)
-            if not filename:
-                continue
+        for output in anticipated_outputs(spec, args):
+            filename = output.path
             lower = filename.lower()
             is_raster = isinstance(output, (invest_spec.SingleBandRasterOutput,
                                             invest_spec.RasterOutput)) \
@@ -202,7 +324,7 @@ class InvestProcess(pywps.Process):
             raise pywps.exceptions.NoApplicableCode("Could not clean GeoServer workspace(s)")
         ws = cat.make_named_workspace(str(self.uuid))
 
-        uploads = self._build_uploads(ws, args["workspace_dir"], spec)
+        uploads = self._build_uploads(ws, args["workspace_dir"], spec, args)
 
         job = easyows.Job(module.execute, args, uploads,
                           "InVEST %s WPS job %s" % (self.model_id, ws),
@@ -241,7 +363,43 @@ class InvestProcess(pywps.Process):
         response.outputs["response"].data = (
             " ; ".join(layer_urls) if layer_urls else args["workspace_dir"])
         response.outputs["response"].uom = pywps.UOM("unity")
-        logger.info("END InVEST WPS model=%s published=%d", self.model_id, len(published))
+
+        # Populate the declared per-output references for whatever this run
+        # actually produced. DescribeProcess has to advertise every output the
+        # model can emit, since WPS cannot express a conditional output, so the
+        # ones whose created_if did not hold are simply left unset.
+        expected = anticipated_outputs(spec, args)
+        filled = 0
+        for output in expected:
+            identifier = _output_identifier(output)
+            if identifier not in response.outputs:
+                continue
+            path = os.path.join(args["workspace_dir"], output.path)
+
+            # Must be a regular file. Some declared outputs are directories on
+            # disk -- taskgraph_cache/taskgraph.db is declared as a file but
+            # taskgraph creates a directory there -- and attaching one fails
+            # inside pywps at response-construction time with IsADirectoryError,
+            # which aborts the entire ExecuteResponse rather than that output.
+            if not os.path.isfile(path):
+                continue
+
+            if path.lower().endswith(".shp"):
+                # A shapefile is a set of sidecar files; delivering just the
+                # .shp would be useless, so ship the set as the advertised zip.
+                path = _zip_shapefile(path)
+                if path is None:
+                    continue
+
+            try:
+                response.outputs[identifier].file = path
+                filled += 1
+            except Exception as exc:  # noqa: BLE001 - one output must not fail the job
+                logger.warning("Could not attach output %s: %s",
+                               identifier, str(exc)[:200])
+
+        logger.info("END InVEST WPS model=%s anticipated=%d produced=%d published=%d",
+                    self.model_id, len(expected), filled, len(published))
         return response
 
 

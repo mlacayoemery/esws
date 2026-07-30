@@ -42,6 +42,16 @@ ARG MAMBA_DOCKERFILE_ACTIVATE=1
 RUN pip install --no-cache-dir --no-build-isolation natcap.invest==3.20.0 && \
     pip install --no-cache-dir -r /tmp/server.txt
 
+# pywps writes stored ExecuteResponse documents and referenced outputs here
+# (outputpath in tools/wpsserver/pywps.cfg). Create it as the image user so the
+# named volume compose mounts over it inherits that ownership: Docker seeds an
+# empty volume from the image directory it covers. Without this the volume comes
+# out root-owned, the container runs as mambauser, and every asynchronous
+# request fails with "Writing Response Document failed with : [Errno 13]
+# Permission denied" -- so storeExecuteResponse and asReference are advertised
+# but unusable.
+RUN mkdir -p /tmp/wpsoutputs
+
 # Application code (compose also bind-mounts ./ over /app for live editing).
 COPY --chown=$MAMBA_USER:$MAMBA_USER . /app
 WORKDIR /app

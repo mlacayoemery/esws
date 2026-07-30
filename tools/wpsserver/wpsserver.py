@@ -50,9 +50,29 @@ logging.info("Registered %d WPS processes", len(wps_processes))
 config_file=os.path.join(os.path.dirname(__file__), "pywps.cfg")
 service = pywps.Service(wps_processes, config_file)
 
+# The URL clients are handed for stored documents and referenced outputs. It has
+# to match how they reach this server, not the port inside the container -- same
+# reasoning as GEOSERVER_PUBLIC_URL in docker-compose.yml.
+_output_url = os.environ.get("WPS_OUTPUT_URL")
+if _output_url:
+    pywps.configuration.CONFIG.set("server", "outputurl", _output_url)
+
+_output_path = pywps.configuration.get_config_value("server", "outputpath")
+
 @app.route('/wps', methods=['GET', 'POST'])
 def wps():
     return service
+
+@app.route('/outputs/<path:filename>')
+def outputs(filename):
+    """Serve what pywps stored under outputpath.
+
+    Asynchronous execution (storeExecuteResponse=true) answers immediately with
+    a statusLocation pointing here, and asReference=true returns outputs as URLs
+    under the same path. Without this route both are written to disk and then
+    404 to the client, so the whole asynchronous flow is unusable.
+    """
+    return flask.send_from_directory(_output_path, filename)
 
 bind_host='0.0.0.0'
 app.run(threaded=True,host=bind_host)

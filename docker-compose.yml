@@ -33,6 +33,9 @@ services:
       GEOSERVER_USER: ${GEOSERVER_USER:-admin}
       GEOSERVER_PASS: ${GEOSERVER_PASS:-geoserver}
       WPS_WORKSPACE_PREFIX: esws-
+      # statusLocation and asReference URLs are handed to clients, so they must
+      # use the host mapping rather than the container port.
+      WPS_OUTPUT_URL: http://localhost:${WPS_HOST_PORT:-5000}/outputs
     depends_on:
       - geoserver
 

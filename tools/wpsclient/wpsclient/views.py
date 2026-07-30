@@ -147,12 +147,18 @@ def server_register(request, server_type, title, url):
 
     ServerClass = server_dict[server_type]
 
-    # Keyed on the URL so re-registering a source updates rather than
-    # duplicating it -- the demo loader is meant to be safe to re-run.
-    server, created = ServerClass.objects.get_or_create(
-        url=url, defaults={"title": title})
-    if not created and server.title != title:
-        server.title = title
+    # Keyed on title *and* URL so re-registering updates rather than
+    # duplicating -- the demo loader is meant to be safe to re-run. URL alone is
+    # not unique: a template shares its WPS's URL, and since ServerTemplate
+    # subclasses ServerWPS both satisfy a ServerWPS lookup, so keying on the URL
+    # matched two rows and raised MultipleObjectsReturned on the second run.
+    candidates = ServerClass.objects.filter(url=url, title=title)
+    if server_type == "WPS":
+        candidates = candidates.filter(servertemplate__isnull=True)
+
+    server = candidates.first()
+    if server is None:
+        server = ServerClass(title=title, url=url)
         server.save()
 
     return server_detail(request, server.pk, server_type)
@@ -316,9 +322,14 @@ def server_element_list(request, server_type, server_pk):
     registered_element_list.sort()
     
     unregistered_element_list = []
-    for identifier in get_list(server.url):
-        if not (identifier in registered_element_list):
-            unregistered_element_list.append(identifier)
+    # A "Local Pending" source is a holding area, not a live endpoint: it lists
+    # what a running job is expected to produce. Asking it for its contents the
+    # usual way means contacting a URL that does not resolve, which 500s the
+    # page -- so only the registered entries are shown.
+    if not server.is_pending:
+        for identifier in get_list(server.url):
+            if not (identifier in registered_element_list):
+                unregistered_element_list.append(identifier)
     
     return render(request, 'wpsclient/server_element_list.html', {'server': server,
                                                                   'registered_element_list' : registered_element_list,
@@ -595,6 +606,144 @@ def job_validate(request, job_pk):
     return dashboard(request)
 
   
+# Output kind -> (pending server title, server class, element class)
+PENDING_SOURCES = {
+    "raster": ("Local Pending WCS", ServerWCS, ElementWCS),
+    "vector": ("Local Pending WFS", ServerWFS, ElementWFS),
+    "table": ("Local Pending HTTP", ServerCSV, ElementCSV),
+}
+
+
+def pending_server(kind):
+    """The holding source for a kind of anticipated output, created on demand."""
+    entry = PENDING_SOURCES.get(kind)
+    if entry is None:
+        return None, None
+    title, ServerClass, ElementClass = entry
+    server, _created = ServerClass.objects.get_or_create(
+        title=title, defaults={"url": "http://pending.invalid/%s" % kind,
+                               "is_pending": True})
+    if not server.is_pending:
+        server.is_pending = True
+        server.save()
+    return server, ElementClass
+
+
+def anticipated_for_job(job):
+    """[(kind, name)] this job is expected to produce.
+
+    Computed from MODEL_SPEC the same way the WPS computes what to publish --
+    created_if evaluated against the job's own arguments, and results_suffix
+    applied -- so the pending list matches what actually turns up.
+    """
+    scripts = "/app/tools"
+    if scripts not in sys.path:
+        sys.path.insert(0, scripts)
+    try:
+        from invest_outputs import resolved_output_paths
+        from natcap.invest import models as invest_models_registry
+    except Exception:  # noqa: BLE001 - not an InVEST server: nothing to predict
+        return []
+
+    spec = invest_models_registry.model_id_to_spec.get(job.identifier)
+    if spec is None:
+        return []
+
+    # Only the argument values matter for created_if and the suffix, so the
+    # workspace is irrelevant here; names are taken from the resolved basenames.
+    out = []
+    for output, resolved in resolved_output_paths(spec, "/anticipated", job.args):
+        lower = resolved.lower()
+        if lower.endswith((".tif", ".tiff")):
+            kind = "raster"
+        elif lower.endswith((".shp", ".gpkg")):
+            kind = "vector"
+        elif lower.endswith(".csv"):
+            kind = "table"
+        else:
+            continue
+        name = path.basename(resolved)
+        if kind != "table":
+            name = path.splitext(name)[0]
+        out.append((kind, name))
+    return out
+
+
+def register_pending(job):
+    """List a job's anticipated outputs under the Local Pending sources."""
+    if not any(job.args.get(field) for field in
+               ("destination_wcs", "destination_wfs", "destination_http")):
+        return 0
+
+    added = 0
+    for kind, name in anticipated_for_job(job):
+        server, ElementClass = pending_server(kind)
+        if server is None:
+            continue
+        # Scoped by job: two runs of one model anticipate identical names, and a
+        # failed run's entries stay listed under its own job id.
+        identifier = "job%s:%s" % (job.pk, name)
+        _element, created = ElementClass.objects.get_or_create(
+            server=server, identifier=identifier)
+        added += int(created)
+    return added
+
+
+def clear_pending(job):
+    """Drop this job's pending entries once its outputs are real."""
+    removed = 0
+    prefix = "job%s:" % job.pk
+    for _title, _ServerClass, ElementClass in PENDING_SOURCES.values():
+        removed += ElementClass.objects.filter(
+            server__is_pending=True, identifier__startswith=prefix).delete()[0]
+    return removed
+
+
+def reconcile_uploads(job, xml):
+    """Turn a finished job's anticipated outputs into registered ones.
+
+    The WPS reports what it published in its `uploaded` output -- entries of
+    <kind>:<workspace>:<name>, or table:<filename> -- so the client reconciles
+    from the response instead of the server calling back into it.
+    """
+    match = re.search(r"uploaded</ows:Identifier>.*?<wps:LiteralData[^>]*>"
+                      r"([^<]*)</wps:LiteralData>", xml, re.S)
+    if not match:
+        return 0
+    entries = [e for e in match.group(1).strip().split(";") if e]
+
+    registered = 0
+    for entry in entries:
+        bits = entry.split(":")
+        kind = bits[0]
+        identifier = ":".join(bits[1:])
+        if not identifier:
+            continue
+
+        destination_url = job.args.get(
+            {"raster": "destination_wcs", "vector": "destination_wfs",
+             "table": "destination_http"}.get(kind, ""))
+        if not destination_url:
+            continue
+
+        entry_map = PENDING_SOURCES.get(kind)
+        if entry_map is None:
+            continue
+        _title, ServerClass, ElementClass = entry_map
+        server = ServerClass.objects.filter(url=destination_url,
+                                            is_pending=False).first()
+        if server is None:
+            continue
+
+        _element, created = ElementClass.objects.get_or_create(
+            server=server, identifier=identifier)
+        registered += int(created)
+
+    if entries:
+        clear_pending(job)
+    return registered
+
+
 def template_initial(process_id):
     """Initial form values for a template source: InVEST's own sample arguments.
 
@@ -694,7 +843,10 @@ def job_new(request, server_pk, process_id):
             for name, value in form.cleaned_data.items():
                 if value is None or value == "":
                     continue
-                if name in form.element_fields:
+                if name in getattr(form, "destination_fields", {}):
+                    # The WPS wants the endpoint, not our row id.
+                    value = value.url
+                elif name in form.element_fields:
                     # A chosen data source becomes the URL the WPS will fetch,
                     # the same conversion the water yield form used to do.
                     value = get_ows_data_url(value.element_type,
@@ -877,6 +1029,14 @@ def job_status(request, job_pk):
             job.status = state
             job.save()
 
+        if state == "Succeeded":
+            try:
+                reconcile_uploads(job, xml)
+            except Exception as exc:  # noqa: BLE001 - polling must still work
+                l = logging.getLogger("django.request")
+                l.warning("Could not reconcile uploads for job %s: %s",
+                          job.pk, exc)
+
     if xml.startswith("<?xml") or xml.startswith("<wps"):
         try:
             xml = "\n".join(line for line in parseString(xml).toprettyxml().split("\n")
@@ -908,6 +1068,13 @@ def job_run(request, job_pk):
             job.save()
             return render(request, "wpsclient/job_run.html",
                           {"job": job, "xml": "submit failed: %s" % exc})
+
+        # Anticipated outputs are listed once the run is actually submitted --
+        # a job that is only saved may never be run.
+        try:
+            register_pending(job)
+        except Exception as exc:  # noqa: BLE001 - never block a submission
+            l.warning("Could not list anticipated outputs: %s", exc)
 
         location = re.search(r'statusLocation="([^"]+)"', xml)
         if location:

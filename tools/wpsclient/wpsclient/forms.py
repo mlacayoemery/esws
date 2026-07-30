@@ -93,7 +93,9 @@ class testForm(forms.Form):
 ##
 
 
-_INVEST_TRAILER = re.compile(r"\[invest:([^\]]*)\]")
+# Both the InVEST type trailer and the wrapper's own esws: trailer.
+_TRAILER = re.compile(r"\[(?:invest|esws):[^\]]*\]")
+_TRAILER_TOKEN = re.compile(r"(invest|esws):(\w+)=([^\s\]]+)")
 
 
 def parse_input_metadata(parameter):
@@ -105,13 +107,9 @@ def parse_input_metadata(parameter):
     """
     abstract = parameter.abstract or ""
     meta = {}
-    match = _INVEST_TRAILER.search(abstract)
-    if match:
-        for token in ("invest:" + match.group(1)).split():
-            key, _sep, value = token.partition("=")
-            if value:
-                meta[key.replace("invest:", "")] = value
-        abstract = _INVEST_TRAILER.sub("", abstract).strip()
+    for ns, key, value in _TRAILER_TOKEN.findall(abstract):
+        meta["%s:%s" % (ns, key) if ns == "esws" else key] = value
+    abstract = _TRAILER.sub("", abstract).strip()
     return abstract, meta
 
 
@@ -127,6 +125,14 @@ class ProcessForm(forms.Form):
     yield form encoded by hand in its ForeignKeys: rasters come from WCS,
     vectors from WFS, tables over plain HTTP.
     """
+
+    # Which registered server type can serve as a destination for each output
+    # kind the wrapper asks about.
+    DESTINATION_SOURCES = {
+        "raster": ServerWCS,
+        "vector": ServerWFS,
+        "table": ServerCSV,
+    }
 
     ELEMENT_SOURCES = {
         "raster": ElementWCS,
@@ -145,6 +151,10 @@ class ProcessForm(forms.Form):
         # URL, and so it knows which fields are element references at all.
         self.element_fields = {}
 
+        # Destination pickers, so the view can turn the chosen server into the
+        # anyURI the WPS expects.
+        self.destination_fields = {}
+
         for parameter in parameters:
             abstract, meta = parse_input_metadata(parameter)
             invest_type = meta.get("type", "")
@@ -158,6 +168,21 @@ class ProcessForm(forms.Form):
                 "required": str(getattr(parameter, "minOccurs", 0)) not in ("0", "None"),
             }
 
+            # The wrapper's own inputs: a checkbox and one server picker per
+            # output kind. Rendered as choices rather than free-text URLs
+            # because the useful destinations are the ones already registered.
+            kind = meta.get("esws:destination")
+            if kind:
+                destination = self.DESTINATION_SOURCES.get(kind)
+                if destination is not None:
+                    common["required"] = False
+                    self.fields[identifier] = forms.ModelChoiceField(
+                        queryset=destination.objects.filter(
+                            is_pending=False).order_by("title"),
+                        empty_label="---------", **common)
+                    self.destination_fields[identifier] = kind
+                    continue
+
             source = self.ELEMENT_SOURCES.get(invest_type)
             if source is not None:
                 self.fields[identifier] = forms.ModelChoiceField(
@@ -168,7 +193,7 @@ class ProcessForm(forms.Form):
                 self.fields[identifier] = forms.FloatField(**common)
             elif invest_type == "integer":
                 self.fields[identifier] = forms.IntegerField(**common)
-            elif invest_type == "boolean":
+            elif invest_type == "boolean" or parameter.dataType == "boolean":
                 common["required"] = False
                 self.fields[identifier] = forms.BooleanField(**common)
             elif getattr(parameter, "allowedValues", None):

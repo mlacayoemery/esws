@@ -36,6 +36,11 @@ class Server(models.Model):
     registrations = models.IntegerField(default=0)
     jobs = models.IntegerField(default=0)
 
+    # A holding area rather than a real endpoint: the "Local Pending" sources
+    # list a job's anticipated outputs until the run produces them. Excluded
+    # from destination pickers, since nothing can be published to them.
+    is_pending = models.BooleanField(default=False)
+
     def publish(self):
         self.save()
 

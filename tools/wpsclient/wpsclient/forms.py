@@ -94,6 +94,11 @@ class testForm(forms.Form):
 
 
 # Both the InVEST type trailer and the wrapper's own esws: trailer.
+# Name of the generated checkbox for the per-run suffix. Underscored rather than
+# namespaced with a colon, which is not valid in an HTML form field name; views
+# maps it onto the namespaced option it stores in Job.args.
+UNIQUE_RUN_FIELD = "esws_unique_run"
+
 _TRAILER = re.compile(r"\[(?:invest|esws):[^\]]*\]")
 _TRAILER_TOKEN = re.compile(r"(invest|esws):(\w+)=([^\s\]]+)")
 
@@ -225,6 +230,17 @@ class ProcessForm(forms.Form):
                 self.fields[identifier] = forms.ChoiceField(choices=choices, **common)
             else:
                 self.fields[identifier] = forms.CharField(**common)
+
+        # A client-side option rather than a WPS input: the dashboard turns it
+        # into a per-run results_suffix. Offered only where a suffix exists to
+        # extend, since that is what keeps one run's outputs apart from another's.
+        if "results_suffix" in self.fields:
+            self.fields[UNIQUE_RUN_FIELD] = forms.BooleanField(
+                label="Unique results for each run",
+                help_text="Add a short token to the results suffix on every run, "
+                          "so running this job again does not overwrite the "
+                          "outputs of the previous run.",
+                required=False)
 
 
 class JobDynamic(forms.ModelForm):

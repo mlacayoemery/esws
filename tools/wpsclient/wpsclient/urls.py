@@ -47,5 +47,6 @@ urlpatterns = [
 ##    url(r'^test/(?P<server_pk>\d+)/execute/(?P<process_id>[a-zA-Z0-9_:]+)/$', views.job_new_wps, name='job_new_wps'),
     url(r'^test/wy/$', views.water_yield, name='water_yield'),
     url(r'^job/(?P<job_pk>[a-zA-Z0-9_:]+)/run/$', views.job_run, name='job_run'),
+    url(r'^job/(?P<job_pk>[a-zA-Z0-9_:]+)/rerun/$', views.job_rerun, name='job_rerun'),
     url(r'^job/(?P<job_pk>[a-zA-Z0-9_:]+)/status/$', views.job_status, name='job_status'),    
 ]

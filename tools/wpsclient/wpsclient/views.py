@@ -25,6 +25,7 @@ from .forms import ServerFormWPS
 from .forms import ServerFormTemplate
 
 from .forms import ProcessForm
+from .forms import UNIQUE_RUN_FIELD
 
 from .forms import JobForm
 
@@ -485,7 +486,12 @@ def job_detail(request, job_pk):
     l.warning(inspect.stack()[0][3])    
     #detail of an existing process with parameters
     job = get_object_or_404(Job, pk=job_pk)
-    return render(request, 'wpsclient/job_detail.html', {'job': job})
+    return render(request, 'wpsclient/job_detail.html',
+                  {'job': job,
+                   # Only a finished job is worth resubmitting; while it is still
+                   # running, job_run is the poll.
+                   'can_rerun': job.status in _JOB_FINISHED,
+                   'unique_run': wants_unique_run(job)})
 
 ##def job_new(request, server_pk, process_id):
 ##    server = get_object_or_404(ServerWPS, pk=server_pk)
@@ -658,7 +664,8 @@ def anticipated_for_job(job):
     # Only the argument values matter for created_if and the suffix, so the
     # workspace is irrelevant here; names are taken from the resolved basenames.
     out = []
-    for output, resolved in resolved_output_paths(spec, "/anticipated", job.args,
+    for output, resolved in resolved_output_paths(spec, "/anticipated",
+                                                 effective_args(job),
                                                  primary_only=True):
         lower = resolved.lower()
         if lower.endswith((".tif", ".tiff")):
@@ -848,6 +855,12 @@ def job_new(request, server_pk, process_id):
         if form.is_valid():
             args = collections.OrderedDict()
             for name, value in form.cleaned_data.items():
+                if name == UNIQUE_RUN_FIELD:
+                    # Ours, not the WPS's: recorded under its namespaced key so
+                    # effective_args keeps it out of the Execute request.
+                    if value:
+                        args[UNIQUE_RUN_OPTION] = "true"
+                    continue
                 if value is None or value == "":
                     continue
                 if name in getattr(form, "destination_fields", {}):
@@ -967,6 +980,49 @@ def water_yield(request):
                     process_id="annual_water_yield")
 
 
+# Client-side job options live in job.args under this prefix. They are the
+# dashboard's own settings, not WPS inputs, and are stripped before submission --
+# kept in args because the wpsclient app has migrations disabled
+# (MIGRATION_MODULES) and so cannot gain a column without recreating the table.
+_OPTION_PREFIX = "esws:"
+UNIQUE_RUN_OPTION = _OPTION_PREFIX + "unique_run"
+RUN_TOKEN_OPTION = _OPTION_PREFIX + "run_token"
+
+
+def wants_unique_run(job):
+    return str(job.args.get(UNIQUE_RUN_OPTION, "")).lower() in ("true", "1", "yes")
+
+
+def rotate_run_token(job):
+    """Give this run its own results_suffix, so an earlier run's outputs survive.
+
+    Output filenames -- and therefore the layer names they are published under --
+    come from results_suffix, so without a per-run token a second run overwrites
+    the first. Eight hex digits is enough to keep runs apart while leaving the
+    names readable.
+    """
+    if not wants_unique_run(job):
+        return
+    job.args[RUN_TOKEN_OPTION] = uuid.uuid4().hex[:8]
+
+
+def effective_args(job):
+    """The WPS inputs for this run: job.args minus our options, plus the token.
+
+    Everything that derives names from the run -- the Execute URL, the anticipated
+    output list -- has to agree, so they all go through here rather than reading
+    job.args directly.
+    """
+    args = collections.OrderedDict(
+        (key, value) for key, value in job.args.items()
+        if not key.startswith(_OPTION_PREFIX))
+    token = job.args.get(RUN_TOKEN_OPTION)
+    if token:
+        base = args.get("results_suffix", "")
+        args["results_suffix"] = "%s_%s" % (base, token) if base else token
+    return args
+
+
 def job_to_wps_url(job, asynchronous=True):
     """The WPS Execute URL for a job.
 
@@ -975,8 +1031,9 @@ def job_to_wps_url(job, asynchronous=True):
     the whole run. Some InVEST models take minutes -- scenic_quality is around
     four -- and a synchronous request means the browser waits that long.
     """
+    args = effective_args(job)
     url = job.server.url + "?service=wps&version=1.0.0&request=Execute&IDENTIFIER=" + job.identifier + "&datainputs="
-    url = url + ";".join(["%s=%s" % (k, quote(quote(job.args[k]))) for k in job.args.keys()])
+    url = url + ";".join(["%s=%s" % (k, quote(quote(v))) for k, v in args.items()])
     if asynchronous:
         url += "&storeExecuteResponse=true&status=true&ResponseDocument=response"
 
@@ -1012,6 +1069,23 @@ def _wps_status(xml):
     """Read the ProcessX state out of an ExecuteResponse."""
     match = re.search(r"Process(Accepted|Started|Paused|Succeeded|Failed)", xml)
     return match.group(1) if match else ""
+
+
+def job_rerun(request, job_pk):
+    """Run a finished job again.
+
+    job_run deliberately will not resubmit a finished job -- that path is the
+    status poll -- so running twice is its own action. With the unique-results
+    option set, this run gets a fresh suffix and the previous run's outputs stay
+    where they are instead of being overwritten.
+    """
+    job = get_object_or_404(Job, pk=job_pk)
+    job.status = "Run"
+    job.status_location = ""
+    rotate_run_token(job)
+    job.save()
+
+    return redirect("job_run", job_pk=job.pk)
 
 
 def job_status(request, job_pk):
@@ -1066,6 +1140,7 @@ def job_run(request, job_pk):
 
     elif job.status == "Run":
         # Submit and return: the response carries a statusLocation, not results.
+        rotate_run_token(job)
         job.status_url = job_to_wps_url(job)
         try:
             with urllib.request.urlopen(job.status_url, timeout=120) as response:

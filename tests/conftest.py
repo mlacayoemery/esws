@@ -4,12 +4,15 @@ These tests run *inside* the app image on the docker-compose network (see
 scripts/smoke.sh), so service hostnames (wps, dashboard, geoserver) resolve and
 natcap.invest is importable. URLs are overridable via environment variables for
 running against other deployments.
+
+pytest loads this for every subdirectory, tests/unit included, so nothing here may
+import at module level what only the stack tests need: requests is not installed
+in the environment that runs the unit tests on its own.
 """
 import os
 import time
 
 import pytest
-import requests
 
 WPS_URL = os.environ.get("WPS_URL", "http://wps:5000/wps")
 DASHBOARD_URL = os.environ.get("DASHBOARD_URL", "http://dashboard:8000")
@@ -18,6 +21,8 @@ GEOSERVER_URL = os.environ.get("GEOSERVER_URL", "http://geoserver:8080/geoserver
 
 def _wait(url, timeout=240, predicate=None):
     """Poll url until predicate(response) is true or timeout (seconds)."""
+    import requests
+
     deadline = time.time() + timeout
     last = None
     while time.time() < deadline:

@@ -199,3 +199,48 @@ def test_every_invest_process_declares_a_licence_and_its_manual(wps_url):
         if roles.count("license") < 2 or "documentation" not in roles:
             missing.append("%s -> %s" % (identifier, roles))
     assert not missing, missing
+
+
+def test_numeric_inputs_publish_their_declared_range(wps_url):
+    """A model's own bounds have to reach the client.
+
+    MODEL_SPEC states them as expressions over `value` ("value > 0",
+    "2012 <= value <= 2017") and as types that imply bounds (a ratio is 0 to 1).
+    Two-sided bounds go out as ows:AllowedValues/ows:Range; one-sided ones ride
+    the abstract trailer, because pywps 4.6 renders ows:MaximumValue
+    unconditionally and a half-open range would emit the string "None".
+    """
+    resp = requests.get(wps_url, params={
+        "service": "WPS", "version": "1.0.0", "request": "DescribeProcess",
+        "identifier": "annual_water_yield,forest_carbon_edge_effect,recreation,"
+                      "urban_mental_health"}, timeout=180)
+    assert resp.status_code == 200, resp.text[:1000]
+    assert ">None<" not in resp.text, "unset bound leaked into the response"
+
+    inputs = {}
+    for block in re.findall(r"<Input [^>]*>.*?</Input>", resp.text, re.S):
+        identifier = re.search(r"<ows:Identifier>([^<]+)", block).group(1)
+        inputs.setdefault(identifier, block)
+
+    # Two-sided: a ratio, bounded by its type rather than any expression.
+    ratio = inputs["biomass_to_carbon_conversion_factor"]
+    assert "<ows:MinimumValue>0.0</ows:MinimumValue>" in ratio, ratio
+    assert "<ows:MaximumValue>1.0</ows:MaximumValue>" in ratio, ratio
+
+    # Two-sided from a chained expression, on an integer input: the bounds must
+    # come out as integers rather than 2012.0.
+    year = inputs["start_year"]
+    assert "<ows:MinimumValue>2012</ows:MinimumValue>" in year, year
+    assert "<ows:MaximumValue>2017</ows:MaximumValue>" in year, year
+
+    # Mixed strictness: "value > 0 and value <= 1" excludes only the lower end.
+    effect = inputs["effect_size"]
+    assert 'ows:rangeClosure="open-closed"' in effect, effect
+    assert "<ows:MinimumValue>0.0</ows:MinimumValue>" in effect, effect
+    assert "<ows:MaximumValue>1.0</ows:MaximumValue>" in effect, effect
+
+    # One-sided and strict: "value > 0" excludes 0, which the trailer must say.
+    seasonality = inputs["seasonality_constant"]
+    assert "invest:min=0.0" in seasonality, seasonality
+    assert "invest:exclusive=open" in seasonality, seasonality
+    assert "invest:max" not in seasonality, seasonality

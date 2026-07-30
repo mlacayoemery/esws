@@ -1,0 +1,37 @@
+# Fast checks: everything that needs neither the stack nor InVEST.
+#
+# The full suite (tests/) needs wps + dashboard + geoserver + fileserver on a
+# compose network and a 2GB sample download, which is what `make smoke-demo` is
+# for locally. This runs the part that can be checked in seconds, so a syntax
+# error or a broken transport rule does not reach master.
+name: checks
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'   # the version the wps image runs
+
+      - name: Byte-compile every live module
+        # Catches what the container would otherwise only reveal on start, and
+        # covers the modules the unit tests never import (the pywps and Django
+        # ones). tools/invest and tools/swat are left out: they are pre-container
+        # Python 2 scripts, kept for reference and not on any code path.
+        env:
+          PYTHONPYCACHEPREFIX: ${{ runner.temp }}/pycache
+        run: |
+          python -m compileall -q scripts tools/*.py tools/wpsserver \
+            tools/wpsclient tests docsrc/_ext
+
+      - name: Unit tests
+        run: |
+          python -m pip install --quiet pytest
+          python -m pytest tests/unit -q

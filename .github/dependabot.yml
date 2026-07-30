@@ -1,0 +1,23 @@
+# Without this, Dependabot picks up every manifest it can find, including the
+# pre-container requirements files kept only so the bare-metal install path still
+# documents itself -- which is where the recurring Django 3.2 and GDAL pull
+# requests came from. Watch the files the running stack actually installs from.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directories:
+      - /requirements      # server.txt + dev.txt: what the wps image installs
+      - /docsrc            # the pinned Sphinx toolchain
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: docker
+    directory: /docker
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

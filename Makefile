@@ -13,6 +13,9 @@ down:         ## Stop the stack and remove volumes
 logs:         ## Follow logs from all services
 	docker compose logs -f
 
+unit:         ## Run the tests that need neither the stack nor InVEST (what CI runs)
+	python3 -m pytest tests/unit -q
+
 smoke:        ## Build, start the stack, run the pytest smoke suite, tear down
 	./scripts/smoke.sh
 

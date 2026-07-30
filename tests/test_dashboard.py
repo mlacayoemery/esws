@@ -243,7 +243,6 @@ def _submit_template_job(session, dashboard_url, template_pk, process_id,
     token = re.search(r'name="csrfmiddlewaretoken" value="([^"]+)"', page).group(1)
 
     data = {"csrfmiddlewaretoken": token, "upload_results": "on"}
-    data.update(extra or {})
     destinations = {}
     for match in re.finditer(r'<select name="([a-z_]+)"(.*?)</select>', page, re.S):
         name, body = match.group(1), match.group(2)
@@ -262,6 +261,9 @@ def _submit_template_job(session, dashboard_url, template_pk, process_id,
                              page):
         if match.group(1) != "csrfmiddlewaretoken" and match.group(2):
             data.setdefault(match.group(1), match.group(2))
+
+    # Last, so an explicit override wins over the prefilled value it replaces.
+    data.update(extra or {})
 
     posted = session.post(form_url, data=data, headers={"Referer": form_url},
                           timeout=300)
@@ -510,3 +512,97 @@ def test_change_detection_reports_unreachable_rather_than_unchanged(dashboard_ur
     assert unchanged > 0, page[:1500]
     assert unreachable == 2, (counts, page[:2000])
     assert changed == 0, (counts, page[:2000])
+
+
+def test_a_reactive_job_reruns_when_its_input_changes(dashboard_url):
+    """The whole point of #3: change the data a finished job used, and it runs again.
+
+    The job is pointed at a copy of one of its own sample tables, placed on the
+    writable share, because the sample data is mounted read-only and a job whose
+    inputs cannot change cannot demonstrate reacting to a change.
+    """
+    template_pk = _demo_template_pk(dashboard_url)
+    if template_pk is None:
+        pytest.skip("needs the demo loaded (make demo): no InVEST Demo template")
+
+    session = requests.Session()
+
+    # A copy of the model's own biophysical table, so the run is still valid.
+    # Fetched over HTTP rather than read from disk: the samples are mounted at
+    # different paths in the wps and fileserver containers.
+    fileserver = os.environ.get("FILESERVER_URL", "http://localhost:8001")
+    source = requests.get(
+        fileserver + "/invest/Annual_Water_Yield/biophysical_table_gura.csv",
+        timeout=60)
+    assert source.status_code == 200, source.status_code
+    original = source.text
+    probe = "results/reactive_biophysical.csv"
+    _write_shared_table(probe, original)
+
+    csv_servers = requests.get(dashboard_url + "/server/CSV/", timeout=30).text
+    csv_pk = None
+    for row in re.findall(r"<tr>(.*?)</tr>", csv_servers, re.S):
+        if "Local Pending" in row:
+            continue
+        found = re.search(r"/server/CSV/(\d+)/element/", row)
+        if found:
+            csv_pk = int(found.group(1))
+    assert csv_pk, csv_servers[:1000]
+    session.get("%s/server/CSV/%d/register/%s/"
+                % (dashboard_url, csv_pk, quote(probe, safe="")), timeout=60)
+
+    # Fingerprint it now, so the baseline is this content. Without it a rerun of
+    # this test would compare against the modified copy the last one left behind
+    # and see a change before anything had changed.
+    session.get("%s/server/CSV/%d/check/" % (dashboard_url, csv_pk), timeout=900)
+
+    # Which option in the form corresponds to that element.
+    form_url = "%s/server/%d/execute/annual_water_yield/" % (dashboard_url, template_pk)
+    page = session.get(form_url, timeout=180).text
+    select = re.search(r'<select name="biophysical_table_path"(.*?)</select>',
+                       page, re.S).group(1)
+    option = re.search(r'<option value="(\d+)">[^<]*%s' % re.escape(probe), select)
+    assert option, select[:1500]
+
+    job_pk, _destinations = _submit_template_job(
+        session, dashboard_url, template_pk, "annual_water_yield",
+        extra={"esws_reactive": "on", "esws_unique_run": "on",
+               "biophysical_table_path": option.group(1)})
+
+    session.get("%s/job/%d/run/" % (dashboard_url, job_pk), timeout=180)
+    state, status = _await_job(session, dashboard_url, job_pk)
+    assert state == "Succeeded", status[:2000]
+
+    def run_token():
+        """The per-run token from the job's arguments, which a rerun rotates."""
+        detail = session.get("%s/job/%d/" % (dashboard_url, job_pk), timeout=60).text
+        found = re.search(r"esws:run_token</td><td>([0-9a-f]+)", detail)
+        return found.group(1) if found else None
+
+    before = run_token()
+    assert before, "the job did not record a run token"
+
+    # Nothing has changed yet, so nothing should be re-run.
+    quiet = session.get("%s/job/%d/react/" % (dashboard_url, job_pk), timeout=900).text
+    assert "unchanged" in quiet, quiet[:1500]
+    assert run_token() == before, "an unchanged input triggered a rerun"
+
+    # Change the table the job used; now it should run again. Edited in the
+    # description column, which the model does not read, so the rerun is still a
+    # valid run -- the point is that the data differs, not that it is broken.
+    changed_table = original.replace("Urban and paved roads",
+                                     "Urban and paved roads (revised)", 1)
+    assert changed_table != original, original[:200]
+    _write_shared_table(probe, changed_table)
+    reacted = session.get("%s/job/%d/react/" % (dashboard_url, job_pk),
+                          timeout=900, allow_redirects=True)
+    assert reacted.status_code == 200, reacted.status_code
+    # A rerun rotates the token, which is what distinguishes it from a no-op.
+    assert run_token() != before, "the changed input did not trigger a rerun"
+
+    state, status = _await_job(session, dashboard_url, job_pk)
+    assert state == "Succeeded", status[:2000]
+
+    # The sweep across all reactive jobs must also work, and find nothing now.
+    everything = session.get(dashboard_url + "/job/react/", timeout=1800).text
+    assert "unchanged" in everything, everything[:1500]

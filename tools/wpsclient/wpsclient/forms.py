@@ -98,6 +98,7 @@ class testForm(forms.Form):
 # namespaced with a colon, which is not valid in an HTML form field name; views
 # maps it onto the namespaced option it stores in Job.args.
 UNIQUE_RUN_FIELD = "esws_unique_run"
+REACTIVE_FIELD = "esws_reactive"
 
 _TRAILER = re.compile(r"\[(?:invest|esws):[^\]]*\]")
 _TRAILER_TOKEN = re.compile(r"(invest|esws):(\w+)=([^\s\]]+)")
@@ -235,6 +236,11 @@ class ProcessForm(forms.Form):
         # into a per-run results_suffix. Offered only where a suffix exists to
         # extend, since that is what keeps one run's outputs apart from another's.
         if "results_suffix" in self.fields:
+            self.fields[REACTIVE_FIELD] = forms.BooleanField(
+                label="Re-run when input data changes",
+                help_text="Include this job when checking whether the data it "
+                          "uses has been replaced, and run it again if so.",
+                required=False)
             self.fields[UNIQUE_RUN_FIELD] = forms.BooleanField(
                 label="Unique results for each run",
                 help_text="Add a short token to the results suffix on every run, "

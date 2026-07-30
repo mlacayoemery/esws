@@ -1,0 +1,22 @@
+{% extends 'wpsclient/base.html' %}
+
+{% block content %}
+    <div class="server">
+        <h2>Reacting to input changes</h2>
+        <table border=1 frame=void rules=all>
+        <tr><td>Job</td><td>Process</td><td>Outcome</td><td>Changed inputs</td></tr>
+        {% for job, action, changed in jobs %}
+        <tr>
+        <td><a href="{% url 'job_detail' job_pk=job.pk %}">{{ job.pk }}</a></td>
+        <td>{{ job.identifier }}</td>
+        <td>{{ action }}</td>
+        <td>{% for identifier in changed %}{{ identifier }}<br/>{% empty %}&mdash;{% endfor %}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan=4>No job asked to react. Tick "Re-run when input data
+        changes" on a job form.</td></tr>
+        {% endfor %}
+        </table>
+        <p><a href="{% url 'job_list' %}">All jobs</a></p>
+    </div>
+{% endblock %}

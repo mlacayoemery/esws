@@ -10,6 +10,9 @@
         <p><b>Job Id: </b>{{job.pk}}<p/>
         <p><b>Status: </b>{{job.status}}</p>
         <p><b><a href="{% url 'job_edit' job_pk=job.pk %}">Edit Job</a></b></p>
+        {% if reactive %}
+        <p><b><a href="{% url 'job_react' job_pk=job.pk %}">Check inputs and re-run if changed</a></b></p>
+        {% endif %}
         {% if can_rerun %}
         <p><b><a href="{% url 'job_rerun' job_pk=job.pk %}">Run Again</a></b>
         {% if unique_run %}&mdash; a fresh suffix, so this run will not overwrite

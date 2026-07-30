@@ -244,7 +244,10 @@ def _submit_template_job(session, dashboard_url, template_pk, process_id,
 
     data = {"csrfmiddlewaretoken": token, "upload_results": "on"}
     destinations = {}
-    for match in re.finditer(r'<select name="([a-z_]+)"(.*?)</select>', page, re.S):
+    # Field names can hold digits -- sdr's ic_0_param does -- and a pattern of
+    # [a-z_]+ silently drops those, submitting a form that is missing a required
+    # value for reasons nothing reports.
+    for match in re.finditer(r'<select name="(\w+)"(.*?)</select>', page, re.S):
         name, body = match.group(1), match.group(2)
         if name.startswith("destination_"):
             option = re.search(r'<option value="(\d+)">', body)
@@ -257,13 +260,21 @@ def _submit_template_job(session, dashboard_url, template_pk, process_id,
     assert len(destinations) == 3, destinations
     data.update(destinations)
 
-    for match in re.finditer(r'<input type="[a-z]+" name="([a-z_]+)"[^>]*value="([^"]*)"',
+    for match in re.finditer(r'<input type="[a-z]+" name="(\w+)"[^>]*value="([^"]*)"',
                              page):
         if match.group(1) != "csrfmiddlewaretoken" and match.group(2):
             data.setdefault(match.group(1), match.group(2))
 
     # Last, so an explicit override wins over the prefilled value it replaces.
     data.update(extra or {})
+
+    # Nothing should be left out. A dropped field shows up as a form that
+    # re-renders instead of redirecting, which says nothing about what is
+    # missing, so check it here where the answer is still to hand.
+    required = {m.group(1) for m in
+                re.finditer(r'<(?:input|select)[^>]*name="(\w+)"[^>]*\srequired\b', page)}
+    unfilled = sorted(name for name in required if not data.get(name))
+    assert not unfilled, "required fields not submitted: %s" % unfilled
 
     posted = session.post(form_url, data=data, headers={"Referer": form_url},
                           timeout=300)
@@ -653,3 +664,42 @@ def test_a_published_output_records_which_job_made_it(dashboard_url):
     # The graph must now know this job produced something.
     graph = session.get(dashboard_url + "/job/graph/", timeout=180).text
     assert "job%d" % job_pk in graph, graph[:1500]
+
+
+def test_the_template_form_fills_every_required_field(dashboard_url):
+    """A Templates job must be submittable without typing anything.
+
+    sdr is the case worth pinning: its ic_0_param is the only field in the demo
+    whose name contains a digit, and a form scraper written as [a-z_]+ drops it
+    silently -- the form then re-renders complaining that a required value is
+    missing, which reads like the prefill is broken when it is not.
+    """
+    template_pk = _demo_template_pk(dashboard_url)
+    if template_pk is None:
+        pytest.skip("needs the demo loaded (make demo): no InVEST Demo template")
+
+    page = requests.get("%s/server/%d/execute/sdr/" % (dashboard_url, template_pk),
+                        timeout=180).text
+
+    numeric = re.search(r'<input[^>]*name="ic_0_param"[^>]*>', page)
+    assert numeric, page[:2000]
+    assert 'value="0.5"' in numeric.group(0), numeric.group(0)
+
+    options = re.search(r'<select name="flow_dir_algorithm"(.*?)</select>',
+                        page, re.S)
+    assert options, page[:2000]
+    assert re.search(r'<option value="MFD" selected>', options.group(1)), \
+        options.group(1)
+
+    # And every required field, not just those two.
+    filled = {m.group(1) for m in
+              re.finditer(r'<input[^>]*name="(\w+)"[^>]*\svalue="[^"]+"', page)}
+    filled |= {m.group(1) for m in
+               re.finditer(r'<select name="(\w+)"(?:(?!</select>).)*?'
+                           r'<option value="[^"]+" selected>', page, re.S)}
+    required = {m.group(1) for m in
+                re.finditer(r'<(?:input|select)[^>]*name="(\w+)"[^>]*\srequired\b',
+                            page)}
+    missing = sorted(name for name in required - filled
+                     if not name.startswith("destination_"))
+    assert not missing, "prefill left required fields empty: %s" % missing

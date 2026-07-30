@@ -18,7 +18,7 @@ OPTIONS=(0 "Clone ESWS repository"
          7 "Install GeoServer"
          8 "Install systemd services"
          9 "Configure firewall"
-         10 "Install InVEST Data"
+         10 "Install InVEST sample data"
          Q "Quit setup")
 
 while true; do 
@@ -186,7 +186,24 @@ read -p "Press [Enter] key to continue..."
 ;;
 
 10)
-python tools/invest/import_sample_data_wy.py 
+# Fetch the InVEST sample datasets and publish them: rasters and vectors to
+# GeoServer, tables over HTTP, everything registered in the dashboard. The same
+# loader `make demo` runs, pointed at a local install rather than at the compose
+# network -- it takes every endpoint from the environment.
+#
+# It replaces tools/invest/import_sample_data_wy.py, which this option used to
+# run. That script is Python 2 and has been unable to even parse for as long as
+# this installer has targeted Python 3, so the option could only ever fail.
+ESWS_ENV="${ESWS_ENV:-$HOME/esws-invest}"
+./scripts/fetch_invest_samples.sh
+# The loader's endpoints default to the compose service names; on a local
+# install everything is on this host.
+DASHBOARD_URL="${DASHBOARD_URL:-http://localhost:8000}" \
+FILESERVER_URL="${FILESERVER_URL:-http://localhost:8001}" \
+WPS_URL="${WPS_URL:-http://localhost:5000/wps}" \
+GEOSERVER_BASE_URL="${GEOSERVER_BASE_URL:-http://localhost:8080/geoserver}" \
+INVEST_SAMPLES_DIR="${INVEST_SAMPLES_DIR:-${INVEST_DATA_ROOT:-/store/invest}/samples}" \
+    "$HOME/.local/bin/micromamba" run -p "$ESWS_ENV" python scripts/load_demo.py
 ;;
 
 Q)

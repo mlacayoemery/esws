@@ -9,6 +9,9 @@
 # once). alabaster is pinned too -- it is what actually emits the HTML, so it
 # moves the output as much as sphinx does. Bump these deliberately, then rebuild
 # and commit the resulting docs/ churn as its own change.
+# 9.0.4 is the last release that runs on Python 3.11, which is what the InVEST
+# conda environment pins -- and the build needs that environment for MODEL_SPEC.
+# Sphinx 9.1 requires >= 3.12; bump this when InVEST moves.
 sphinx==9.0.4
-sphinxcontrib-mermaid==2.0.2
+sphinxcontrib-mermaid==2.1.0
 alabaster==1.0.0

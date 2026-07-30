@@ -11,6 +11,12 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      # Sphinx 9.1 requires Python >= 3.12 and the docs build runs in the InVEST
+      # conda environment, which is on 3.11. Drop this when InVEST moves, so the
+      # bump can be taken.
+      - dependency-name: sphinx
+        versions: [">=9.1"]
 
   - package-ecosystem: docker
     directory: /docker

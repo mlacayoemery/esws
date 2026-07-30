@@ -17,9 +17,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /opt/esws
 COPY scripts/install-geoserver.sh scripts/install-geoserver.sh
+# The extra CRS definitions the script installs. Copied in so the check exercises
+# that step rather than skipping it -- the script guards on the file existing, so
+# without this it would quietly do nothing and still pass.
+COPY docker/geoserver/epsg.properties docker/geoserver/epsg.properties
 
 # install.sh option 7
 RUN sh scripts/install-geoserver.sh
+
+# The CRSs with no EPSG code have to reach a bare-metal install too, or the MODIS
+# sinusoidal layers are published disabled there while working in the container.
+RUN test -f /opt/geoserver_data/user_projections/epsg.properties \
+        || { echo "extra CRS definitions were not installed"; exit 1; }; \
+    grep -q '^996842=' /opt/geoserver_data/user_projections/epsg.properties \
+        || { echo "996842 (MODIS Sinusoidal) missing from user_projections"; exit 1; }
 
 # Boot it and assert it actually serves. A distribution that unpacked but cannot
 # run -- wrong Java, missing data dir -- would pass a file-existence check and

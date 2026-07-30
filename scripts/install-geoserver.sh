@@ -58,6 +58,18 @@ else
     echo ">> Keeping existing data directory ${GEOSERVER_DATA_DIR}"
 fi
 
+# CRSs with no EPSG code -- the MODIS sinusoidal grid -- so a bare-metal
+# GeoServer can serve the same layers the container one can. Installed on every
+# run, not only when the data directory is seeded, so an existing install picks
+# it up too. Without it those layers are published disabled and every request
+# for them answers "Could not locate coverage".
+EXTRA_CRS="$(dirname "$0")/../docker/geoserver/epsg.properties"
+if [ -f "${EXTRA_CRS}" ]; then
+    echo ">> Installing extra CRS definitions"
+    $SUDO mkdir -p "${GEOSERVER_DATA_DIR}/user_projections"
+    $SUDO cp "${EXTRA_CRS}" "${GEOSERVER_DATA_DIR}/user_projections/epsg.properties"
+fi
+
 echo ">> GeoServer ${GS_VERSION} installed. Start it with:"
 echo "     GEOSERVER_DATA_DIR=${GEOSERVER_DATA_DIR} ${GEOSERVER_HOME}/bin/startup.sh"
 echo "   or install the esws-geoserver systemd unit (install.sh option 8)."

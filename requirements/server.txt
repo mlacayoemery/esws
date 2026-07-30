@@ -16,6 +16,12 @@
 # Dockerfile pins that exact series.
 natcap.invest==3.20.0
 pygeoprocessing>=2.4.11
+# tools/crs_identify.py depends on this directly: it is what recognises a CRS
+# GeoServer cannot name. It was only ever present by way of geopandas, which
+# natcap.invest pulls in and could stop pulling in -- and publishing breaks
+# quietly when it goes, because a layer with no identified CRS is published
+# disabled rather than refused.
+pyproj>=3.5
 taskgraph[niced_processes]>=0.11.2
 pint
 Babel

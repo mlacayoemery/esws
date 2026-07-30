@@ -28,6 +28,8 @@ urlpatterns = [
     url(r'^server/(?P<server_type>'+server_type+')/(?P<server_pk>\d+)/register/(?P<element_id>'+element_id+')/$', views.server_element_register, name='server_element_register'),
     url(r'^server/(?P<server_type>'+server_type+')/(?P<server_pk>\d+)/unregister/(?P<element_id>'+element_id+')/$', views.server_element_unregister, name='server_element_unregister'),
     
+    url(r'^server/(?P<server_type>'+server_type+')/(?P<server_pk>\d+)/check/$', views.server_check, name='server_check'),
+
     ##job specific urls
     url(r'^job/$', views.job_list, name='job_list'),
     #add server specific job list

@@ -76,6 +76,43 @@ Running a model
 5. **Status** polls it. When the run finishes, the outputs it produced are
    registered against whichever servers you chose.
 
+.. _change-detection:
+
+Noticing when remote data changes
+=================================
+
+A registered element points at data on someone else's server, and nothing
+announces when that data is replaced. **Check for changes in remote data**, on any
+WCS, WFS or HTTP source, records a fingerprint of every bookmarked element and
+compares it against the last one. The element list then shows when each was last
+checked and last seen to change.
+
+Three outcomes, deliberately distinct:
+
+changed
+    The data differs from the previous check.
+
+unchanged
+    It does not. A first check is never a change: there is nothing to compare to
+    yet.
+
+unreachable
+    The data could not be fetched, which is **not** the same as unchanged. Two of
+    the demo's rasters land here, being the ones GeoServer will not serve
+    (:ref:`crs-caveat`).
+
+The check fetches the data. GeoServer generates OWS responses per request and
+offers neither an ETag nor a Last-Modified, so there is nothing cheaper to compare;
+where a source does offer a validator -- the file server does for tables -- a
+matching one skips the download. Checking the demo's 39 rasters takes about 30
+seconds and moves a few hundred megabytes; its 50 tables take under a second.
+
+What counts as a change is narrower than "the bytes differ". GeoServer stamps every
+entry of a shapefile archive with the *request* time, so the same untouched layer
+fetched twice seconds apart has different bytes. Archives are therefore fingerprinted
+by their members rather than their bytes; otherwise every check would report every
+vector as changed, which is the same as reporting nothing.
+
 Results
 =======
 

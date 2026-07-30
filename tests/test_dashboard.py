@@ -1,8 +1,9 @@
-"""Django dashboard smoke tests — key views return 200 on Django 4.2."""
+"""Django dashboard smoke tests — key views return 200 on the pinned Django."""
 import html
 import os
 import re
 import time
+from urllib.parse import quote
 
 import pytest
 import requests
@@ -30,7 +31,7 @@ def registered_wps_server(dashboard_url, wps_url):
     Everything below needs one: with no servers the list template never enters
     its row loop and the element views are unreachable, which is how both the
     missing ``server_wps_capabilities`` URL name and the owslib ``verbose``
-    kwarg survived the Django 4.2 port unnoticed.
+    kwarg survived the Django port unnoticed.
 
     Depends on wps_url so the WPS is actually answering first -- the dashboard
     calls GetCapabilities server-side to list processes, and the WPS takes some
@@ -201,6 +202,18 @@ def _pending_counts(session, dashboard_url, job_pk):
                                    timeout=60).text
             counts[server_type] = len(re.findall(r"job%d:" % job_pk, elements))
     return counts
+
+
+def _write_shared_table(relative_path, content):
+    """Write a table into the volume the file server publishes.
+
+    The tests run inside the same image as the wps service and share that volume,
+    so the file appears under the file server's /results/ without shelling out.
+    """
+    path = os.path.join("/app/data", relative_path)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w") as handle:
+        handle.write(content)
 
 
 def _demo_template_pk(dashboard_url):
@@ -423,3 +436,77 @@ def test_unique_run_does_not_overwrite_the_previous_runs_outputs(dashboard_url):
     second = wyield_layers()
     assert first < second, (first, second)
     assert len(second - before) == 2, (before, second)
+
+
+def test_change_detection_distinguishes_changed_from_unchanged(dashboard_url):
+    """Fingerprint a table, rewrite it, and see only that one reported changed.
+
+    Uses the writable results share, since the sample data is mounted read-only:
+    a check has to be able to observe an actual change, not just run.
+    """
+    if _demo_template_pk(dashboard_url) is None:
+        pytest.skip("needs the demo loaded (make demo): no registered sources")
+
+    servers = requests.get(dashboard_url + "/server/CSV/", timeout=30).text
+    pk = None
+    for row in re.findall(r"<tr>(.*?)</tr>", servers, re.S):
+        if "Local Pending" in row:
+            continue
+        found = re.search(r"/server/CSV/(\d+)/element/", row)
+        if found:
+            pk = int(found.group(1))
+    assert pk, servers[:1000]
+
+    def check():
+        page = requests.get("%s/server/CSV/%d/check/" % (dashboard_url, pk),
+                            timeout=900).text
+        tally = dict(zip(("changed", "unchanged", "unreachable"),
+                         (int(n) for n in re.findall(
+                             r"<td>(?:Changed|Unchanged|Unreachable)</td>"
+                             r'<td align="right">(\d+)</td>', page))))
+        return tally, page
+
+    probe = "results/change_probe_test.csv"
+    _write_shared_table(probe, "lucode,root_depth\n1,1000\n")
+    requests.get("%s/server/CSV/%d/register/%s/"
+                 % (dashboard_url, pk, quote(probe, safe="")), timeout=60)
+
+    first, _ = check()
+    assert first["changed"] == 0, first        # a first fingerprint is not a change
+    assert first["unchanged"] >= 1, first
+
+    _write_shared_table(probe, "lucode,root_depth\n1,2000\n2,500\n")
+    second, page = check()
+    assert second["changed"] == 1, (second, page[:1500])
+    assert probe in page, page[:1500]
+
+    # And nothing changes when nothing changes.
+    third, _ = check()
+    assert third["changed"] == 0, third
+
+
+def test_change_detection_reports_unreachable_rather_than_unchanged(dashboard_url):
+    """Two of the demo's rasters have no CRS GeoServer can serve, so they cannot
+    be fingerprinted -- and must not be counted as unchanged."""
+    if _demo_template_pk(dashboard_url) is None:
+        pytest.skip("needs the demo loaded (make demo): no registered sources")
+
+    servers = requests.get(dashboard_url + "/server/WCS/", timeout=30).text
+    pk = None
+    for row in re.findall(r"<tr>(.*?)</tr>", servers, re.S):
+        if "Local Pending" in row:
+            continue
+        found = re.search(r"/server/WCS/(\d+)/element/", row)
+        if found:
+            pk = int(found.group(1))
+    assert pk, servers[:1000]
+
+    page = requests.get("%s/server/WCS/%d/check/" % (dashboard_url, pk),
+                        timeout=1800).text
+    counts = [int(n) for n in re.findall(
+        r"<td>(?:Changed|Unchanged|Unreachable)</td><td align="
+        r'"right">(\d+)</td>', page)]
+    changed, unchanged, unreachable = counts
+    assert unchanged > 0, page[:1500]
+    assert unreachable == 2, (counts, page[:2000])
+    assert changed == 0, (counts, page[:2000])

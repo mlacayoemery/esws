@@ -1,4 +1,6 @@
 """Django dashboard smoke tests — key views return 200 on Django 4.2."""
+import html
+import os
 import re
 import time
 
@@ -276,15 +278,41 @@ def test_upload_round_trip_moves_outputs_to_their_destinations(dashboard_url):
     cleared = _pending_counts(session, dashboard_url, job_pk)
     assert not any(cleared.values()), cleared
 
+    # What the WPS says it published. Reported on failure below so a miss reads as
+    # "the server published nothing" or "published but the client did not
+    # register it" without digging through the server log.
+    # The status page embeds the ExecuteResponse as escaped markup, so unescape
+    # before matching -- searching the raw HTML for <wps:LiteralData never hits.
+    reported = re.search(r"uploaded</ows:Identifier>.*?<wps:LiteralData[^>]*>"
+                         r"([^<]*)</wps:LiteralData>", html.unescape(status), re.S)
+    reported = reported.group(1).strip() if reported else "<no uploaded output>"
+
     # ...and the results are registered against the chosen destinations.
+    registered = {}
     for field, server_type, expected in (
             ("destination_wcs", "WCS", "results:fractp"),
             ("destination_wfs", "WFS", "results:watershed_results_wyield"),
-            ("destination_http", "CSV", "watershed_results_wyield")):
+            ("destination_http", "CSV", "results/watershed_results_wyield")):
         elements = session.get("%s/server/%s/%s/element/"
                                % (dashboard_url, server_type, destinations[field]),
                                timeout=120).text
-        assert expected in elements, (server_type, expected, elements[:1500])
+        assert expected in elements, (server_type, expected, reported)
+        registered[server_type] = elements
+
+    # Results only: the model writes ten more rasters under intermediate/, and
+    # publishing those buried the results the run was actually for. Scoped to the
+    # results workspace -- the demo publishes its *inputs* to the same GeoServer,
+    # so bare names like eto appear in the listing either way.
+    for intermediate in ("clipped_lulc", "eto", "kc_raster", "depth_to_root"):
+        assert "results:%s" % intermediate not in registered["WCS"], intermediate
+
+    # The table is a genuine upload, not a pointer at where it already sat: it
+    # is fetchable from the file server it was registered against.
+    table = re.search(r"results/[A-Za-z0-9_]+\.csv", registered["CSV"]).group(0)
+    fetched = requests.get("%s/%s" % (os.environ.get(
+        "FILESERVER_URL", "http://localhost:8001"), table), timeout=60)
+    assert fetched.status_code == 200, fetched.status_code
+    assert fetched.text.splitlines()[0].count(",") >= 1, fetched.text[:200]
 
 
 def test_dashboard_wps_process_detail(registered_wps_server, dashboard_url):

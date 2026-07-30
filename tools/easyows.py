@@ -120,8 +120,15 @@ class Catalog:
     def publish_shp(self,
                     shp_path,
                     shp_name = None,
-                    gs_workspace = None):
-        "Publishes a Shapefile to a workspace"
+                    gs_workspace = None,
+                    overwrite = False):
+        """Publishes a Shapefile to a workspace
+
+        overwrite replaces a store of the same name; without it GeoServer
+        rejects the request outright ("There is already a store named ..."), so
+        publishing the same layer twice -- a model re-run, a reloaded demo --
+        silently produces nothing.
+        """
 
         if gs_workspace is None:
             gs_workspace = self.make_named_workspace()
@@ -142,14 +149,16 @@ class Catalog:
 
         return self.gs_cat.create_featurestore(shp_name,
                                                workspace = gs_workspace,
-                                               data = shapefile_plus_sidecars)
+                                               data = shapefile_plus_sidecars,
+                                               overwrite = overwrite)
 
 
     def publish_tif(self,
                     tif_path,
                     tif_name = None,
-                    gs_workspace = None):
-        "Publishes a GeoTIFF to a workspace"
+                    gs_workspace = None,
+                    overwrite = False):
+        "Publishes a GeoTIFF to a workspace. See publish_shp for overwrite."
 
         if gs_workspace is None:
             gs_workspace = self.make_named_workspace()
@@ -167,12 +176,14 @@ class Catalog:
                                                 path = tif_path,
                                                 workspace = self.gs_cat.get_workspace(gs_workspace),
                                                 layer_name = tif_name,
-                                                upload_data = True)
+                                                upload_data = True,
+                                                overwrite = overwrite)
 
     def publish_gpkg(self,
                      gpkg_path,
                      gpkg_name = None,
-                     gs_workspace = None):
+                     gs_workspace = None,
+                     overwrite = False):
         "Publishes a GeoPackage by translating it to a Shapefile with GDAL first"
 
         from osgeo import gdal
@@ -186,7 +197,7 @@ class Catalog:
         self.logger.debug("Translating %s to %s" % (gpkg_path, shp_path))
         gdal.VectorTranslate(shp_path, gpkg_path, format="ESRI Shapefile")
 
-        return self.publish_shp(shp_path, gpkg_name, gs_workspace)
+        return self.publish_shp(shp_path, gpkg_name, gs_workspace, overwrite)
 
     def layer_url(self,layer_name):
         template = self.gs_url + "/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=%s&outputFormat=SHAPE-ZIP"

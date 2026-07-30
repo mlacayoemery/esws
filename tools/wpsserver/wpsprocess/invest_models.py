@@ -22,6 +22,7 @@ import importlib
 import logging
 import os
 import re
+import shutil
 import sys
 import tempfile
 
@@ -55,6 +56,37 @@ _WRAPPER_ARGS = {UPLOAD_FLAG} | set(DESTINATION_INPUTS.values())
 # than per-job so registered layer names are predictable; results_suffix is what
 # keeps successive runs apart.
 _RESULTS_WORKSPACE = os.environ.get("WPS_RESULTS_WORKSPACE", "results")
+
+# Where table outputs are uploaded to. A plain file server has no upload
+# protocol, so "uploading" a CSV means writing it into a directory that server
+# already publishes -- a volume shared between this container and the file
+# server. Unset means no writable share is configured, in which case tables are
+# reported where the WPS itself serves them from.
+_TABLE_UPLOAD_DIR = os.environ.get("WPS_TABLE_UPLOAD_DIR", "")
+# Path under the destination server that _TABLE_UPLOAD_DIR appears at, used to
+# build the identifier handed back to the client. Matches how the demo registers
+# CSV elements: a server-root-relative path, not an absolute URL.
+_TABLE_UPLOAD_PATH = os.environ.get("WPS_TABLE_UPLOAD_PATH",
+                                    _RESULTS_WORKSPACE)
+
+
+def _upload_table(path):
+    """Copy a table output into the shared directory the file server publishes.
+
+    Returns the destination-relative identifier, or None if no writable share is
+    configured or the copy fails -- the caller then falls back to reporting the
+    table where the WPS serves it.
+    """
+    if not _TABLE_UPLOAD_DIR:
+        return None
+    name = os.path.basename(path)
+    try:
+        os.makedirs(_TABLE_UPLOAD_DIR, exist_ok=True)
+        shutil.copyfile(path, os.path.join(_TABLE_UPLOAD_DIR, name))
+    except OSError as exc:
+        logger.warning("Could not upload table %s: %s", name, exc)
+        return None
+    return "%s/%s" % (_TABLE_UPLOAD_PATH.strip("/"), name)
 
 
 def _upload_inputs():
@@ -299,7 +331,8 @@ class InvestProcess(pywps.Process):
         easyows.Job.run.
         """
         uploads = {}
-        for output, path in resolved_output_paths(spec, workspace_dir, args):
+        for output, path in resolved_output_paths(spec, workspace_dir, args,
+                                                  primary_only=True):
             filename = output.path
             lower = filename.lower()
             is_raster = isinstance(output, (invest_spec.SingleBandRasterOutput,
@@ -372,7 +405,8 @@ class InvestProcess(pywps.Process):
                                    base, str(exc)[:200])
             return catalogs[base]
 
-        for output, path in resolved_output_paths(spec, args["workspace_dir"], args):
+        for output, path in resolved_output_paths(spec, args["workspace_dir"], args,
+                                                  primary_only=True):
             if not os.path.isfile(path):
                 continue
             lower = path.lower()
@@ -392,19 +426,28 @@ class InvestProcess(pywps.Process):
             name = re.sub(r"[^0-9A-Za-z]+", "_",
                           os.path.splitext(os.path.basename(path))[0]).strip("_")
             if kind == "table":
-                # There is no upload protocol for a plain file server, so a table
-                # is offered where it already is: the WPS serves its own outputs.
-                uploaded.append("table:%s" % os.path.basename(path))
+                # A file server has no upload protocol, so the table is copied
+                # into a directory it already publishes. Without that share it is
+                # offered where it already is: the WPS serves its own outputs.
+                uploaded.append("table:%s" % (_upload_table(path)
+                                              or os.path.basename(path)))
                 continue
 
             try:
                 cat = catalog_for(base)
+                # overwrite: the results workspace is stable and layer names come
+                # from the output filename, so re-running a model publishes the
+                # same names again. Without it GeoServer refuses the store and the
+                # run's results never reach the destination.
                 if kind == "raster":
-                    cat.publish_tif(path, name, _RESULTS_WORKSPACE)
+                    cat.publish_tif(path, name, _RESULTS_WORKSPACE,
+                                    overwrite=True)
                 elif lower.endswith(".gpkg"):
-                    cat.publish_gpkg(path, name, _RESULTS_WORKSPACE)
+                    cat.publish_gpkg(path, name, _RESULTS_WORKSPACE,
+                                     overwrite=True)
                 else:
-                    cat.publish_shp(path, name, _RESULTS_WORKSPACE)
+                    cat.publish_shp(path, name, _RESULTS_WORKSPACE,
+                                    overwrite=True)
             except Exception as exc:  # noqa: BLE001 - report the rest regardless
                 logger.warning("Could not publish %s to %s: %s",
                                name, base, str(exc)[:200])

@@ -488,30 +488,40 @@ def test_change_detection_distinguishes_changed_from_unchanged(dashboard_url):
 
 
 def test_change_detection_reports_unreachable_rather_than_unchanged(dashboard_url):
-    """Two of the demo's rasters have no CRS GeoServer can serve, so they cannot
-    be fingerprinted -- and must not be counted as unchanged."""
+    """Data that cannot be fetched must not be counted as data that has not changed.
+
+    Driven by registering an element that points at nothing, rather than by
+    relying on a layer the demo fails to publish: every layer is servable now
+    that CRS identification handles unnamed datums and the MODIS grid, so the
+    distinction has to be provoked deliberately to stay tested.
+    """
     if _demo_template_pk(dashboard_url) is None:
         pytest.skip("needs the demo loaded (make demo): no registered sources")
 
-    servers = requests.get(dashboard_url + "/server/WCS/", timeout=30).text
+    session = requests.Session()
+    servers = requests.get(dashboard_url + "/server/CSV/", timeout=30).text
     pk = None
     for row in re.findall(r"<tr>(.*?)</tr>", servers, re.S):
         if "Local Pending" in row:
             continue
-        found = re.search(r"/server/WCS/(\d+)/element/", row)
+        found = re.search(r"/server/CSV/(\d+)/element/", row)
         if found:
             pk = int(found.group(1))
     assert pk, servers[:1000]
 
-    page = requests.get("%s/server/WCS/%d/check/" % (dashboard_url, pk),
-                        timeout=1800).text
-    counts = [int(n) for n in re.findall(
+    missing = "results/never_written_by_anything.csv"
+    session.get("%s/server/CSV/%d/register/%s/"
+                % (dashboard_url, pk, quote(missing, safe="")), timeout=60)
+
+    page = session.get("%s/server/CSV/%d/check/" % (dashboard_url, pk),
+                       timeout=900).text
+    changed, unchanged, unreachable = [int(n) for n in re.findall(
         r"<td>(?:Changed|Unchanged|Unreachable)</td><td align="
         r'"right">(\d+)</td>', page)]
-    changed, unchanged, unreachable = counts
-    assert unchanged > 0, page[:1500]
-    assert unreachable == 2, (counts, page[:2000])
-    assert changed == 0, (counts, page[:2000])
+
+    assert unreachable >= 1, (changed, unchanged, unreachable, page[:1500])
+    assert missing in page, page[:2000]
+    assert unchanged > 0, "the reachable tables should still report unchanged"
 
 
 def test_a_reactive_job_reruns_when_its_input_changes(dashboard_url):

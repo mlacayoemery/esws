@@ -2,6 +2,7 @@ import logging
 import os
 
 import geoserver.catalog
+from crs_identify import (describe_crs, drop_unresolvable_authority, identify_epsg)
 import uuid
 
 import urllib
@@ -261,9 +262,8 @@ class Catalog:
                                  logger=self.logger)
             if not epsg:
                 self.logger.warning(
-                    "%s:%s has no CRS GeoServer recognises and none could be "
-                    "identified; the layer will not be served"
-                    % (workspace, resource.name))
+                    "%s:%s cannot be served: %s, which resolves to no CRS code"
+                    % (workspace, resource.name, describe_crs(path, self.logger)))
                 self.unservable.append("%s:%s" % (workspace, resource.name))
                 ok = False
                 continue
@@ -288,51 +288,6 @@ class Catalog:
 # are three different UTM 21S datums at 70% apiece, and declaring one of them
 # would place the data tens of metres from where it belongs.
 _CRS_MIN_CONFIDENCE = int(os.environ.get("EASYOWS_CRS_MIN_CONFIDENCE", "90"))
-
-
-def identify_epsg(path, min_confidence=90, logger=logging.getLogger('easyows')):
-    """The EPSG code for a dataset's CRS, when it can be identified for certain.
-
-    GeoServer leaves a layer disabled -- and so unservable, "Could not locate
-    coverage", "defaultCRS should not be null" -- whenever it cannot resolve the
-    native CRS to an authority code. That happens for ESRI-style WKT names such as
-    RGF93_Lambert_93, for definitions tagged against a non-EPSG authority such as
-    IGNF:LAMB93, and for projections written without a datum.
-
-    pyproj does the matching rather than osr.FindMatches, which returns only the
-    authority a definition is already tagged with: it answers IGNF:LAMB93 for a
-    shapefile whose EPSG equivalent is plainly 2154.
-
-    Returns None rather than a guess below min_confidence. Declaring the wrong CRS
-    silently misplaces the data, which is worse than a layer that plainly does not
-    work -- two of the InVEST sample rasters carry an unnamed projection whose best
-    matches are three different UTM 21S datums at 70% apiece.
-    """
-    from osgeo import gdal
-    from pyproj import CRS
-
-    try:
-        dataset = gdal.OpenEx(path)
-    except Exception as exc:  # noqa: BLE001
-        logger.debug("Could not open %s to identify its CRS: %s" % (path, exc))
-        return None
-    if dataset is None:
-        return None
-
-    srs = dataset.GetSpatialRef()
-    if srs is None and dataset.GetLayerCount():
-        # A vector carries its CRS on the layer, not on the dataset.
-        srs = dataset.GetLayer(0).GetSpatialRef()
-    if srs is None:
-        return None
-
-    try:
-        code = CRS.from_wkt(srs.ExportToWkt()).to_epsg(
-            min_confidence=min_confidence)
-    except Exception as exc:  # noqa: BLE001
-        logger.debug("Could not match the CRS of %s: %s" % (path, exc))
-        return None
-    return "EPSG:%s" % code if code else None
 
 
 class Job:
@@ -423,6 +378,8 @@ class Job:
 
                                     tmp_dir = tempfile.mkdtemp(prefix=prefix)
                                     zipfile.ZipFile(tmp_path, 'r').extractall(tmp_dir)
+                                    drop_unresolvable_authority(tmp_dir,
+                                                                self.logger)
 
                                     for wfs_file in os.listdir(tmp_dir):
                                         if wfs_file.endswith(".shp"):

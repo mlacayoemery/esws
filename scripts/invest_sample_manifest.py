@@ -35,9 +35,12 @@ def _datastacks():
     out = []
     for dirpath, _dirnames, filenames in os.walk(SAMPLES):
         for fn in filenames:
-            # Two naming conventions ship in the archives: the older
-            # <name>.invs.json and the newer <model>_datastack.invest.json.
-            if not (fn.endswith(".invs.json") or fn.endswith(".invest.json")):
+            # Recognised by content rather than name. At least three conventions
+            # ship in the archives -- <name>.invs.json,
+            # <model>_datastack.invest.json and invest_<model>_args.json -- and
+            # matching on the suffix missed the third, which is the only sample
+            # data urban_mental_health has.
+            if not fn.endswith(".json"):
                 continue
             path = os.path.join(dirpath, fn)
             try:
@@ -45,8 +48,12 @@ def _datastacks():
                     d = json.load(fh)
             except Exception:  # noqa: BLE001 - a bad datastack is just skipped
                 continue
+            if not isinstance(d, dict) or not isinstance(d.get("args"), dict):
+                continue
             pyname = d.get("model_name") or d.get("model_id") or ""
-            out.append((path, pyname, d.get("args") or {}))
+            if not pyname:
+                continue
+            out.append((path, pyname, d["args"]))
     return sorted(out)
 
 

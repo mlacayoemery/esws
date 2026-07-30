@@ -1,5 +1,5 @@
 # ESWS containerized stack — common operations.
-.PHONY: build up down logs unit smoke smoke-demo demo demo-data \
+.PHONY: build up down logs update unit smoke smoke-demo demo demo-data \
 	check-baremetal check-geoserver
 
 build:        ## Build the app + dashboard images
@@ -13,6 +13,9 @@ down:         ## Stop the stack and remove volumes
 
 logs:         ## Follow logs from all services
 	docker compose logs -f
+
+update:       ## Pull the latest ESWS from GitHub and bring the stack up on it
+	./scripts/update.sh
 
 unit:         ## Run the tests that need neither the stack nor InVEST (what CI runs)
 	python3 -m pytest tests/unit -q

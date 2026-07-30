@@ -40,7 +40,27 @@ def output_is_expected(output, args):
         return True
 
 
-def anticipated_outputs(spec, args=None):
+# Top-level directories holding working files rather than results. Matching on
+# these rather than keeping only "output/" because most models put their results
+# at the top level of the workspace -- 17 of 26, carbon among them -- so an
+# allow-list of output/ would discard almost everything worth publishing.
+_INTERMEDIATE_DIRS = {"taskgraph_cache", "tmp"}
+
+
+def is_primary_output(output):
+    """Whether this output is a result rather than a working file.
+
+    Publishing every declared output means a single annual_water_yield run puts
+    36 layers on a server, most of them clipped inputs and convolution kernels.
+    """
+    parts = (getattr(output, "path", "") or "").split("/")
+    if len(parts) < 2:
+        return True  # top level: the model's own results
+    head = parts[0]
+    return not (head.startswith("intermediate") or head in _INTERMEDIATE_DIRS)
+
+
+def anticipated_outputs(spec, args=None, primary_only=False):
     """The file outputs a run with ``args`` is expected to produce.
 
     With args omitted this is every file output the model declares, which is
@@ -55,11 +75,13 @@ def anticipated_outputs(spec, args=None):
             continue
         if not output_is_expected(output, args):
             continue
+        if primary_only and not is_primary_output(output):
+            continue
         expected.append(output)
     return expected
 
 
-def resolved_output_paths(spec, workspace_dir, args=None):
+def resolved_output_paths(spec, workspace_dir, args=None, primary_only=False):
     """[(output, absolute path)] for the outputs a run is expected to produce.
 
     A list of pairs rather than a dict: spec.Output is a pydantic model carrying
@@ -91,7 +113,7 @@ def resolved_output_paths(spec, workspace_dir, args=None):
         logger.debug("No FileRegistry (%s); suffixing by hand", exc)
 
     resolved = []
-    for output in anticipated_outputs(spec, args):
+    for output in anticipated_outputs(spec, args, primary_only=primary_only):
         path = None
         if registry is not None and "[" not in (output.id or ""):
             try:

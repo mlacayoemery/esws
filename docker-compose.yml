@@ -25,6 +25,10 @@ services:
       # InVEST sample data, cached outside the repo by
       # scripts/fetch_invest_samples.sh. Read-only: it is reference data.
       - ${INVEST_SAMPLES:-/store/invest/samples}:/data/invest:ro
+      # Shared with fileserver, which publishes it at /results/: gives table
+      # outputs somewhere to be uploaded *to*, since a plain file server has no
+      # upload protocol of its own.
+      - results_tables:/app/data/results
     environment:
       GEOSERVER_URL: http://geoserver:8080/geoserver
       # Advertised to WPS clients in the WMS URLs of published layers, so it has
@@ -36,6 +40,8 @@ services:
       # statusLocation and asReference URLs are handed to clients, so they must
       # use the host mapping rather than the container port.
       WPS_OUTPUT_URL: http://localhost:${WPS_HOST_PORT:-5000}/outputs
+      WPS_TABLE_UPLOAD_DIR: /app/data/results
+      WPS_TABLE_UPLOAD_PATH: results
     depends_on:
       - geoserver
 
@@ -54,6 +60,8 @@ services:
       # Served under /invest/, so demo tables (CSVs) have an HTTP URL the
       # dashboard can register as CSV elements.
       - ${INVEST_SAMPLES:-/store/invest/samples}:/app/data/invest:ro
+      # Table outputs the wps uploads, published at /results/. See wps.
+      - results_tables:/app/data/results:ro
 
   dashboard:
     image: esws/wps  # see fileserver
@@ -67,6 +75,10 @@ services:
       # Read by the Templates source to prefill job forms with the sample
       # arguments recorded in InVEST's datastacks.
       - ${INVEST_SAMPLES:-/store/invest/samples}:/data/invest:ro
+      # Shared with fileserver, which publishes it at /results/: gives table
+      # outputs somewhere to be uploaded *to*, since a plain file server has no
+      # upload protocol of its own.
+      - results_tables:/app/data/results
     environment:
       DJANGO_ALLOWED_HOSTS: "*"
       DJANGO_DB_PATH: /tmp/esws-db.sqlite3
@@ -88,5 +100,6 @@ services:
 
 volumes:
   wps_outputs:
+  results_tables:
   gisdata:
   geoserver_data:

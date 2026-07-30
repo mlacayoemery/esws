@@ -652,7 +652,8 @@ def anticipated_for_job(job):
     # Only the argument values matter for created_if and the suffix, so the
     # workspace is irrelevant here; names are taken from the resolved basenames.
     out = []
-    for output, resolved in resolved_output_paths(spec, "/anticipated", job.args):
+    for output, resolved in resolved_output_paths(spec, "/anticipated", job.args,
+                                                 primary_only=True):
         lower = resolved.lower()
         if lower.endswith((".tif", ".tiff")):
             kind = "raster"

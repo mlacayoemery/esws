@@ -16,6 +16,9 @@ logs:         ## Follow logs from all services
 smoke:        ## Build, start the stack, run the pytest smoke suite, tear down
 	./scripts/smoke.sh
 
+smoke-demo:   ## smoke, but with the demo data loaded so no test skips
+	DEMO=1 ./scripts/smoke.sh
+
 demo-data:    ## Download + unpack the InVEST sample datasets (cached, ~380MB)
 	./scripts/fetch_invest_samples.sh
 

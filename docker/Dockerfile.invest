@@ -56,6 +56,11 @@ RUN mkdir -p /tmp/wpsoutputs
 COPY --chown=$MAMBA_USER:$MAMBA_USER . /app
 WORKDIR /app
 
+# Upload target for table outputs, shared with the fileserver as a named volume.
+# Created here for the same ownership reason as /tmp/wpsoutputs above -- and it
+# has to be after the COPY, which would otherwise replace the directory.
+RUN mkdir -p /app/data/results
+
 ENV PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app/tools
 

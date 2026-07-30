@@ -11,3 +11,5 @@ sample.csv
 shape_join.*
 src
 .env
+# mountpoint for the results_tables volume (see docker-compose.yml)
+data/results/

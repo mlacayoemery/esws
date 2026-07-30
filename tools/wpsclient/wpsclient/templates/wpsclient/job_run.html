@@ -11,6 +11,12 @@
         <tr><td>{{k}}</td><td>{{v}}</td></tr>
         {% endfor %}
         </table>
+        <p><b>Status: </b>{{ job.status }}
+        {% if job.status_location %}
+        &mdash; <a href="{% url 'job_status' job_pk=job.pk %}">Refresh</a>
+        (<a href="{{ job.status_location }}">raw</a>)
+        {% endif %}
+        </p>
         <p><b>Job Queue: </b></p>
         <p><a href="{% url 'server_job_list' server_pk=job.server.pk%}">Server</a></p>
         <p><a href="{% url 'job_list' %}">All</a></p>

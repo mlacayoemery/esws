@@ -808,11 +808,84 @@ def water_yield(request):
                     process_id="annual_water_yield")
 
 
-def job_to_wps_url(job):
+def job_to_wps_url(job, asynchronous=True):
+    """The WPS Execute URL for a job.
+
+    Asynchronous by default: with storeExecuteResponse the server answers
+    immediately with a statusLocation instead of holding the connection open for
+    the whole run. Some InVEST models take minutes -- scenic_quality is around
+    four -- and a synchronous request means the browser waits that long.
+    """
     url = job.server.url + "?service=wps&version=1.0.0&request=Execute&IDENTIFIER=" + job.identifier + "&datainputs="
     url = url + ";".join(["%s=%s" % (k, quote(quote(job.args[k]))) for k in job.args.keys()])
+    if asynchronous:
+        url += "&storeExecuteResponse=true&status=true&ResponseDocument=response"
 
-    return url    
+    return url
+
+
+# The WPS status values that mean the run is over, one way or the other.
+_JOB_FINISHED = {"Succeeded", "Failed"}
+
+
+def _reachable_via_server(url, server_url):
+    """Rewrite a WPS-issued URL onto the host we reach that server on.
+
+    statusLocation and output references carry the address the WPS advertises to
+    the outside world (WPS_OUTPUT_URL, the published host port). The dashboard is
+    an internal client on the compose network, where that address does not
+    resolve, so the path is re-hosted onto whatever we already use to talk to
+    the server. Otherwise polling fails silently and a job sits on Accepted
+    forever.
+    """
+    from urllib.parse import urlsplit, urlunsplit
+    try:
+        target, source = urlsplit(url), urlsplit(server_url)
+        if not (target.path and source.netloc):
+            return url
+        return urlunsplit((source.scheme or target.scheme, source.netloc,
+                           target.path, target.query, ""))
+    except Exception:  # noqa: BLE001
+        return url
+
+
+def _wps_status(xml):
+    """Read the ProcessX state out of an ExecuteResponse."""
+    match = re.search(r"Process(Accepted|Started|Paused|Succeeded|Failed)", xml)
+    return match.group(1) if match else ""
+
+
+def job_status(request, job_pk):
+    """Poll the job's statusLocation and advance its recorded status.
+
+    Nothing in the dashboard runs in the background, so this is the moment a
+    job's outcome becomes known -- and, once uploads are wired up, where
+    anticipated outputs get reconciled against what was really produced.
+    """
+    job = get_object_or_404(Job, pk=job_pk)
+
+    xml = ""
+    if job.status_location:
+        try:
+            with urllib.request.urlopen(job.status_location, timeout=60) as response:
+                xml = response.read().decode("utf-8", "replace")
+        except Exception as exc:  # noqa: BLE001 - a poll failure is not fatal
+            xml = "<!-- could not read statusLocation: %s -->" % exc
+
+        state = _wps_status(xml)
+        if state:
+            job.status = state
+            job.save()
+
+    if xml.startswith("<?xml") or xml.startswith("<wps"):
+        try:
+            xml = "\n".join(line for line in parseString(xml).toprettyxml().split("\n")
+                            if line.strip())
+        except Exception:  # noqa: BLE001 - show it raw if it will not parse
+            pass
+
+    return render(request, "wpsclient/job_run.html", {"job": job, "xml": xml})
+
 
 def job_run(request, job_pk):
     job = get_object_or_404(Job, pk=job_pk)
@@ -822,22 +895,39 @@ def job_run(request, job_pk):
         job.status_url = job_to_wps_url(job)
         job.save()
 
-        return dashboard(request)    
+        return dashboard(request)
 
     elif job.status == "Run":
-        print(job.status_url)
-        response = urllib.request.urlopen(job.status_url)
-        #response = urllib.request.urlopen("http://127.0.0.1:5000/wps?service=wps&version=1.0.0&request=GetCapabilities")
-
-        xml = parseString(response.read()).toprettyxml()
-        xml = '\n'.join([line for line in xml.split('\n') if line.strip()])
-
-        job.status = "Complete"
+        # Submit and return: the response carries a statusLocation, not results.
         job.status_url = job_to_wps_url(job)
+        try:
+            with urllib.request.urlopen(job.status_url, timeout=120) as response:
+                xml = response.read().decode("utf-8", "replace")
+        except Exception as exc:  # noqa: BLE001
+            job.status = "Failed"
+            job.save()
+            return render(request, "wpsclient/job_run.html",
+                          {"job": job, "xml": "submit failed: %s" % exc})
+
+        location = re.search(r'statusLocation="([^"]+)"', xml)
+        if location:
+            job.status_location = _reachable_via_server(location.group(1),
+                                                        job.server.url)
+        job.status = _wps_status(xml) or "Accepted"
         job.save()
+
+        try:
+            xml = "\n".join(line for line in parseString(xml).toprettyxml().split("\n")
+                            if line.strip())
+        except Exception:  # noqa: BLE001
+            pass
 
         return render(request, "wpsclient/job_run.html", {'job': job,
                                                           "xml" : xml})
+
+    elif job.status not in _JOB_FINISHED:
+        # Already submitted and still running -- checking on it is a poll.
+        return job_status(request, job_pk)
 
     else:
         return job_detail(request, job_pk)

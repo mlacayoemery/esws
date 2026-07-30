@@ -103,6 +103,10 @@ class Job(models.Model):
     identifier = models.CharField(max_length=200)
     status = models.CharField(max_length=12, default='Pending')
     status_url = models.TextField(default="")
+    # Where the WPS parks the stored ExecuteResponse for an asynchronous run
+    # (statusLocation). Polled to advance `status`; empty for a job that has
+    # not been submitted yet.
+    status_location = models.TextField(default="")
 
     args = models.JSONField(default=dict)
 

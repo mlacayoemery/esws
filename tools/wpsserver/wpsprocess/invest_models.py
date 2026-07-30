@@ -39,6 +39,52 @@ logger = logging.getLogger("invest_models")
 # Args the wrapper sets itself; never exposed as WPS inputs.
 _SKIP_ARGS = {"workspace_dir", "n_workers"}
 
+# Inputs this wrapper adds on top of the model's own. They control where results
+# are published and must never reach the model's execute().
+UPLOAD_FLAG = "upload_results"
+DESTINATION_INPUTS = {
+    "raster": "destination_wcs",
+    "vector": "destination_wfs",
+    "table": "destination_http",
+}
+_WRAPPER_ARGS = {UPLOAD_FLAG} | set(DESTINATION_INPUTS.values())
+
+# Workspace results are published into on a destination server. Stable rather
+# than per-job so registered layer names are predictable; results_suffix is what
+# keeps successive runs apart.
+_RESULTS_WORKSPACE = os.environ.get("WPS_RESULTS_WORKSPACE", "results")
+
+
+def _upload_inputs():
+    """The wrapper's own inputs: whether to upload results, and where to.
+
+    anyURI rather than string -- these are endpoints, and it is the standard
+    xmlschema type for one, so a client can treat them as URLs. The values are
+    supplied by the client from whatever servers it knows about; the WPS does not
+    keep a list of permitted destinations.
+    """
+    inputs = [pywps.LiteralInput(
+        identifier=UPLOAD_FLAG,
+        title="Upload model results",
+        abstract="Publish this run's outputs to the destination servers below "
+                 "in addition to returning them.\n\n[esws:wrapper=1]",
+        data_type="boolean",
+        min_occurs=0,
+        max_occurs=1,
+    )]
+    for kind, identifier in sorted(DESTINATION_INPUTS.items()):
+        inputs.append(pywps.LiteralInput(
+            identifier=identifier,
+            title="Destination for %s outputs" % kind,
+            abstract="Base URL of the server %s outputs are published to when "
+                     "%s is set.\n\n[esws:wrapper=1 esws:destination=%s]"
+                     % (kind, UPLOAD_FLAG, kind),
+            data_type="anyURI",
+            min_occurs=0,
+            max_occurs=1,
+        ))
+    return inputs
+
 # Model workspaces are created here. In the container this points at a volume
 # shared with GeoServer (so GeoServer can read raster outputs by file path).
 _WORKSPACE_ROOT = os.environ.get("WPS_WORKSPACE_ROOT", tempfile.gettempdir())
@@ -293,9 +339,19 @@ class InvestProcess(pywps.Process):
         # published WMS URLs and existing clients read it. The per-output
         # ComplexOutputs are the real declaration -- WPS supports any number of
         # outputs, and until now every model advertised only this one string.
+        inputs.extend(_upload_inputs())
+
         outputs = [pywps.LiteralOutput("response",
                                        "Published layers or workspace path",
                                        data_type="string")]
+        outputs.append(pywps.LiteralOutput(
+            "uploaded",
+            "Layers published to the destination servers",
+            abstract="Semicolon-separated <kind>:<identifier> entries for what "
+                     "was published when upload_results was set. Empty "
+                     "otherwise. A client uses it to turn anticipated outputs "
+                     "into registered ones.",
+            data_type="string"))
         outputs.extend(_complex_outputs(spec))
 
         abstract = (module.__doc__ or spec.model_title or model_id or "").strip()
@@ -316,7 +372,7 @@ class InvestProcess(pywps.Process):
         args = {}
         for inp in spec.inputs:
             arg_id = inp.id
-            if arg_id in _SKIP_ARGS:
+            if arg_id in _SKIP_ARGS or arg_id in _WRAPPER_ARGS:
                 continue
             if arg_id in request.inputs and len(request.inputs[arg_id]):
                 value = request.inputs[arg_id][0].data
@@ -351,6 +407,106 @@ class InvestProcess(pywps.Process):
             layer = re.sub(r"[^0-9A-Za-z]+", "_", base).strip("_") or "layer"
             uploads["%s:%s" % (ws, layer)] = path
         return uploads
+
+    def _wrapper_arg(self, request, identifier):
+        """One of this wrapper's own inputs, or None if it was not supplied.
+
+        pywps parses an anyURI input into a urllib ParseResult rather than a
+        string, so it is put back together here -- otherwise it reaches easyows
+        as an object and string concatenation fails.
+        """
+        values = request.inputs.get(identifier) or []
+        if not values:
+            return None
+        value = values[0].data
+        if hasattr(value, "geturl"):
+            value = value.geturl()
+        return value if value not in ("", None) else None
+
+    def _upload_to_destinations(self, request, spec, args):
+        """Publish this run's outputs to the client-chosen servers.
+
+        Returns ["<kind>:<identifier>", ...] describing what landed where, which
+        goes back in the `uploaded` output. The client reconciles from that
+        rather than the WPS calling into it -- nothing here knows or needs to
+        know that a dashboard exists.
+
+        Deliberately separate from the per-job publish easyows.Job already does:
+        that one exists so a run's results are viewable at all, whereas this is
+        the user asking for them to be kept somewhere of their choosing.
+        """
+        flag = self._wrapper_arg(request, UPLOAD_FLAG)
+        if not (flag is True or str(flag).lower() in ("true", "1", "yes")):
+            return []
+
+        destinations = {kind: self._wrapper_arg(request, identifier)
+                        for kind, identifier in DESTINATION_INPUTS.items()}
+        if not any(destinations.values()):
+            logger.warning("%s set but no destination given", UPLOAD_FLAG)
+            return []
+
+        # One catalog per distinct GeoServer base, so rasters and vectors can go
+        # to different servers if the client chose differently.
+        catalogs, uploaded = {}, []
+
+        def catalog_for(base):
+            if base not in catalogs:
+                catalogs[base] = easyows.Catalog(
+                    gs_url=base,
+                    username=os.environ.get("GEOSERVER_USER", "admin"),
+                    password=os.environ.get("GEOSERVER_PASS", "geoserver"),
+                    logger=logger)
+                try:
+                    existing = {w.name for w in catalogs[base].gs_cat.get_workspaces()}
+                    if _RESULTS_WORKSPACE not in existing:
+                        catalogs[base].gs_cat.create_workspace(
+                            _RESULTS_WORKSPACE, "http://esws/%s" % _RESULTS_WORKSPACE)
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning("Could not prepare workspace on %s: %s",
+                                   base, str(exc)[:200])
+            return catalogs[base]
+
+        for output, path in resolved_output_paths(spec, args["workspace_dir"], args):
+            if not os.path.isfile(path):
+                continue
+            lower = path.lower()
+            if lower.endswith((".tif", ".tiff")):
+                kind = "raster"
+            elif lower.endswith((".shp", ".gpkg")):
+                kind = "vector"
+            elif lower.endswith(".csv"):
+                kind = "table"
+            else:
+                continue
+
+            base = destinations.get(kind)
+            if not base:
+                continue
+
+            name = re.sub(r"[^0-9A-Za-z]+", "_",
+                          os.path.splitext(os.path.basename(path))[0]).strip("_")
+            if kind == "table":
+                # There is no upload protocol for a plain file server, so a table
+                # is offered where it already is: the WPS serves its own outputs.
+                uploaded.append("table:%s" % os.path.basename(path))
+                continue
+
+            try:
+                cat = catalog_for(base)
+                if kind == "raster":
+                    cat.publish_tif(path, name, _RESULTS_WORKSPACE)
+                elif lower.endswith(".gpkg"):
+                    cat.publish_gpkg(path, name, _RESULTS_WORKSPACE)
+                else:
+                    cat.publish_shp(path, name, _RESULTS_WORKSPACE)
+            except Exception as exc:  # noqa: BLE001 - report the rest regardless
+                logger.warning("Could not publish %s to %s: %s",
+                               name, base, str(exc)[:200])
+                continue
+            uploaded.append("%s:%s:%s" % (kind, _RESULTS_WORKSPACE, name))
+
+        logger.info("Uploaded %d outputs to client destinations", len(uploaded))
+        return uploaded
 
     def _handler(self, request, response):
         logger.info("BEGIN InVEST WPS model=%s", self.model_id)
@@ -399,6 +555,10 @@ class InvestProcess(pywps.Process):
             raise pywps.exceptions.NoApplicableCode(
                 "Could not resolve all inputs for %s; the model did not run"
                 % self.model_id)
+
+        uploaded = self._upload_to_destinations(request, spec, args)
+        response.outputs["uploaded"].data = ";".join(uploaded)
+        response.outputs["uploaded"].uom = pywps.UOM("unity")
 
         gs_url = os.environ.get(
             "GEOSERVER_PUBLIC_URL",

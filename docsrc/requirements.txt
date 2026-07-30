@@ -10,5 +10,5 @@
 # moves the output as much as sphinx does. Bump these deliberately, then rebuild
 # and commit the resulting docs/ churn as its own change.
 sphinx==9.0.4
-sphinxcontrib-mermaid==2.0.2
+sphinxcontrib-mermaid==2.1.0
 alabaster==1.0.0

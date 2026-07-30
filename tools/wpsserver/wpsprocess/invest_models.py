@@ -160,6 +160,55 @@ def anticipated_outputs(spec, args=None):
     return expected
 
 
+def resolved_output_paths(spec, workspace_dir, args=None):
+    """[(output, absolute path)] for the outputs a run is expected to produce.
+
+    A list of pairs rather than a dict: spec.Output is a pydantic model carrying
+    a set field (VectorOutput.geometry_types), so it is not hashable and cannot
+    be a key.
+
+    Paths come from InVEST's own FileRegistry, which is what applies
+    results_suffix: a suffixed run writes c_storage_bas_gura.tif, not
+    c_storage_bas.tif, so joining ``output.path`` onto the workspace finds
+    nothing whenever a suffix is set -- and the sample datastacks nearly all set
+    one. Output ids containing a bracketed pattern are substituted per run and
+    cannot be resolved generically, so those fall back to the declared path.
+    """
+    # FileRegistry concatenates path + file_suffix + extension, so the separator
+    # has to be part of the suffix: "gura" yields wyieldgura.tif, while InVEST
+    # actually writes wyield_gura.tif. Normalise once and use the same value for
+    # the manual fallback below.
+    suffix = None
+    if args:
+        raw = args.get("results_suffix") or None
+        if raw:
+            suffix = raw if str(raw).startswith("_") else "_%s" % raw
+
+    registry = None
+    try:
+        from natcap.invest.file_registry import FileRegistry
+        registry = FileRegistry(spec.outputs, workspace_dir, file_suffix=suffix)
+    except Exception as exc:  # noqa: BLE001 - fall back to manual suffixing
+        logger.debug("No FileRegistry (%s); suffixing by hand", exc)
+
+    resolved = []
+    for output in anticipated_outputs(spec, args):
+        path = None
+        if registry is not None and "[" not in (output.id or ""):
+            try:
+                path = registry[output.id]
+            except Exception:  # noqa: BLE001 - not every id indexes cleanly
+                path = None
+        if not path:
+            relative = output.path
+            if suffix:
+                stem, ext = os.path.splitext(relative)
+                relative = "%s%s%s" % (stem, suffix, ext)
+            path = os.path.join(workspace_dir, relative)
+        resolved.append((output, path))
+    return resolved
+
+
 def _output_identifier(output):
     """A WPS-safe identifier for a declared output."""
     ident = output.id or os.path.splitext(os.path.basename(output.path))[0]
@@ -288,7 +337,7 @@ class InvestProcess(pywps.Process):
         easyows.Job.run.
         """
         uploads = {}
-        for output in anticipated_outputs(spec, args):
+        for output, path in resolved_output_paths(spec, workspace_dir, args):
             filename = output.path
             lower = filename.lower()
             is_raster = isinstance(output, (invest_spec.SingleBandRasterOutput,
@@ -298,8 +347,7 @@ class InvestProcess(pywps.Process):
                 or lower.endswith((".shp", ".gpkg"))
             if not (is_raster or is_vector):
                 continue
-            path = os.path.join(workspace_dir, filename)
-            base = os.path.splitext(os.path.basename(filename))[0]
+            base = os.path.splitext(os.path.basename(path))[0]
             layer = re.sub(r"[^0-9A-Za-z]+", "_", base).strip("_") or "layer"
             uploads["%s:%s" % (ws, layer)] = path
         return uploads
@@ -368,13 +416,12 @@ class InvestProcess(pywps.Process):
         # actually produced. DescribeProcess has to advertise every output the
         # model can emit, since WPS cannot express a conditional output, so the
         # ones whose created_if did not hold are simply left unset.
-        expected = anticipated_outputs(spec, args)
+        expected = resolved_output_paths(spec, args["workspace_dir"], args)
         filled = 0
-        for output in expected:
+        for output, path in expected:
             identifier = _output_identifier(output)
             if identifier not in response.outputs:
                 continue
-            path = os.path.join(args["workspace_dir"], output.path)
 
             # Must be a regular file. Some declared outputs are directories on
             # disk -- taskgraph_cache/taskgraph.db is declared as a file but

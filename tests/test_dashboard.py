@@ -616,3 +616,40 @@ def test_a_reactive_job_reruns_when_its_input_changes(dashboard_url):
     # The sweep across all reactive jobs must also work, and find nothing now.
     everything = session.get(dashboard_url + "/job/react/", timeout=1800).text
     assert "unchanged" in everything, everything[:1500]
+
+
+def test_the_job_graph_page_and_its_bpmn_export(dashboard_url):
+    """The pipeline view renders, and its BPMN export is well-formed BPMN.
+
+    Schema validation lives in the unit tests; here the point is that the view
+    reaches the builder at all and hands back the right content type.
+    """
+    page = requests.get(dashboard_url + "/job/graph/", timeout=180)
+    assert page.status_code == 200, page.text[:1000]
+    assert "flowchart LR" in page.text, page.text[:1500]
+    assert "job" in page.text
+
+    export = requests.get(dashboard_url + "/job/graph.bpmn", timeout=180)
+    assert export.status_code == 200, export.status_code
+    assert export.headers["Content-Type"].startswith("application/xml")
+    assert "esws-pipeline.bpmn" in export.headers.get("Content-Disposition", "")
+    assert "bpmn" in export.text[:400].lower(), export.text[:400]
+
+
+def test_a_published_output_records_which_job_made_it(dashboard_url):
+    """The edge in the pipeline graph comes from this: without provenance a
+    registered element is just a layer nobody claims."""
+    template_pk = _demo_template_pk(dashboard_url)
+    if template_pk is None:
+        pytest.skip("needs the demo loaded (make demo): no InVEST Demo template")
+
+    session = requests.Session()
+    job_pk, _destinations = _submit_template_job(session, dashboard_url,
+                                                 template_pk, "annual_water_yield")
+    session.get("%s/job/%d/run/" % (dashboard_url, job_pk), timeout=180)
+    state, status = _await_job(session, dashboard_url, job_pk)
+    assert state == "Succeeded", status[:2000]
+
+    # The graph must now know this job produced something.
+    graph = session.get(dashboard_url + "/job/graph/", timeout=180).text
+    assert "job%d" % job_pk in graph, graph[:1500]

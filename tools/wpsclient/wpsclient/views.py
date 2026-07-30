@@ -2,7 +2,7 @@ import logging
 import inspect
 
 from django.shortcuts import render, get_object_or_404, redirect
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from django.utils import timezone
 
 from .models import ServerCSV
@@ -20,6 +20,7 @@ from .models import ElementWPS
 from .models import ServerElement
 from .models import Job
 from .models import ElementFingerprint
+from .models import ElementProvenance
 
 from .forms import ServerFormCSV
 from .forms import ServerFormWCS
@@ -767,9 +768,13 @@ def reconcile_uploads(job, xml):
         if server is None:
             continue
 
-        _element, created = ElementClass.objects.get_or_create(
+        element, created = ElementClass.objects.get_or_create(
             server=server, identifier=identifier)
         registered += int(created)
+
+        # Remember what made it, so the pipeline the jobs form can be drawn.
+        ElementProvenance.objects.update_or_create(
+            element=element.serverelement_ptr, defaults={"job": job})
 
     if entries:
         clear_pending(job)
@@ -1154,6 +1159,43 @@ def react_to_changes(job):
     rotate_run_token(job)
     job.save()
     return "rerun", changed
+
+
+def _pipeline():
+    """The job pipeline as (nodes, edges), derived from what jobs consume and
+    produce. Nothing declares it -- see tools/job_graph.py."""
+    tools = "/app/tools"
+    if tools not in sys.path:
+        sys.path.insert(0, tools)
+    import job_graph
+
+    produced_by = {}
+    for record in ElementProvenance.objects.select_related("element"):
+        produced_by[record.element.identifier] = record.job_id
+
+    jobs = list(Job.objects.order_by("pk"))
+    inputs_of = {}
+    for job in jobs:
+        inputs_of[job.pk] = [element.identifier
+                             for element, _kind in job_input_elements(job)]
+    return job_graph, job_graph.build(jobs, produced_by, inputs_of)
+
+
+def job_graph_view(request):
+    """The pipeline the jobs form, drawn."""
+    module, (nodes, edges) = _pipeline()
+    return render(request, "wpsclient/job_graph.html",
+                  {"diagram": module.to_mermaid(nodes, edges),
+                   "job_count": len(nodes), "edge_count": len(edges)})
+
+
+def job_graph_bpmn(request):
+    """The same pipeline as BPMN 2.0, for a modeller such as bpmn.io."""
+    module, (nodes, edges) = _pipeline()
+    response = HttpResponse(module.to_bpmn(nodes, edges),
+                            content_type="application/xml")
+    response["Content-Disposition"] = 'attachment; filename="esws-pipeline.bpmn"'
+    return response
 
 
 def job_react(request, job_pk):

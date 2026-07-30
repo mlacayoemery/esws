@@ -159,6 +159,30 @@ class Job(models.Model):
         return "-".join([self.server,
                          self.process])
 
+
+class ElementProvenance(models.Model):
+    """Which job produced a registered element.
+
+    Jobs already form a pipeline: a job's published outputs are registered as
+    elements, and any later job can select them as inputs. Nothing recorded the
+    link, so the pipeline existed without being visible. This is the missing
+    edge.
+
+    One row per element, rewritten when a later run republishes the same name --
+    the question it answers is "what made what is there now", not "what has ever
+    been there". Its own table rather than a column on ServerElement, for the
+    same reason as ElementFingerprint: this app cannot ALTER an existing one.
+    """
+
+    element = models.OneToOneField(ServerElement, on_delete=models.CASCADE,
+                                   related_name="provenance")
+    job = models.ForeignKey(Job, on_delete=models.CASCADE,
+                            related_name="produced")
+    recorded_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return "%s <- job %s" % (self.element.identifier, self.job_id)
+
 ##class WCS_Instance(models.Model):
 ##    server = models.ForeignKey(WCS_Server, on_delete=models.CASCADE)   
 ##    identifier = models.CharField(max_length=200)

@@ -21,7 +21,7 @@ pygeoprocessing>=2.4.11
 # natcap.invest pulls in and could stop pulling in -- and publishing breaks
 # quietly when it goes, because a layer with no identified CRS is published
 # disabled rather than refused.
-pyproj>=3.5
+pyproj>=3.7.2
 taskgraph[niced_processes]>=0.11.2
 pint
 Babel

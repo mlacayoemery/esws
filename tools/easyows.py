@@ -466,11 +466,52 @@ class Catalog:
         first = not os.path.exists(os.path.join(directory, "indexer.properties"))
         if first:
             self._write_mosaic_config(directory, layer_name)
+            self._write_mosaic_index_store(directory)
 
         self.make_workspace(gs_workspace)
         if first:
-            return self._create_mosaic_store(gs_workspace, layer_name, directory)
-        return self._harvest_granule(gs_workspace, layer_name, granule)
+            created = self._create_mosaic_store(gs_workspace, layer_name,
+                                                directory)
+        else:
+            created = self._harvest_granule(gs_workspace, layer_name, granule)
+
+        # The index records the granule with whatever time it could read from the
+        # filename; this is where it learns the run's actual time.
+        self.set_granule_time(layer_name, granule, time_value)
+        return created
+
+    def _write_mosaic_index_store(self, directory):
+        """Point the mosaic's granule index at PostGIS.
+
+        The index is otherwise a shapefile beside the granules, and the time of
+        each granule has to be parsed out of its filename -- which this GeoServer
+        does only as far as the date: it honours the regex and ignores the
+        format, so every run of a day collapses onto midnight. Indexing into
+        PostGIS puts the times in a table this code can set exactly, which is the
+        same place the vector series already keeps them.
+        """
+        params = self.postgis_params()
+        with open(os.path.join(directory, "datastore.properties"), "w") as handle:
+            handle.write(
+                "SPI=org.geotools.data.postgis.PostgisNGDataStoreFactory\n"
+                "host=%(host)s\nport=%(port)s\ndatabase=%(database)s\n"
+                "schema=%(schema)s\nuser=%(user)s\npasswd=%(passwd)s\n"
+                "Loose\\ bbox=true\nEstimated\\ extends=false\n"
+                "validate\\ connections=true\nConnection\\ timeout=10\n"
+                "preparedStatements=true\n" % params)
+
+    def set_granule_time(self, layer_name, granule, time_value):
+        """Set the time of one granule in the mosaic's PostGIS index."""
+        from osgeo import ogr
+
+        connection = ogr.Open(self.postgis_uri(), 1)
+        if connection is None:
+            raise RuntimeError("could not reach the mosaic index in PostGIS")
+        connection.ExecuteSQL(
+            "UPDATE \"%s\" SET \"time\" = TIMESTAMPTZ '%s' "
+            "WHERE location LIKE '%%%s'"
+            % (layer_name, time_value, os.path.basename(granule)))
+        connection = None
 
     def _write_mosaic_config(self, directory, layer_name):
         """indexer and timeregex, which are how a mosaic learns to be a series.
@@ -488,7 +529,11 @@ class Catalog:
                 "AbsolutePath=true\n" % layer_name)
         with open(os.path.join(directory, "timeregex.properties"), "w") as handle:
             # 20260731T093000Z, as written by publish_mosaic_granule.
-            handle.write("regex=[0-9]{8}T[0-9]{6}Z,format=yyyyMMdd'T'HHmmss'Z'\n")
+            # regex and format on separate lines: a Java properties file reads
+            # "regex=...,format=..." as one value, and the format is silently
+            # ignored -- every granule then lands at midnight of its date.
+            handle.write("regex=[0-9]{8}T[0-9]{6}Z\n")
+            handle.write("format=yyyyMMdd'T'HHmmss'Z'\n")
 
     def _rest(self, path, method="GET", data=None, ctype="application/json"):
         import urllib.request
@@ -513,7 +558,10 @@ class Catalog:
         status, _body = self._rest(
             "workspaces/%s/coveragestores/%s/external.imagemosaic"
             % (workspace, layer_name),
-            method="PUT", data=("file://" + directory).encode(),
+            # A plain absolute path, not a file:// URL: Tomcat rejects the
+            # scheme form outright with its own 400 page, before GeoServer's REST
+            # handler ever sees the request.
+            method="PUT", data=directory.encode(),
             ctype="text/plain")
         self.gs_cat.reset()
         # The mosaic serves one coverage; make sure its time dimension is on.
@@ -522,11 +570,12 @@ class Catalog:
 
     def _harvest_granule(self, workspace, layer_name, granule):
         """Tell an existing mosaic to pick up a newly written file."""
+        # external.imagemosaic, not remote: "remote" means fetch a URL, and
+        # handing it a local path fails inside GeoServer with a String/File cast.
         status, _body = self._rest(
-            "workspaces/%s/coveragestores/%s/remote.imagemosaic"
+            "workspaces/%s/coveragestores/%s/external.imagemosaic"
             % (workspace, layer_name),
-            method="POST", data=("file://" + granule).encode(),
-            ctype="text/plain")
+            method="POST", data=granule.encode(), ctype="text/plain")
         return status in (200, 201, 202)
 
     def enable_coverage_time(self, workspace, layer_name):

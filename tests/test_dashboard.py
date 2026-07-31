@@ -339,16 +339,19 @@ def test_upload_round_trip_moves_outputs_to_their_destinations(dashboard_url):
                          r"([^<]*)</wps:LiteralData>", html.unescape(status), re.S)
     reported = reported.group(1).strip() if reported else "<no uploaded output>"
 
-    # ...and the results are registered against the chosen destinations.
+    # ...and the results are registered against the chosen destinations. Under
+    # the default layout each run publishes into a workspace of its own, so the
+    # layer is addressed run_<id>:<name> rather than by a mangled name in a
+    # shared workspace.
     registered = {}
     for field, server_type, expected in (
-            ("destination_wcs", "WCS", "results:fractp"),
-            ("destination_wfs", "WFS", "results:watershed_results_wyield"),
-            ("destination_http", "CSV", "results/watershed_results_wyield")):
+            ("destination_wcs", "WCS", r"run_\w+:fractp"),
+            ("destination_wfs", "WFS", r"run_\w+:watershed_results_wyield"),
+            ("destination_http", "CSV", r"results/watershed_results_wyield")):
         elements = session.get("%s/server/%s/%s/element/"
                                % (dashboard_url, server_type, destinations[field]),
                                timeout=120).text
-        assert expected in elements, (server_type, expected, reported)
+        assert re.search(expected, elements), (server_type, expected, reported)
         registered[server_type] = elements
 
     # Results only: the model writes ten more rasters under intermediate/, and
@@ -356,7 +359,8 @@ def test_upload_round_trip_moves_outputs_to_their_destinations(dashboard_url):
     # results workspace -- the demo publishes its *inputs* to the same GeoServer,
     # so bare names like eto appear in the listing either way.
     for intermediate in ("clipped_lulc", "eto", "kc_raster", "depth_to_root"):
-        assert "results:%s" % intermediate not in registered["WCS"], intermediate
+        assert not re.search(r"run_\w+:%s" % intermediate, registered["WCS"]), \
+            intermediate
 
     # The table is a genuine upload, not a pointer at where it already sat: it
     # is fetchable from the file server it was registered against.
@@ -426,10 +430,17 @@ def test_unique_run_does_not_overwrite_the_previous_runs_outputs(dashboard_url):
     assert "esws:unique_run" in detail, detail[:2000]
 
     def wyield_layers():
+        """Every published wyield raster, qualified by the workspace it is in.
+
+        Under the per-run layout the workspace is what separates runs, so a
+        second run shows up as the same layer name in a different workspace --
+        which is the point: uniqueness stopped being something mangled into a
+        name.
+        """
         elements = session.get("%s/server/WCS/%s/element/"
                                % (dashboard_url, destinations["destination_wcs"]),
                                timeout=120).text
-        return set(re.findall(r"results:(wyield_[A-Za-z0-9_]+)", elements))
+        return set(re.findall(r"(run_\w+:wyield\w*)", elements))
 
     # Measured as a delta: other tests publish to the same destination.
     before = wyield_layers()

@@ -1,6 +1,6 @@
 # ESWS containerized stack — common operations.
 .PHONY: build up down logs update unit smoke smoke-demo verify demo demo-data \
-	check-baremetal check-geoserver
+	check-baremetal check-geoserver check-layouts
 
 build:        ## Build the app + dashboard images
 	docker compose build
@@ -36,6 +36,9 @@ demo: demo-data  ## Load the demo: publish sample data and register it in the da
 	docker compose up -d
 	# `run` (not `exec`) so the micromamba entrypoint puts python on PATH.
 	docker compose run --rm --no-deps wps python scripts/load_demo.py
+
+check-layouts:    ## Exercise every ESWS_RESULTS_LAYOUT / ESWS_VECTOR_BACKEND combination
+	./scripts/check_results_layouts.sh
 
 check-baremetal:  ## Verify install.sh / requirements_py3.txt still install on a clean machine
 	docker build -f docker/Dockerfile.baremetal-check -t esws/baremetal-check .

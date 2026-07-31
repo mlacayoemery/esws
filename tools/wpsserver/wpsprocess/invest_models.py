@@ -18,6 +18,7 @@ References (InVEST >= 3.20):
     carries its type as a class attribute ('raster', 'csv', 'number', ...); each
     file output carries its workspace-relative ``path``.
 """
+import datetime
 import importlib
 import logging
 import os
@@ -36,6 +37,7 @@ import easyows
 from invest_outputs import (anticipated_outputs, output_is_expected,
                             resolved_output_paths)
 from invest_tables import localise_tables
+import results_layout
 
 import natcap.invest
 from natcap.invest import models
@@ -537,21 +539,24 @@ class InvestProcess(pywps.Process):
         catalogs, uploaded = {}, []
 
         def catalog_for(base):
+            # Workspaces are made on demand now: which one an output belongs in
+            # depends on the layout, and under `run` there is a new one per run.
             if base not in catalogs:
                 catalogs[base] = easyows.Catalog(
                     gs_url=base,
                     username=os.environ.get("GEOSERVER_USER", "admin"),
                     password=os.environ.get("GEOSERVER_PASS", "geoserver"),
                     logger=logger)
-                try:
-                    existing = {w.name for w in catalogs[base].gs_cat.get_workspaces()}
-                    if _RESULTS_WORKSPACE not in existing:
-                        catalogs[base].gs_cat.create_workspace(
-                            _RESULTS_WORKSPACE, "http://esws/%s" % _RESULTS_WORKSPACE)
-                except Exception as exc:  # noqa: BLE001
-                    logger.warning("Could not prepare workspace on %s: %s",
-                                   base, str(exc)[:200])
             return catalogs[base]
+
+        layout = results_layout.layout()
+        backend = results_layout.vector_backend()
+        run_id = str(self.uuid)
+        run_time = datetime.datetime.now(datetime.timezone.utc).replace(
+            microsecond=0).isoformat().replace("+00:00", "Z")
+        suffix = args.get("results_suffix") or ""
+        logger.info("Publishing run %s as layout=%s vectors=%s at %s",
+                    run_id, layout, backend, run_time)
 
         for output, path in resolved_output_paths(spec, args["workspace_dir"], args,
                                                   primary_only=True):
@@ -571,8 +576,14 @@ class InvestProcess(pywps.Process):
             if not base:
                 continue
 
-            name = re.sub(r"[^0-9A-Za-z]+", "_",
-                          os.path.splitext(os.path.basename(path))[0]).strip("_")
+            filename = os.path.splitext(os.path.basename(path))[0]
+            # A series has to recognise the same output run after run, and the
+            # results_suffix is the one part of the name that legitimately
+            # differs between them.
+            output_name = (results_layout.unsuffixed(filename, suffix)
+                           if layout == results_layout.LAYOUT_SERIES else filename)
+            workspace, name = results_layout.target(kind, self.model_id,
+                                                    output_name, run_id, layout)
             if kind == "table":
                 # A file server has no upload protocol, so the table is copied
                 # into a directory it already publishes. Without that share it is
@@ -581,26 +592,40 @@ class InvestProcess(pywps.Process):
                                               or os.path.basename(path)))
                 continue
 
+            if results_layout.requires_postgis(kind, layout, backend):
+                logger.warning(
+                    "%s cannot be published: a vector series is appended to run "
+                    "after run and a shapefile cannot be appended to. Set "
+                    "ESWS_VECTOR_BACKEND=postgis.", name)
+                continue
+
             try:
                 cat = catalog_for(base)
-                # overwrite: the results workspace is stable and layer names come
-                # from the output filename, so re-running a model publishes the
-                # same names again. Without it GeoServer refuses the store and the
-                # run's results never reach the destination.
+                cat.make_workspace(workspace)
                 if kind == "raster":
-                    cat.publish_tif(path, name, _RESULTS_WORKSPACE,
-                                    overwrite=True)
+                    if layout == results_layout.LAYOUT_SERIES:
+                        cat.publish_mosaic_granule(path, name, workspace,
+                                                   run_time)
+                    else:
+                        # overwrite: a re-run of the same job publishes the same
+                        # names again, and GeoServer refuses an existing store.
+                        cat.publish_tif(path, name, workspace, overwrite=True)
+                elif backend == results_layout.BACKEND_POSTGIS:
+                    series = layout == results_layout.LAYOUT_SERIES
+                    cat.publish_postgis(path, name, workspace, append=series,
+                                        time_value=run_time if series else None,
+                                        overwrite=not series)
+                    if series:
+                        cat.enable_time_dimension(workspace, name)
                 elif lower.endswith(".gpkg"):
-                    cat.publish_gpkg(path, name, _RESULTS_WORKSPACE,
-                                     overwrite=True)
+                    cat.publish_gpkg(path, name, workspace, overwrite=True)
                 else:
-                    cat.publish_shp(path, name, _RESULTS_WORKSPACE,
-                                    overwrite=True)
+                    cat.publish_shp(path, name, workspace, overwrite=True)
             except Exception as exc:  # noqa: BLE001 - report the rest regardless
                 logger.warning("Could not publish %s to %s: %s",
                                name, base, str(exc)[:200])
                 continue
-            uploaded.append("%s:%s:%s" % (kind, _RESULTS_WORKSPACE, name))
+            uploaded.append("%s:%s:%s" % (kind, workspace, name))
 
         logger.info("Uploaded %d outputs to client destinations", len(uploaded))
         return uploaded

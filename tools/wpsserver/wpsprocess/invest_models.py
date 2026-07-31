@@ -493,7 +493,8 @@ class InvestProcess(pywps.Process):
             if not (is_raster or is_vector):
                 continue
             base = os.path.splitext(os.path.basename(path))[0]
-            layer = re.sub(r"[^0-9A-Za-z]+", "_", base).strip("_") or "layer"
+            # The same naming the upload path uses, so the two agree.
+            layer = results_layout.safe(base)
             uploads["%s:%s" % (ws, layer)] = path
         return uploads
 
@@ -648,7 +649,12 @@ class InvestProcess(pywps.Process):
             cat.clean_named_workspace()
         except Exception:  # noqa: BLE001
             raise pywps.exceptions.NoApplicableCode("Could not clean GeoServer workspace(s)")
-        ws = cat.make_named_workspace(str(self.uuid))
+        # The same workspace the upload path publishes into, so a run has one
+        # workspace rather than two. These are separate publishes for separate
+        # reasons -- this one makes the run viewable at all, the other keeps the
+        # results where the client asked -- but they are the same run's outputs,
+        # and giving them two differently named homes only made that harder to see.
+        ws = cat.make_workspace(results_layout.run_workspace(str(self.uuid)))
 
         uploads = self._build_uploads(ws, args["workspace_dir"], spec, args)
 

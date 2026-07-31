@@ -120,7 +120,9 @@ class Catalog:
 
         if f is None:
             def f(s):
-                return s[:5] == self.ws_prefix
+                # startswith, not s[:5]: that hardcoded the length of "esws-"
+                # and silently matched nothing for any other prefix.
+                return s.startswith(self.ws_prefix)
 
         self.logger.debug("Cleaning workspace")
 

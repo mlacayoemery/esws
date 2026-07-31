@@ -15,6 +15,10 @@ COPY --chown=$MAMBA_USER:$MAMBA_USER requirements/server.txt /tmp/server.txt
 RUN micromamba install -y -n base -c conda-forge \
         python=3.11 \
         "gdal=3.10.*" \
+        # GDAL's PostgreSQL/PostGIS driver is a separate conda package. Without
+        # it OGR has only PGDUMP -- write a .sql file, not talk to a database --
+        # so ESWS_VECTOR_BACKEND=postgis cannot publish anything.
+        "libgdal-pg=3.10.*" \
         c-compiler \
         cxx-compiler \
         cython \
@@ -60,6 +64,14 @@ WORKDIR /app
 # Created here for the same ownership reason as /tmp/wpsoutputs above -- and it
 # has to be after the COPY, which would otherwise replace the directory.
 RUN mkdir -p /app/data/results
+
+# Raster series granules, shared with GeoServer. At the filesystem root, so it
+# needs root to create and the image user to own -- the named volume compose
+# mounts here is seeded from this directory, ownership included, and the wps
+# runs as mambauser.
+USER root
+RUN mkdir -p /mosaics && chown $MAMBA_USER:$MAMBA_USER /mosaics
+USER $MAMBA_USER
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app/tools

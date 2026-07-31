@@ -1,8 +1,16 @@
+import base64
 import logging
 import os
 
 import geoserver.catalog
-from crs_identify import (describe_crs, drop_unresolvable_authority, identify_epsg)
+
+# Namespace URIs for workspaces this code creates. A WFS response carries the
+# URI, so making it meaningful is what puts provenance in the data.
+NAMESPACE_BASE = os.environ.get("ESWS_NAMESPACE_BASE", "http://esws.unige.ch")
+# Column a series table carries its run time in.
+TIME_COLUMN = "esws_run_time"
+from crs_identify import (describe_crs, drop_unresolvable_authority,
+                          identify_epsg)
 import uuid
 
 import urllib
@@ -18,7 +26,6 @@ else:
     from urllib.parse import unquote
 
 import re
-
 import tempfile
 import zipfile
 
@@ -277,6 +284,360 @@ class Catalog:
                              % (epsg, workspace, resource.name,
                                 _CRS_MIN_CONFIDENCE))
         return ok
+
+    # --- PostGIS -----------------------------------------------------------
+    #
+    # The PostGIS data store ships with GeoServer; the JDBC driver does not, and
+    # is added in docker/Dockerfile.geoserver. On this side, GDAL needs its
+    # PostgreSQL driver (conda's libgdal-pg) or OGR can only write .sql dumps.
+
+    def postgis_params(self):
+        """Connection settings for the PostGIS both ends share."""
+        return {
+            "host": os.environ.get("POSTGIS_HOST", "postgis"),
+            "port": os.environ.get("POSTGIS_PORT", "5432"),
+            "database": os.environ.get("POSTGIS_DB", "esws"),
+            "user": os.environ.get("POSTGIS_USER", "esws"),
+            "passwd": os.environ.get("POSTGIS_PASS", "esws"),
+            "schema": os.environ.get("POSTGIS_SCHEMA", "public"),
+            "dbtype": "postgis",
+        }
+
+    def postgis_uri(self):
+        """The same settings as an OGR connection string."""
+        p = self.postgis_params()
+        return ("PG:host=%(host)s port=%(port)s dbname=%(database)s "
+                "user=%(user)s password=%(passwd)s" % p)
+
+    def load_into_postgis(self, vector_path, table, append=False,
+                          extra_fields=None):
+        """Copy a vector file into a PostGIS table, returning the table name.
+
+        ``append`` adds to an existing table rather than replacing it, which is
+        what a series does run after run. ``extra_fields`` are constant values
+        written onto every feature -- the run time, for a series.
+        """
+        from osgeo import gdal, ogr
+
+        source = gdal.OpenEx(vector_path)
+        if source is None or not source.GetLayerCount():
+            raise ValueError("%s has no layers to publish" % vector_path)
+
+        # PROMOTE_TO_MULTI because a shapefile mixes single and multi geometries
+        # in one layer where PostGIS wants one type per column.
+        options = ["-nln", table, "-lco", "GEOMETRY_NAME=geom",
+                   "-lco", "FID=fid", "-nlt", "PROMOTE_TO_MULTI"]
+        options += ["-append"] if append else ["-overwrite"]
+
+        self.logger.debug("Loading %s into PostGIS table %s" % (vector_path, table))
+        result = gdal.VectorTranslate(self.postgis_uri(), source,
+                                      options=options)
+        if result is None:
+            raise RuntimeError("could not load %s into PostGIS" % vector_path)
+        result = None  # flush
+
+        if extra_fields:
+            self._stamp_rows(table, extra_fields)
+        return table
+
+    def _stamp_rows(self, table, values):
+        """Write constant values onto the rows that have none yet.
+
+        Used for the run time on a series table: OGR copies the file's own
+        fields, and this is how the rows learn which run they came from.
+        """
+        from osgeo import ogr
+
+        connection = ogr.Open(self.postgis_uri(), 1)
+        if connection is None:
+            raise RuntimeError("could not connect to PostGIS to stamp %s" % table)
+        for column, value in values.items():
+            connection.ExecuteSQL(
+                'ALTER TABLE "%s" ADD COLUMN IF NOT EXISTS "%s" timestamptz'
+                % (table, column))
+            connection.ExecuteSQL(
+                'UPDATE "%s" SET "%s" = %s WHERE "%s" IS NULL'
+                % (table, column, "'%s'" % value, column))
+        connection = None
+
+    def ensure_postgis_store(self, workspace, store="esws_pg"):
+        """A PostGIS store in ``workspace``, created if it is not there."""
+        try:
+            existing = self.gs_cat.get_store(store, workspace)
+        except Exception:  # noqa: BLE001 - absent stores raise rather than return
+            existing = None
+        if existing is not None:
+            return existing
+        self.logger.debug("Creating PostGIS store %s in %s" % (store, workspace))
+        return self._create_postgis_store_rest(workspace, store)
+
+    def _create_postgis_store_rest(self, workspace, store):
+        """Create the store over REST.
+
+        geoserver-restconfig's create_datastore builds an empty shell and expects
+        the caller to fill in connection parameters one at a time; posting the
+        whole thing is one call and fails loudly if the connection is wrong.
+        """
+        import json as _json
+        import urllib.request
+
+        body = {"dataStore": {"name": store, "connectionParameters": {
+            "entry": [{"@key": key, "$": str(value)}
+                      for key, value in self.postgis_params().items()]}}}
+        request = urllib.request.Request(
+            "%s/rest/workspaces/%s/datastores" % (self.gs_url, workspace),
+            data=_json.dumps(body).encode(), method="POST")
+        request.add_header("Content-Type", "application/json")
+        request.add_header("Authorization", "Basic " + base64.b64encode(
+            ("%s:%s" % (self.username, self.password)).encode()).decode())
+        with urllib.request.urlopen(request, timeout=120) as response:
+            if response.status not in (200, 201):
+                raise RuntimeError("could not create PostGIS store: %s"
+                                   % response.status)
+        # restconfig caches the catalog it has already read, so a store created
+        # behind its back is invisible to the same session until the cache is
+        # dropped -- publishing then fails on a store that plainly exists.
+        self.gs_cat.reset()
+        return self.gs_cat.get_store(store, workspace)
+
+    def publish_postgis(self, vector_path, layer_name, gs_workspace,
+                        store="esws_pg", append=False, time_value=None,
+                        overwrite=False):
+        """Publish a vector through PostGIS rather than as a shapefile.
+
+        The table is named for the layer, so a series appends run after run into
+        one table and one layer, while a per-run workspace gets a table of its
+        own.
+        """
+        self.make_workspace(gs_workspace)
+        self.ensure_postgis_store(gs_workspace, store)
+
+        # The table is named for the layer, so a series appends into one table
+        # run after run while a per-run workspace gets a table of its own.
+        extra = {TIME_COLUMN: time_value} if time_value else None
+        self.load_into_postgis(vector_path, layer_name, append=append,
+                               extra_fields=extra)
+
+        try:
+            published = self.gs_cat.get_layer("%s:%s" % (gs_workspace, layer_name))
+        except Exception:  # noqa: BLE001
+            published = None
+        if published is not None:
+            # Already published: the table now holds this run's rows too.
+            return published
+
+        # GeoServer will not publish a feature type without a CRS, and PostGIS
+        # gives it only an SRID. The same identification the file publishing path
+        # uses answers it, including for the definitions GeoServer cannot name
+        # itself -- see crs_identify.
+        native_crs = identify_epsg(vector_path, logger=self.logger)
+        if not native_crs:
+            raise RuntimeError(
+                "%s has no CRS that can be declared, so PostGIS cannot publish it"
+                % os.path.basename(vector_path))
+
+        store_object = self.gs_cat.get_store(store, gs_workspace)
+        return self.gs_cat.publish_featuretype(layer_name, store_object,
+                                               native_crs=native_crs,
+                                               srs=native_crs)
+
+    # --- raster series (ImageMosaic) ---------------------------------------
+
+    def publish_mosaic_granule(self, tif_path, layer_name, gs_workspace,
+                               time_value):
+        """Add one run's raster to a time series, creating the series if new.
+
+        An ImageMosaic is a directory of files plus an index; GeoServer reads the
+        time of each granule out of its filename, so the run time is written
+        there rather than kept in a sidecar. The directory lives on a volume both
+        containers see, since GeoServer opens the granules itself.
+        """
+        import shutil
+
+        root = os.environ.get("ESWS_MOSAIC_ROOT", "/mosaics")
+        directory = os.path.join(root, gs_workspace, layer_name)
+        os.makedirs(directory, exist_ok=True)
+
+        stamp = re.sub(r"[^0-9TZ]", "", str(time_value).replace("-", "")
+                       .replace(":", ""))
+        granule = os.path.join(directory, "%s_%s.tif" % (layer_name, stamp))
+        shutil.copyfile(tif_path, granule)
+
+        first = not os.path.exists(os.path.join(directory, "indexer.properties"))
+        if first:
+            self._write_mosaic_config(directory, layer_name)
+            self._write_mosaic_index_store(directory)
+
+        self.make_workspace(gs_workspace)
+        if first:
+            created = self._create_mosaic_store(gs_workspace, layer_name,
+                                                directory)
+        else:
+            created = self._harvest_granule(gs_workspace, layer_name, granule)
+
+        # The index records the granule with whatever time it could read from the
+        # filename; this is where it learns the run's actual time.
+        self.set_granule_time(layer_name, granule, time_value)
+        return created
+
+    def _write_mosaic_index_store(self, directory):
+        """Point the mosaic's granule index at PostGIS.
+
+        The index is otherwise a shapefile beside the granules, and the time of
+        each granule has to be parsed out of its filename -- which this GeoServer
+        does only as far as the date: it honours the regex and ignores the
+        format, so every run of a day collapses onto midnight. Indexing into
+        PostGIS puts the times in a table this code can set exactly, which is the
+        same place the vector series already keeps them.
+        """
+        params = self.postgis_params()
+        with open(os.path.join(directory, "datastore.properties"), "w") as handle:
+            handle.write(
+                "SPI=org.geotools.data.postgis.PostgisNGDataStoreFactory\n"
+                "host=%(host)s\nport=%(port)s\ndatabase=%(database)s\n"
+                "schema=%(schema)s\nuser=%(user)s\npasswd=%(passwd)s\n"
+                "Loose\\ bbox=true\nEstimated\\ extends=false\n"
+                "validate\\ connections=true\nConnection\\ timeout=10\n"
+                "preparedStatements=true\n" % params)
+
+    def set_granule_time(self, layer_name, granule, time_value):
+        """Set the time of one granule in the mosaic's PostGIS index."""
+        from osgeo import ogr
+
+        connection = ogr.Open(self.postgis_uri(), 1)
+        if connection is None:
+            raise RuntimeError("could not reach the mosaic index in PostGIS")
+        connection.ExecuteSQL(
+            "UPDATE \"%s\" SET \"time\" = TIMESTAMPTZ '%s' "
+            "WHERE location LIKE '%%%s'"
+            % (layer_name, time_value, os.path.basename(granule)))
+        connection = None
+
+    def _write_mosaic_config(self, directory, layer_name):
+        """indexer and timeregex, which are how a mosaic learns to be a series.
+
+        Without TimeAttribute the directory is just a mosaic of tiles laid out in
+        space; with it, granules that cover the same ground are separate points in
+        time rather than overlapping neighbours.
+        """
+        with open(os.path.join(directory, "indexer.properties"), "w") as handle:
+            handle.write(
+                "TimeAttribute=time\n"
+                "Schema=*the_geom:Polygon,location:String,time:java.util.Date\n"
+                "PropertyCollectors=TimestampFileNameExtractorSPI[timeregex](time)\n"
+                "Name=%s\n"
+                "AbsolutePath=true\n" % layer_name)
+        with open(os.path.join(directory, "timeregex.properties"), "w") as handle:
+            # 20260731T093000Z, as written by publish_mosaic_granule.
+            # regex and format on separate lines: a Java properties file reads
+            # "regex=...,format=..." as one value, and the format is silently
+            # ignored -- every granule then lands at midnight of its date.
+            handle.write("regex=[0-9]{8}T[0-9]{6}Z\n")
+            handle.write("format=yyyyMMdd'T'HHmmss'Z'\n")
+
+    def _rest(self, path, method="GET", data=None, ctype="application/json"):
+        import urllib.request
+
+        request = urllib.request.Request("%s/rest/%s" % (self.gs_url, path),
+                                         data=data, method=method)
+        request.add_header("Content-Type", ctype)
+        request.add_header("Authorization", "Basic " + base64.b64encode(
+            ("%s:%s" % (self.username, self.password)).encode()).decode())
+        try:
+            with urllib.request.urlopen(request, timeout=300) as response:
+                return response.status, response.read()
+        except urllib.error.HTTPError as error:
+            # GeoServer explains itself in the body; a bare status turns a fixable
+            # mistake into a guess.
+            detail = error.read().decode("utf-8", "replace")[:400]
+            raise RuntimeError("GeoServer %s on %s: %s"
+                               % (error.code, path, detail.strip())) from None
+
+    def _create_mosaic_store(self, workspace, layer_name, directory):
+        """Register the directory as an ImageMosaic coverage store."""
+        status, _body = self._rest(
+            "workspaces/%s/coveragestores/%s/external.imagemosaic"
+            % (workspace, layer_name),
+            # A plain absolute path, not a file:// URL: Tomcat rejects the
+            # scheme form outright with its own 400 page, before GeoServer's REST
+            # handler ever sees the request.
+            method="PUT", data=directory.encode(),
+            ctype="text/plain")
+        self.gs_cat.reset()
+        # The mosaic serves one coverage; make sure its time dimension is on.
+        self.enable_coverage_time(workspace, layer_name)
+        return status in (200, 201, 202)
+
+    def _harvest_granule(self, workspace, layer_name, granule):
+        """Tell an existing mosaic to pick up a newly written file."""
+        # external.imagemosaic, not remote: "remote" means fetch a URL, and
+        # handing it a local path fails inside GeoServer with a String/File cast.
+        status, _body = self._rest(
+            "workspaces/%s/coveragestores/%s/external.imagemosaic"
+            % (workspace, layer_name),
+            method="POST", data=granule.encode(), ctype="text/plain")
+        return status in (200, 201, 202)
+
+    def enable_coverage_time(self, workspace, layer_name):
+        """Turn on the time dimension of a mosaic's coverage."""
+        import json as _json
+
+        body = {"coverage": {"enabled": True, "metadata": {"entry": [{
+            "@key": "time",
+            "dimensionInfo": {"enabled": True, "presentation": "LIST",
+                              "units": "ISO8601",
+                              "defaultValue": {"strategy": "MAXIMUM"}}}]}}}
+        try:
+            status, _ = self._rest(
+                "workspaces/%s/coveragestores/%s/coverages/%s.json"
+                % (workspace, layer_name, layer_name),
+                method="PUT", data=_json.dumps(body).encode())
+            return status in (200, 201)
+        except Exception as exc:  # noqa: BLE001
+            self.logger.warning("Could not enable time on %s:%s: %s"
+                                % (workspace, layer_name, str(exc)[:160]))
+            return False
+
+    def enable_time_dimension(self, workspace, layer, attribute=TIME_COLUMN,
+                              store="esws_pg"):
+        """Expose a feature type's run-time column as its time dimension.
+
+        This is what makes a series addressable: with it, a client asks for
+        `&time=...` to get one run, or omits it and GeoServer serves the most
+        recent -- which is exactly what a downstream job wanting "whatever was
+        produced last" needs, with no resolution logic anywhere.
+        """
+        import json as _json
+        import urllib.request
+
+        body = {"featureType": {"enabled": True, "metadata": {"entry": [{
+            "@key": "time",
+            "dimensionInfo": {"enabled": True, "attribute": attribute,
+                              "presentation": "LIST",
+                              "units": "ISO8601",
+                              "defaultValue": {"strategy": "MAXIMUM"}}}]}}}
+        url = ("%s/rest/workspaces/%s/datastores/%s/featuretypes/%s.json"
+               % (self.gs_url, workspace, store, layer))
+        request = urllib.request.Request(url, data=_json.dumps(body).encode(),
+                                         method="PUT")
+        request.add_header("Content-Type", "application/json")
+        request.add_header("Authorization", "Basic " + base64.b64encode(
+            ("%s:%s" % (self.username, self.password)).encode()).decode())
+        with urllib.request.urlopen(request, timeout=120) as response:
+            return response.status in (200, 201)
+
+    def make_workspace(self, name, uri=None):
+        """A workspace, created if absent, with a namespace URI that says whose
+        it is -- a WFS response carries that URI, so it is where provenance ends
+        up being readable from the data itself."""
+        try:
+            if self.gs_cat.get_workspace(name) is not None:
+                return name
+        except Exception:  # noqa: BLE001
+            pass
+        self.gs_cat.create_workspace(name, uri or (NAMESPACE_BASE + "/" + name))
+        self.gs_cat.reset()
+        return name
 
     def store_exists(self, name, workspace):
         return len(self.gs_cat.get_stores(names=name, workspaces=workspace)) > 0

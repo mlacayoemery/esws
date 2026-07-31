@@ -43,6 +43,42 @@
 workspace and registers each as a WCS element in the dashboard, where it becomes
 selectable for any model input that wants a raster.</p>
 <p>A job given a WCS URL has the coverage fetched for it before the model runs.</p>
+<section id="how-a-run-s-results-are-laid-out">
+<span id="results-layouts"></span><h2>How a run’s results are laid out<a class="headerlink" href="#how-a-run-s-results-are-laid-out" title="Link to this heading">¶</a></h2>
+<p>Every job should produce a unique, traceable result, and none should be thrown
+away. Two layouts satisfy that, and they differ in how a result is <em>addressed</em>
+rather than merely where it is stored. Choose with <code class="docutils literal notranslate"><span class="pre">ESWS_RESULTS_LAYOUT</span></code>.</p>
+<dl>
+<dt><code class="docutils literal notranslate"><span class="pre">run</span></code> (the default)</dt><dd><p>A workspace per run, named for it. Layer names stay exactly as the model
+wrote them – <code class="docutils literal notranslate"><span class="pre">run_a1b2c3d4:wyield</span></code>, not a token mangled into the name.
+Each run is also its own OGC endpoint, since GeoServer serves every
+workspace at <code class="docutils literal notranslate"><span class="pre">/geoserver/&lt;workspace&gt;/ows</span></code>.</p>
+<p>The cost is catalog growth: GeoServer keeps its catalog as XML on disk, at
+roughly four files per layer, so this grows with the number of runs.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">series</span></code></dt><dd><p>One layer per model output, one granule per run, addressed by time:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">Dimension</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;time&quot;</span> <span class="n">default</span><span class="o">=</span><span class="s2">&quot;2026-07-31T10:30:00Z&quot;</span> <span class="n">units</span><span class="o">=</span><span class="s2">&quot;ISO8601&quot;</span><span class="o">&gt;</span>
+    <span class="mi">2026</span><span class="o">-</span><span class="mi">07</span><span class="o">-</span><span class="mi">31</span><span class="n">T09</span><span class="p">:</span><span class="mi">00</span><span class="p">:</span><span class="mf">00.000</span><span class="n">Z</span><span class="p">,</span><span class="mi">2026</span><span class="o">-</span><span class="mi">07</span><span class="o">-</span><span class="mi">31</span><span class="n">T10</span><span class="p">:</span><span class="mi">30</span><span class="p">:</span><span class="mf">00.000</span><span class="n">Z</span>
+</pre></div>
+</div>
+<p>The catalog stops growing with run count, which is what makes keeping
+everything survivable. Note the default: <strong>the most recent granule</strong>, so a
+request without a time gets the latest run – and a downstream job wanting
+“whatever was produced last” needs no resolution logic at all.</p>
+</dd>
+</dl>
+<p>Vectors additionally choose a backend with <code class="docutils literal notranslate"><span class="pre">ESWS_VECTOR_BACKEND</span></code>: <code class="docutils literal notranslate"><span class="pre">files</span></code>
+publishes shapefiles, <code class="docutils literal notranslate"><span class="pre">postgis</span></code> loads tables into PostGIS. A <strong>vector series
+requires PostGIS</strong>, because each run appends to the same layer and a shapefile
+cannot be appended to; asked for the impossible combination, publishing refuses
+that output and says why rather than producing something misleading.</p>
+<p>Rasters in <code class="docutils literal notranslate"><span class="pre">series</span></code> become an ImageMosaic whose granule index lives in PostGIS.
+That is not merely tidier: GeoServer honours the filename <code class="docutils literal notranslate"><span class="pre">regex</span></code> for granule
+times but ignores the accompanying <code class="docutils literal notranslate"><span class="pre">format</span></code>, so every run of a day collapses
+onto midnight. Keeping the index in PostGIS lets the run’s actual time be set
+directly.</p>
+<p>Verify every combination with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">check-layouts</span></code>.</p>
+</section>
 <section id="layers-without-a-usable-crs">
 <span id="crs-caveat"></span><h2>Layers without a usable CRS<a class="headerlink" href="#layers-without-a-usable-crs" title="Link to this heading">¶</a></h2>
 <p>GeoServer leaves a layer <strong>disabled</strong> when it cannot resolve the data’s native
@@ -118,6 +154,7 @@ such a reference stripped, leaving a CRS every client can read on its own terms.
 <li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration &amp; Maintenance</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tables.html">Tabular Data</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Raster Data</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#how-a-run-s-results-are-laid-out">How a run’s results are laid out</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#layers-without-a-usable-crs">Layers without a usable CRS</a></li>
 </ul>
 </li>

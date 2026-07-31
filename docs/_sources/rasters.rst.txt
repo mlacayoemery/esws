@@ -15,6 +15,49 @@ selectable for any model input that wants a raster.
 
 A job given a WCS URL has the coverage fetched for it before the model runs.
 
+.. _results-layouts:
+
+How a run's results are laid out
+================================
+
+Every job should produce a unique, traceable result, and none should be thrown
+away. Two layouts satisfy that, and they differ in how a result is *addressed*
+rather than merely where it is stored. Choose with ``ESWS_RESULTS_LAYOUT``.
+
+``run`` (the default)
+    A workspace per run, named for it. Layer names stay exactly as the model
+    wrote them -- ``run_a1b2c3d4:wyield``, not a token mangled into the name.
+    Each run is also its own OGC endpoint, since GeoServer serves every
+    workspace at ``/geoserver/<workspace>/ows``.
+
+    The cost is catalog growth: GeoServer keeps its catalog as XML on disk, at
+    roughly four files per layer, so this grows with the number of runs.
+
+``series``
+    One layer per model output, one granule per run, addressed by time::
+
+        <Dimension name="time" default="2026-07-31T10:30:00Z" units="ISO8601">
+            2026-07-31T09:00:00.000Z,2026-07-31T10:30:00.000Z
+
+    The catalog stops growing with run count, which is what makes keeping
+    everything survivable. Note the default: **the most recent granule**, so a
+    request without a time gets the latest run -- and a downstream job wanting
+    "whatever was produced last" needs no resolution logic at all.
+
+Vectors additionally choose a backend with ``ESWS_VECTOR_BACKEND``: ``files``
+publishes shapefiles, ``postgis`` loads tables into PostGIS. A **vector series
+requires PostGIS**, because each run appends to the same layer and a shapefile
+cannot be appended to; asked for the impossible combination, publishing refuses
+that output and says why rather than producing something misleading.
+
+Rasters in ``series`` become an ImageMosaic whose granule index lives in PostGIS.
+That is not merely tidier: GeoServer honours the filename ``regex`` for granule
+times but ignores the accompanying ``format``, so every run of a day collapses
+onto midnight. Keeping the index in PostGIS lets the run's actual time be set
+directly.
+
+Verify every combination with ``make check-layouts``.
+
 .. _crs-caveat:
 
 Layers without a usable CRS

@@ -101,23 +101,38 @@ by GeoServer itself and by the WPS when it publishes results.</p>
 <code class="docutils literal notranslate"><span class="pre">/store/invest/samples</span></code>; kept outside the repository because it is
 around 2 GB. Mounted read-only.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">WPS_RESULTS_WORKSPACE</span></code></p></td>
-<td><p>GeoServer workspace uploaded results are published into (<code class="docutils literal notranslate"><span class="pre">results</span></code>).</p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ESWS_RESULTS_LAYOUT</span></code></p></td>
+<td><p>How a run’s results are laid out. <code class="docutils literal notranslate"><span class="pre">run</span></code> (the default) gives every run a
+workspace of its own, named for the run, with layer names left exactly as
+the model wrote them. <code class="docutils literal notranslate"><span class="pre">series</span></code> instead keeps one layer per model output
+and adds a granule per run, addressed by time.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">WPS_TABLE_UPLOAD_DIR</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ESWS_VECTOR_BACKEND</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">files</span></code> (the default) publishes vectors as shapefiles; <code class="docutils literal notranslate"><span class="pre">postgis</span></code>
+loads them into PostGIS tables. <code class="docutils literal notranslate"><span class="pre">series</span></code> requires <code class="docutils literal notranslate"><span class="pre">postgis</span></code> for
+vectors – a shapefile cannot be appended to.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">POSTGIS_DB</span></code>, <code class="docutils literal notranslate"><span class="pre">POSTGIS_USER</span></code>, <code class="docutils literal notranslate"><span class="pre">POSTGIS_PASS</span></code></p></td>
+<td><p>The database both GeoServer and the WPS use when the PostGIS backend or
+the series layout is on.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">WPS_RESULTS_WORKSPACE</span></code></p></td>
+<td><p>Legacy shared workspace name, unused by either layout above.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">WPS_TABLE_UPLOAD_DIR</span></code></p></td>
 <td><p>Directory table results are copied into. It is a volume the file server
 publishes, which is what makes an HTTP destination a real upload target: a
 plain file server has no upload protocol of its own. Leave it unset and
 tables are reported where the WPS already serves them from.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">WPS_TABLE_UPLOAD_PATH</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">WPS_TABLE_UPLOAD_PATH</span></code></p></td>
 <td><p>The path that directory appears at on the file server (<code class="docutils literal notranslate"><span class="pre">results</span></code>).</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">EASYOWS_CRS_MIN_CONFIDENCE</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">EASYOWS_CRS_MIN_CONFIDENCE</span></code></p></td>
 <td><p>How sure a CRS match must be, as a percentage, before it is declared for a
 published layer. Defaults to 90. See <a class="reference internal" href="rasters.html#crs-caveat"><span class="std std-ref">Layers without a usable CRS</span></a>.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">INVEST_USERGUIDE_BASE</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">INVEST_USERGUIDE_BASE</span></code></p></td>
 <td><p>Base URL each process links its manual under.</p></td>
 </tr>
 </tbody>

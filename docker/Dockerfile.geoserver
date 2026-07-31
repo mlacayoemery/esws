@@ -1,0 +1,14 @@
+# GeoServer with the PostgreSQL JDBC driver.
+#
+# The PostGIS *data store* ships with GeoServer -- gt-jdbc-postgis is in
+# WEB-INF/lib of the stock image -- but the JDBC driver it needs does not, so a
+# PostGIS store cannot connect without this. It is one jar, which is why this
+# image is a two-line derivative rather than a build.
+ARG GEOSERVER_VERSION=3.0.0
+FROM docker.osgeo.org/geoserver:${GEOSERVER_VERSION}
+
+ARG PGJDBC_VERSION=42.7.13
+RUN set -eu; \
+    curl -fsSL -o /usr/local/tomcat/webapps/geoserver/WEB-INF/lib/postgresql-${PGJDBC_VERSION}.jar \
+      "https://repo1.maven.org/maven2/org/postgresql/postgresql/${PGJDBC_VERSION}/postgresql-${PGJDBC_VERSION}.jar"; \
+    test -s /usr/local/tomcat/webapps/geoserver/WEB-INF/lib/postgresql-${PGJDBC_VERSION}.jar

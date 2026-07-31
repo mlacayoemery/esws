@@ -29,6 +29,10 @@ services:
       # outputs somewhere to be uploaded *to*, since a plain file server has no
       # upload protocol of its own.
       - results_tables:/app/data/results
+      # Raster series granules, shared with geoserver, which reads them as an
+      # ImageMosaic. Its own volume rather than a corner of gisdata: that one is
+      # root-owned and the wps runs as mambauser, so it cannot write there.
+      - mosaics:/mosaics
     environment:
       GEOSERVER_URL: http://geoserver:8080/geoserver
       # Advertised to WPS clients in the WMS URLs of published layers, so it has
@@ -42,8 +46,21 @@ services:
       WPS_OUTPUT_URL: http://localhost:${WPS_HOST_PORT:-5000}/outputs
       WPS_TABLE_UPLOAD_DIR: /app/data/results
       WPS_TABLE_UPLOAD_PATH: results
+      # How a run's results are laid out on the destination server:
+      #   run    - a workspace per run, layer names left as the model wrote them
+      #   series - one layer per model output, a granule per run, addressed by time
+      ESWS_RESULTS_LAYOUT: ${ESWS_RESULTS_LAYOUT:-run}
+      # Where published vectors live: as shapefiles, or as PostGIS tables.
+      # `series` needs postgis for vectors -- a shapefile cannot be appended to.
+      ESWS_VECTOR_BACKEND: ${ESWS_VECTOR_BACKEND:-files}
+      POSTGIS_HOST: postgis
+      POSTGIS_PORT: "5432"
+      POSTGIS_DB: ${POSTGIS_DB:-esws}
+      POSTGIS_USER: ${POSTGIS_USER:-esws}
+      POSTGIS_PASS: ${POSTGIS_PASS:-esws}
     depends_on:
       - geoserver
+      - postgis
 
   fileserver:
     # Shares the wps image. Only the wps service declares the build: buildkit
@@ -86,8 +103,27 @@ services:
     depends_on:
       - wps
 
+  postgis:
+    # Vector backend for ESWS_VECTOR_BACKEND=postgis, and the granule index for
+    # ESWS_RESULTS_LAYOUT=series. Unused by the defaults, but cheap to leave up.
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_DB: ${POSTGIS_DB:-esws}
+      POSTGRES_USER: ${POSTGIS_USER:-esws}
+      POSTGRES_PASSWORD: ${POSTGIS_PASS:-esws}
+    volumes:
+      - postgis_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGIS_USER:-esws} -d ${POSTGIS_DB:-esws}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
   geoserver:
-    image: docker.osgeo.org/geoserver:3.0.0
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.geoserver
+    image: esws/geoserver
     ports:
       - "${GEOSERVER_HOST_PORT:-8080}:8080"
     environment:
@@ -100,8 +136,12 @@ services:
       # CRSs with no EPSG code, chiefly the MODIS sinusoidal grid. Without this
       # GeoServer cannot name them and leaves those layers disabled.
       - ./docker/geoserver/epsg.properties:/opt/geoserver_data/user_projections/epsg.properties:ro
+      # See wps: granule files for ESWS_RESULTS_LAYOUT=series.
+      - mosaics:/mosaics
 
 volumes:
+  mosaics:
+  postgis_data:
   wps_outputs:
   results_tables:
   gisdata:

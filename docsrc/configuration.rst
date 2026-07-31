@@ -60,8 +60,20 @@ Data and results
      - Where the InVEST sample data is cached. Defaults to
        ``/store/invest/samples``; kept outside the repository because it is
        around 2 GB. Mounted read-only.
+   * - ``ESWS_RESULTS_LAYOUT``
+     - How a run's results are laid out. ``run`` (the default) gives every run a
+       workspace of its own, named for the run, with layer names left exactly as
+       the model wrote them. ``series`` instead keeps one layer per model output
+       and adds a granule per run, addressed by time.
+   * - ``ESWS_VECTOR_BACKEND``
+     - ``files`` (the default) publishes vectors as shapefiles; ``postgis``
+       loads them into PostGIS tables. ``series`` requires ``postgis`` for
+       vectors -- a shapefile cannot be appended to.
+   * - ``POSTGIS_DB``, ``POSTGIS_USER``, ``POSTGIS_PASS``
+     - The database both GeoServer and the WPS use when the PostGIS backend or
+       the series layout is on.
    * - ``WPS_RESULTS_WORKSPACE``
-     - GeoServer workspace uploaded results are published into (``results``).
+     - Legacy shared workspace name, unused by either layout above.
    * - ``WPS_TABLE_UPLOAD_DIR``
      - Directory table results are copied into. It is a volume the file server
        publishes, which is what makes an HTTP destination a real upload target: a

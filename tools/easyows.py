@@ -282,10 +282,49 @@ class Catalog:
             resource.projection_policy = "FORCE_DECLARED"
             resource.enabled = True
             self.gs_cat.save(resource)
+            # Declaring the CRS is not enough to make the layer findable; see
+            # _recalculate_bounds.
+            self._recalculate_bounds(resource)
             self.logger.info("Declared %s for %s:%s (CRS match threshold %d%%)"
                              % (epsg, workspace, resource.name,
                                 _CRS_MIN_CONFIDENCE))
         return ok
+
+    def _recalculate_bounds(self, resource):
+        """Recompute a rescued layer's bounds, so WMS will advertise it.
+
+        GeoServer computes no latLonBoundingBox for a layer it imported without
+        a resolvable CRS -- it had no projection to derive one from. Declaring
+        the SRS afterwards does not backfill it: the bounds are only recomputed
+        when the write asks for it. WMS 1.3.0 cannot emit a layer that has no
+        EX_GeographicBoundingBox, so GeoServer silently drops it from
+        GetCapabilities.
+
+        The layer is enabled and serves correctly over WFS and WCS throughout,
+        which is why this hides from a publish-then-fetch round trip and
+        surfaces only as a layer no WMS client can discover -- it cost four of
+        the demo's layers before anyone noticed.
+        """
+        import json as _json
+
+        # The href carries the store kind (datastores vs coveragestores), which
+        # decides both the REST path and the name of the document element.
+        path = resource.href.partition("/rest/")[2]
+        for extension in (".xml", ".json", ".html"):
+            if path.endswith(extension):
+                path = path[:-len(extension)]
+                break
+        body = {resource.resource_type: {"srs": resource.projection}}
+        try:
+            status, _ = self._rest(
+                "%s.json?recalculate=nativebbox,latlonbbox" % path,
+                method="PUT", data=_json.dumps(body).encode())
+            return status in (200, 201)
+        except Exception as exc:  # noqa: BLE001
+            # A layer that serves but cannot be found beats no layer at all.
+            self.logger.warning("Could not recalculate bounds for %s: %s"
+                                % (resource.name, str(exc)[:160]))
+            return False
 
     # --- PostGIS -----------------------------------------------------------
     #

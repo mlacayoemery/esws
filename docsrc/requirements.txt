@@ -9,10 +9,11 @@
 # once). alabaster is pinned too -- it is what actually emits the HTML, so it
 # moves the output as much as sphinx does. Bump these deliberately, then rebuild
 # and commit the resulting docs/ churn as its own change.
-# 9.0.4 was the last release that ran on Python 3.11, which the InVEST conda
-# environment used to pin. That environment is on 3.12 now, so Sphinx 9.1 is
-# available -- this stays at 9.0.4 only until the bump is taken deliberately,
-# because it rewrites every page and all of _static in the committed docs/.
-sphinx==9.0.4
+# 9.1 needs Python >= 3.12, which the InVEST conda environment provides since the
+# Python floor moved. Taken deliberately, with the docs/ churn it causes committed
+# alongside it -- and only after confirming on the same environment that 9.0.4
+# still reproduced the committed output byte for byte, so the churn below is
+# attributable to Sphinx and nothing else.
+sphinx==9.1.0
 sphinxcontrib-mermaid==2.1.0
 alabaster==1.0.0

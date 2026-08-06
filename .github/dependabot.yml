@@ -11,13 +11,6 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
-    ignore:
-      # Sphinx 9.1 requires Python >= 3.12. The environment now provides it, so
-      # this is no longer a hard block -- the bump is just not taken yet, and it
-      # rewrites every page of the committed docs/, so it moves deliberately on
-      # its own. Drop this entry when it does.
-      - dependency-name: sphinx
-        versions: [">=9.1"]
 
   - package-ecosystem: docker
     directory: /docker

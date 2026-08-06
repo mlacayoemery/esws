@@ -13,3 +13,8 @@ src
 .env
 # mountpoint for the results_tables volume (see docker-compose.yml)
 data/results/
+# Per-machine Claude Code state: settings.local.json holds personal permission
+# rules, the lock file is runtime scratch. A shared .claude/settings.json is
+# deliberately not ignored -- that one is meant to be committed.
+.claude/settings.local.json
+.claude/*.lock

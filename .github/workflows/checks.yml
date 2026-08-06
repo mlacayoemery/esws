@@ -18,7 +18,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
-          python-version: '3.11'   # the version the wps image runs
+          python-version: '3.12'   # the version the wps image runs
 
       - name: Byte-compile every live module
         # Catches what the container would otherwise only reveal on start, and

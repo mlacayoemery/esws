@@ -39,8 +39,10 @@ geoserver-restconfig
 
 # --- Django dashboard (tools/wpsclient) ---
 # 4.2's extended support ended in April 2026; 5.2 is the current LTS, supported
-# to April 2028. Django 6.0 requires Python >= 3.12 and the image is on 3.11,
-# pinned by the InVEST conda environment, so 5.2 is as far as this can go.
+# to April 2028. Django 6.0 needs Python >= 3.12, which the image now has -- so
+# 6.0 is reachable and is simply not taken yet. It is a major version and the
+# dashboard's syncdb-only migration setup is the risky part, so it moves on its
+# own, not as a side effect of the Python bump.
 Django==5.2.*
 django-extensions
 owslib

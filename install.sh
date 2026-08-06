@@ -62,8 +62,11 @@ if [ ! -x "$HOME/.local/bin/micromamba" ]; then
     curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest \
         | tar -xj -C "$HOME/.local" bin/micromamba
 fi
+# Keep the Python in step with docker/Dockerfile.invest -- the docs build reads
+# MODEL_SPEC from whatever InVEST this env has, so a drifting env documents the
+# wrong thing silently.
 "$HOME/.local/bin/micromamba" create -y -p "$ESWS_ENV" -c conda-forge \
-    python=3.11 \
+    python=3.12 \
     "gdal=3.10.*" \
     "pygeoprocessing>=2.4.10" \
     c-compiler cxx-compiler cython numpy \

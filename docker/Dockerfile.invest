@@ -10,10 +10,17 @@ FROM mambaorg/micromamba:2.8.1
 # Install requirements file early for better layer caching.
 COPY --chown=$MAMBA_USER:$MAMBA_USER requirements/server.txt /tmp/server.txt
 
-# Python 3.11 + GDAL 3.x + compilers/cython so `pip install natcap.invest` can
-# build its extensions from sdist if no wheel is available for this platform.
+# Python + GDAL 3.x + compilers/cython so `pip install natcap.invest` can build
+# its extensions from sdist if no wheel is available for this platform.
+#
+# 3.12, not 3.11: natcap.invest 3.20.0 declares requires_python >=3.10 and
+# classifies 3.10-3.14, so the old 3.11 was ESWS's own choice rather than a
+# constraint -- and it was what held Django at 5.2 and Sphinx at 9.0.4, both of
+# which need >=3.12. conda-forge builds the whole geo stack for 3.12 (gdal
+# 3.10.3, pygeoprocessing 2.4.11). Keep this in step with install.sh and
+# docker/Dockerfile.baremetal-check.
 RUN micromamba install -y -n base -c conda-forge \
-        python=3.11 \
+        python=3.12 \
         "gdal=3.10.*" \
         # GDAL's PostgreSQL/PostGIS driver is a separate conda package. Without
         # it OGR has only PGDUMP -- write a .sql file, not talk to a database --

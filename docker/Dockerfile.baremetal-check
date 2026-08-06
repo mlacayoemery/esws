@@ -35,7 +35,7 @@ RUN mkdir -p "$HOME/.local/bin" && \
         | tar -xj -C "$HOME/.local" bin/micromamba
 
 RUN "$HOME/.local/bin/micromamba" create -y -p "$HOME/esws-invest" -c conda-forge \
-        python=3.11 \
+        python=3.12 \
         "gdal=3.10.*" \
         "pygeoprocessing>=2.4.10" \
         c-compiler cxx-compiler cython numpy \

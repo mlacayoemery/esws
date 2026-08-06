@@ -5,5 +5,13 @@
 # anywhere under tools/wpsclient any more.
 #   jsonfield                    -> django.db.models.JSONField
 #   django-SplitJSONWidget-form  -> tools/wpsclient/wpsclient/widgets.py
-Django==4.2.*
+#
+# This pin must track ../../requirements/server.txt. It cannot defer to it with
+# -r: the point of this file is to be the dashboard-only subset, and server.txt
+# carries the whole InVEST geo stack. So it is a copy, and copies drift -- this
+# one sat at 4.2 while the stack moved to 5.2, which made the
+# "DASHBOARD SUBSET OK" step of docker/Dockerfile.baremetal-check meaningless:
+# it dry-run installs this file into the env built from server.txt, so a lower
+# pin resolves as a *downgrade* and still exits 0. Bump both together.
+Django==5.2.*
 owslib

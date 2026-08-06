@@ -38,12 +38,17 @@ flask-cors
 geoserver-restconfig
 
 # --- Django dashboard (tools/wpsclient) ---
-# 4.2's extended support ended in April 2026; 5.2 is the current LTS, supported
-# to April 2028. Django 6.0 needs Python >= 3.12, which the image now has -- so
-# 6.0 is reachable and is simply not taken yet. It is a major version and the
-# dashboard's syncdb-only migration setup is the risky part, so it moves on its
-# own, not as a side effect of the Python bump.
-Django==5.2.*
+# 6.1, the current release, on Python >= 3.12 which the image now has.
+#
+# This deliberately leaves the LTS track, so the trade is worth stating: 5.2 is
+# an LTS supported to April 2028, while 6.1 is a feature release with roughly a
+# 16-month window. Chosen over 6.0 because if you are leaving LTS anyway, the
+# newer release buys the longer runway for the same compatibility risk. The next
+# LTS is 6.2 (April 2027) and is the natural next stop.
+#
+# tools/wpsclient/requirements_py3.txt pins this too and must move with it --
+# see the comment there for what silently breaks when it does not.
+Django==6.1.*
 django-extensions
 owslib
 beautifulsoup4

@@ -13,5 +13,5 @@
 # "DASHBOARD SUBSET OK" step of docker/Dockerfile.baremetal-check meaningless:
 # it dry-run installs this file into the env built from server.txt, so a lower
 # pin resolves as a *downgrade* and still exits 0. Bump both together.
-Django==5.2.*
+Django==6.1.*
 owslib

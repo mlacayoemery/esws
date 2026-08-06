@@ -3,6 +3,7 @@ import html
 import os
 import re
 import time
+import uuid
 from urllib.parse import quote
 
 import pytest
@@ -490,7 +491,21 @@ def test_change_detection_distinguishes_changed_from_unchanged(dashboard_url):
                              r'<td align="right">(\d+)</td>', page))))
         return tally, page
 
-    probe = "results/change_probe_test.csv"
+    # A name unique to this run, because the assertion below is specifically
+    # about an element nothing has fingerprinted yet. The registration and its
+    # fingerprint live in the dashboard's database, which outlives the test, so
+    # a fixed name makes the second run against one stack start with the
+    # previous run's *final* content already recorded -- writing the initial
+    # content back is then itself a change, and "a first fingerprint is not a
+    # change" fails. Reproduced on Django 5.2 and 6.1 alike; it is the suite
+    # being run twice that triggers it, not any version.
+    #
+    # test_a_reactive_job_reruns_when_its_input_changes solves the same problem
+    # by checking once to establish a baseline, which suits it because it only
+    # needs a known starting point. That would not work here: it would make the
+    # check below the second one, and a second fingerprint is not what this
+    # test is about.
+    probe = "results/change_probe_%s.csv" % uuid.uuid4().hex[:8]
     _write_shared_table(probe, "lucode,root_depth\n1,1000\n")
     requests.get("%s/server/CSV/%d/register/%s/"
                  % (dashboard_url, pk, quote(probe, safe="")), timeout=60)

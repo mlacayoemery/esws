@@ -1,9 +1,8 @@
-# GeoServer with the PostgreSQL JDBC driver.
+# GeoServer with the PostgreSQL JDBC driver and the WPS extension.
 #
 # The PostGIS *data store* ships with GeoServer -- gt-jdbc-postgis is in
 # WEB-INF/lib of the stock image -- but the JDBC driver it needs does not, so a
-# PostGIS store cannot connect without this. It is one jar, which is why this
-# image is a two-line derivative rather than a build.
+# PostGIS store cannot connect without this.
 ARG GEOSERVER_VERSION=3.0.0
 FROM docker.osgeo.org/geoserver:${GEOSERVER_VERSION}
 
@@ -12,3 +11,22 @@ RUN set -eu; \
     curl -fsSL -o /usr/local/tomcat/webapps/geoserver/WEB-INF/lib/postgresql-${PGJDBC_VERSION}.jar \
       "https://repo1.maven.org/maven2/org/postgresql/postgresql/${PGJDBC_VERSION}/postgresql-${PGJDBC_VERSION}.jar"; \
     test -s /usr/local/tomcat/webapps/geoserver/WEB-INF/lib/postgresql-${PGJDBC_VERSION}.jar
+
+# WPS. Only gt-process* (the GeoTools process framework) is in the stock image;
+# the WPS *service* is an extension, so without this GeoServer has processes but
+# no way to serve them.
+#
+# Run at build time rather than by setting INSTALL_EXTENSIONS=true in compose:
+# /opt/startup.sh runs this same script on every container start, which would
+# re-download the plugin from SourceForge each time the container is recreated
+# and make startup depend on that host being reachable. Baking it in keeps the
+# image self-contained and the version fixed to the base image's own 3.0.0.
+#
+# Note for a future GeoServer bump: the WPS *remote* module -- the Python/XMPP
+# bridge for running processes off-JVM -- was removed in 3.0 (GEOS-12071). This
+# is the plain WPS service, which is still shipped; do not expect remote-wps to
+# come back by upgrading.
+RUN set -eu; \
+    INSTALL_EXTENSIONS=true STABLE_EXTENSIONS=wps /opt/install-extensions.sh; \
+    test -s /usr/local/tomcat/webapps/geoserver/WEB-INF/lib/gs-wps-core-${GEOSERVER_VERSION}.jar; \
+    test -s /usr/local/tomcat/webapps/geoserver/WEB-INF/lib/gs-web-wps-${GEOSERVER_VERSION}.jar

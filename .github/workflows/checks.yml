@@ -36,5 +36,11 @@ jobs:
           # pyproj because the CRS rules are checked against real definitions --
           # that EPSG:6842 is Oregon Coast, not the MODIS grid, is the sort of
           # thing only the registry can tell you.
-          python -m pip install --quiet pytest pyproj
+          #
+          # lxml because the BPMN tests `pytest.importorskip` it, and without it
+          # they skip rather than fail: CI reported "49 passed, 3 skipped" and
+          # looked green while the export was never validated against the OMG
+          # schema at all. The schema is vendored (tests/data/BPMN20.xsd), so
+          # lxml was the only thing missing. A skip is not a pass.
+          python -m pip install --quiet pytest pyproj lxml
           python -m pytest tests/unit -q

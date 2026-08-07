@@ -3,7 +3,7 @@
 {% block content %}
     <div class="server">
 	{% if user.is_authenticated %}
-        <a class="btn btn-default" href="{% url 'server_edit' server_pk=server.pk %}"><span class="glyphicon glyphicon-pencil"></span></a>
+        <a class="btn btn-default" href="{% url 'server_edit' server_type=server.server_type server_pk=server.pk %}"><span class="glyphicon glyphicon-pencil"></span></a>
 	{% endif %}
 <h2>{{ server.server_type }} Source</h2>
 
@@ -19,6 +19,18 @@
 
 </table>
 <a href="{% url 'server_edit' server_type=server.server_type server_pk=server.pk %}">Edit</a>
+
+<p><b>Visibility: </b>{% if is_public %}Public{% else %}Private{% endif %}
+{% if may_modify %}
+  <form action="{% url 'server_visibility' server_type=server.server_type server_pk=server.pk %}" method="post" style="display:inline">
+    {% csrf_token %}
+    <button type="submit">Make {% if is_public %}private{% else %}public{% endif %}</button>
+  </form>
+  &mdash; a public source is one everyone can list processes from and register
+  against. It does not publish the elements already registered on it; those
+  carry their own toggle.
+{% endif %}
+</p>
     </div>
 
 <table border=1 frame=void rules=all>
@@ -29,10 +41,14 @@
 <td><center>Server Title</center></td>
 <td width=50%><center>JSON Parameters</center></td></tr>
 {% for p in process_list  %}
-<tr><td><center><a href="{% url 'job_detail' process_pk=p.pk %}">{{ p.pk }}</a></center></td>
+{# job_detail takes job_pk, and neither server_describe_process nor
+   server_capabilities is a route -- this loop only renders when a server has
+   jobs, which is why three dead URL names survived here. job_detail.html
+   already links the same two things by their real names. #}
+<tr><td><center><a href="{% url 'job_detail' job_pk=p.pk %}">{{ p.pk }}</a></center></td>
 <td>{{ p.status }}</td>
-<td><a href="{% url 'server_describe_process' server_pk=p.server.pk process_id=p.identifier %}">{{ p.identifier }}</a></td>
-<td><center><a href="{% url 'server_capabilities' server_pk=p.server.pk %}">{{ p.server.pk }}</a><center></td>
+<td><a href="{% url 'server_element_detail' server_type='WPS' server_pk=p.server.pk element_id=p.identifier %}">{{ p.identifier }}</a></td>
+<td><center><a href="{% url 'server_element_list' server_type='WPS' server_pk=p.server.pk %}">{{ p.server.pk }}</a><center></td>
 <td>{{ p.server.title }}</td>
 <td width=50%>{{ p.args }}</td></tr>
 {% endfor %}

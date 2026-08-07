@@ -18,5 +18,9 @@ from django.contrib import admin
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
+    # login/logout/password views. Ahead of the wpsclient catch-all, whose
+    # first pattern is r'^$' but whose later ones are broad enough to shadow
+    # these if they came second.
+    url(r'^accounts/', include('django.contrib.auth.urls')),
     url(r'', include('wpsclient.urls'))
 ]

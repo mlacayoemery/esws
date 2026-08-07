@@ -82,8 +82,13 @@ services:
 
   dashboard:
     image: esws/wps  # see fileserver
+    # createsuperuser --noinput reads DJANGO_SUPERUSER_*. It exits non-zero once
+    # the account exists, which is every start after the first, so its failure is
+    # ignored -- without it the dashboard would come up with no account able to
+    # log into it, and every page would redirect to a login nobody can pass.
     command: >
       sh -c "python tools/wpsclient/manage.py migrate --run-syncdb &&
+             (python tools/wpsclient/manage.py createsuperuser --noinput || true) &&
              python tools/wpsclient/manage.py runserver 0.0.0.0:8000"
     ports:
       - "${DASHBOARD_HOST_PORT:-8000}:8000"
@@ -100,6 +105,13 @@ services:
       DJANGO_ALLOWED_HOSTS: "*"
       DJANGO_DB_PATH: /tmp/esws-db.sqlite3
       WPS_SERVER_URL: http://wps:5000/wps
+      # The first administrator. Everyone else is created through the Django
+      # admin at /admin/; this one exists so there is somebody to create them.
+      # An admin sees every user's servers, elements and jobs, which is what the
+      # dashboard did for everyone before there were accounts.
+      DJANGO_SUPERUSER_USERNAME: ${DASHBOARD_ADMIN_USER:-admin}
+      DJANGO_SUPERUSER_PASSWORD: ${DASHBOARD_ADMIN_PASS:-esws-admin}
+      DJANGO_SUPERUSER_EMAIL: ${DASHBOARD_ADMIN_EMAIL:-admin@example.invalid}
     depends_on:
       - wps
 

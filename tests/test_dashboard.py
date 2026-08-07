@@ -10,23 +10,23 @@ import pytest
 import requests
 
 
-def test_dashboard_home(dashboard_url):
-    r = requests.get(dashboard_url + "/", timeout=30)
+def test_dashboard_home(dashboard, dashboard_url):
+    r = dashboard.get(dashboard_url + "/", timeout=30)
     assert r.status_code == 200, r.text[:500]
 
 
-def test_dashboard_server_list(dashboard_url):
-    r = requests.get(dashboard_url + "/server/WPS/", timeout=30)
+def test_dashboard_server_list(dashboard, dashboard_url):
+    r = dashboard.get(dashboard_url + "/server/WPS/", timeout=30)
     assert r.status_code == 200, r.text[:500]
 
 
-def test_dashboard_job_list(dashboard_url):
-    r = requests.get(dashboard_url + "/job/", timeout=30)
+def test_dashboard_job_list(dashboard, dashboard_url):
+    r = dashboard.get(dashboard_url + "/job/", timeout=30)
     assert r.status_code == 200, r.text[:500]
 
 
 @pytest.fixture(scope="module")
-def registered_wps_server(dashboard_url, wps_url):
+def registered_wps_server(dashboard, dashboard_url, wps_url):
     """A WPS server registered in the dashboard, returning its primary key.
 
     Everything below needs one: with no servers the list template never enters
@@ -38,34 +38,34 @@ def registered_wps_server(dashboard_url, wps_url):
     calls GetCapabilities server-side to list processes, and the WPS takes some
     seconds to import all 26 InVEST models on start.
     """
-    r = requests.get(
+    r = dashboard.get(
         "%s/server/WPS/register/Smoke WPS/url/%s" % (dashboard_url, wps_url),
         timeout=60)
     assert r.status_code == 200, r.text[:500]
 
-    listing = requests.get(dashboard_url + "/server/WPS/", timeout=30)
+    listing = dashboard.get(dashboard_url + "/server/WPS/", timeout=30)
     assert listing.status_code == 200, listing.text[:1000]
     pks = re.findall(r"/server/WPS/(\d+)/", listing.text)
     assert pks, listing.text[:1000]
     return max(int(p) for p in pks)
 
 
-def test_dashboard_server_list_renders_a_registered_server(registered_wps_server,
+def test_dashboard_server_list_renders_a_registered_server(dashboard, registered_wps_server,
                                                            dashboard_url, wps_url):
     """The row template must reverse every URL name it references."""
-    r = requests.get(dashboard_url + "/server/WPS/", timeout=30)
+    r = dashboard.get(dashboard_url + "/server/WPS/", timeout=30)
     assert r.status_code == 200, r.text[:1000]
     assert wps_url in r.text
 
 
-def test_dashboard_lists_wps_processes(registered_wps_server, dashboard_url):
-    r = requests.get("%s/server/WPS/%d/element/" % (dashboard_url, registered_wps_server),
+def test_dashboard_lists_wps_processes(dashboard, registered_wps_server, dashboard_url):
+    r = dashboard.get("%s/server/WPS/%d/element/" % (dashboard_url, registered_wps_server),
                      timeout=120)
     assert r.status_code == 200, r.text[:1000]
     assert "annual_water_yield" in r.text, r.text[:1000]
 
 
-def test_generated_form_renders_for_every_process(registered_wps_server,
+def test_generated_form_renders_for_every_process(dashboard, registered_wps_server,
                                                   dashboard_url, wps_url):
     """Every advertised process must produce a job form.
 
@@ -80,7 +80,7 @@ def test_generated_form_renders_for_every_process(registered_wps_server,
 
     broken = []
     for process_id in ids:
-        r = requests.get("%s/server/%d/execute/%s/" % (dashboard_url,
+        r = dashboard.get("%s/server/%d/execute/%s/" % (dashboard_url,
                                                        registered_wps_server,
                                                        process_id), timeout=120)
         if r.status_code != 200:
@@ -88,14 +88,14 @@ def test_generated_form_renders_for_every_process(registered_wps_server,
     assert not broken, broken
 
 
-def test_generated_form_offers_registered_data(registered_wps_server, dashboard_url):
+def test_generated_form_offers_registered_data(dashboard, registered_wps_server, dashboard_url):
     """Spatial inputs become dropdowns of registered sources, not free text.
 
     This is what the hand-built water yield form did for one model; the
     generated form derives it for all of them from the InVEST type the WPS
     publishes on each input.
     """
-    r = requests.get("%s/server/%d/execute/annual_water_yield/"
+    r = dashboard.get("%s/server/%d/execute/annual_water_yield/"
                      % (dashboard_url, registered_wps_server), timeout=120)
     assert r.status_code == 200, r.text[:1000]
     # lulc_path is a raster input, so it must render as a select
@@ -103,36 +103,36 @@ def test_generated_form_offers_registered_data(registered_wps_server, dashboard_
 
 
 @pytest.fixture(scope="module")
-def registered_template(dashboard_url, wps_url):
+def registered_template(dashboard, dashboard_url, wps_url):
     """A Templates source pointing at the same WPS, returning its primary key."""
-    r = requests.get("%s/server/TPL/register/Smoke Template/url/%s"
+    r = dashboard.get("%s/server/TPL/register/Smoke Template/url/%s"
                      % (dashboard_url, wps_url), timeout=60)
     assert r.status_code == 200, r.text[:500]
 
-    listing = requests.get(dashboard_url + "/server/TPL/", timeout=30)
+    listing = dashboard.get(dashboard_url + "/server/TPL/", timeout=30)
     assert listing.status_code == 200, listing.text[:1000]
     pks = re.findall(r"/server/TPL/(\d+)/", listing.text)
     assert pks, listing.text[:1000]
     return max(int(p) for p in pks)
 
 
-def test_dashboard_has_a_templates_section(registered_template, dashboard_url):
-    r = requests.get(dashboard_url + "/", timeout=30)
+def test_dashboard_has_a_templates_section(dashboard, registered_template, dashboard_url):
+    r = dashboard.get(dashboard_url + "/", timeout=30)
     assert r.status_code == 200, r.text[:500]
     assert "Templates" in r.text
     # Templates are also ServerWPS rows; they must not show up twice.
-    wps_list = requests.get(dashboard_url + "/server/WPS/", timeout=30)
+    wps_list = dashboard.get(dashboard_url + "/server/WPS/", timeout=30)
     assert "Smoke Template" not in wps_list.text, wps_list.text[:1000]
 
 
-def test_template_lists_the_same_processes(registered_template, dashboard_url):
-    r = requests.get("%s/server/TPL/%d/element/" % (dashboard_url, registered_template),
+def test_template_lists_the_same_processes(dashboard, registered_template, dashboard_url):
+    r = dashboard.get("%s/server/TPL/%d/element/" % (dashboard_url, registered_template),
                      timeout=120)
     assert r.status_code == 200, r.text[:1000]
     assert "annual_water_yield" in r.text
 
 
-def test_template_process_detail_and_its_new_job_link(registered_template,
+def test_template_process_detail_and_its_new_job_link(dashboard, registered_template,
                                                       dashboard_url):
     """Walk the click-through: template -> process -> new job.
 
@@ -140,7 +140,7 @@ def test_template_process_detail_and_its_new_job_link(registered_template,
     detail page was missed and raised KeyError, so this covers the whole path
     rather than just the list and the form.
     """
-    detail = requests.get("%s/server/TPL/%d/element/annual_water_yield/"
+    detail = dashboard.get("%s/server/TPL/%d/element/annual_water_yield/"
                           % (dashboard_url, registered_template), timeout=120)
     assert detail.status_code == 200, detail.text[:1000]
 
@@ -150,7 +150,7 @@ def test_template_process_detail_and_its_new_job_link(registered_template,
         in detail.text, detail.text[:2000]
 
 
-def test_template_form_is_prefilled_from_the_sample_datastack(registered_template,
+def test_template_form_is_prefilled_from_the_sample_datastack(dashboard, registered_template,
                                                               registered_wps_server,
                                                               dashboard_url):
     """A template's job form arrives carrying InVEST's own sample arguments.
@@ -159,18 +159,18 @@ def test_template_form_is_prefilled_from_the_sample_datastack(registered_templat
     data being published: annual_water_yield's datastack sets results_suffix to
     "gura" and seasonality_constant to 5. The plain WPS source must stay empty.
     """
-    tpl = requests.get("%s/server/%d/execute/annual_water_yield/"
+    tpl = dashboard.get("%s/server/%d/execute/annual_water_yield/"
                        % (dashboard_url, registered_template), timeout=120)
     assert tpl.status_code == 200, tpl.text[:1000]
     assert 'value="gura"' in tpl.text, tpl.text[:2000]
 
-    plain = requests.get("%s/server/%d/execute/annual_water_yield/"
+    plain = dashboard.get("%s/server/%d/execute/annual_water_yield/"
                          % (dashboard_url, registered_wps_server), timeout=120)
     assert plain.status_code == 200, plain.text[:1000]
     assert 'value="gura"' not in plain.text
 
 
-def test_generated_form_offers_upload_and_destinations(registered_wps_server,
+def test_generated_form_offers_upload_and_destinations(dashboard, registered_wps_server,
                                                       dashboard_url):
     """The wrapper's own inputs render as a checkbox and server pickers.
 
@@ -178,7 +178,7 @@ def test_generated_form_offers_upload_and_destinations(registered_wps_server,
     render as a text box; the useful destinations are the servers already
     registered, so they are choices.
     """
-    r = requests.get("%s/server/%d/execute/carbon/" % (dashboard_url,
+    r = dashboard.get("%s/server/%d/execute/carbon/" % (dashboard_url,
                                                        registered_wps_server),
                      timeout=120)
     assert r.status_code == 200, r.text[:1000]
@@ -217,9 +217,9 @@ def _write_shared_table(relative_path, content):
         handle.write(content)
 
 
-def _demo_template_pk(dashboard_url):
+def _demo_template_pk(session, dashboard_url):
     """The pk of the demo Templates source, or None if the demo is not loaded."""
-    templates = requests.get(dashboard_url + "/server/TPL/", timeout=30).text
+    templates = session.get(dashboard_url + "/server/TPL/", timeout=30).text
     template_pk = None
     for row in re.findall(r"<tr>(.*?)</tr>", templates, re.S):
         if "InVEST Demo" not in row:
@@ -298,7 +298,7 @@ def _await_job(session, dashboard_url, job_pk, tries=60):
     return None, status
 
 
-def test_upload_round_trip_moves_outputs_to_their_destinations(dashboard_url):
+def test_upload_round_trip_moves_outputs_to_their_destinations(dashboard, dashboard_url):
     """anticipated -> Local Pending -> published -> registered, for all three kinds.
 
     Driven through the Templates source so the model arguments are InVEST's own
@@ -309,11 +309,11 @@ def test_upload_round_trip_moves_outputs_to_their_destinations(dashboard_url):
     annual_water_yield rather than carbon because it emits rasters, vectors and
     tables, so every destination kind is exercised in one run.
     """
-    template_pk = _demo_template_pk(dashboard_url)
+    template_pk = _demo_template_pk(dashboard, dashboard_url)
     if template_pk is None:
         pytest.skip("needs the demo loaded (make demo): no InVEST Demo template")
 
-    session = requests.Session()
+    session = dashboard
     job_pk, destinations = _submit_template_job(session, dashboard_url, template_pk,
                                                 "annual_water_yield")
 
@@ -366,24 +366,24 @@ def test_upload_round_trip_moves_outputs_to_their_destinations(dashboard_url):
     # The table is a genuine upload, not a pointer at where it already sat: it
     # is fetchable from the file server it was registered against.
     table = re.search(r"results/[A-Za-z0-9_]+\.csv", registered["CSV"]).group(0)
-    fetched = requests.get("%s/%s" % (os.environ.get(
+    fetched = dashboard.get("%s/%s" % (os.environ.get(
         "FILESERVER_URL", "http://localhost:8001"), table), timeout=60)
     assert fetched.status_code == 200, fetched.status_code
     assert fetched.text.splitlines()[0].count(",") >= 1, fetched.text[:200]
 
 
-def test_dashboard_wps_process_detail(registered_wps_server, dashboard_url):
+def test_dashboard_wps_process_detail(dashboard, registered_wps_server, dashboard_url):
     """Describes a process through owslib -- the path that raised
     TypeError: WebProcessingService.__init__() got an unexpected keyword
     argument 'verbose' once owslib dropped that parameter."""
-    r = requests.get(
+    r = dashboard.get(
         "%s/server/WPS/%d/element/annual_water_yield/" % (dashboard_url,
                                                           registered_wps_server),
         timeout=120)
     assert r.status_code == 200, r.text[:1000]
 
 
-def test_generated_form_enforces_the_declared_range(registered_wps_server,
+def test_generated_form_enforces_the_declared_range(dashboard, registered_wps_server,
                                                     dashboard_url):
     """A value the model would reject is rejected by the form.
 
@@ -391,7 +391,7 @@ def test_generated_form_enforces_the_declared_range(registered_wps_server,
     range; annual_water_yield's seasonality constant must exceed 0, so 0 is too.
     Both bounds come from the WPS, not from anything hard-coded here.
     """
-    ratio = requests.get("%s/server/%d/execute/forest_carbon_edge_effect/"
+    ratio = dashboard.get("%s/server/%d/execute/forest_carbon_edge_effect/"
                          % (dashboard_url, registered_wps_server), timeout=120)
     assert ratio.status_code == 200, ratio.text[:1000]
     field = re.search(r'<input[^>]*name="biomass_to_carbon_conversion_factor"[^>]*>',
@@ -402,7 +402,7 @@ def test_generated_form_enforces_the_declared_range(registered_wps_server,
 
     # An exclusive bound has no HTML equivalent, so it is nudged one step: the
     # smallest accepted value is just above 0, not 0 itself.
-    exclusive = requests.get("%s/server/%d/execute/annual_water_yield/"
+    exclusive = dashboard.get("%s/server/%d/execute/annual_water_yield/"
                              % (dashboard_url, registered_wps_server), timeout=120)
     field = re.search(r'<input[^>]*name="seasonality_constant"[^>]*>',
                       exclusive.text)
@@ -410,7 +410,7 @@ def test_generated_form_enforces_the_declared_range(registered_wps_server,
     assert 'min="1e-09"' in field.group(0), field.group(0)
 
 
-def test_unique_run_does_not_overwrite_the_previous_runs_outputs(dashboard_url):
+def test_unique_run_does_not_overwrite_the_previous_runs_outputs(dashboard, dashboard_url):
     """Running a job twice with the flag set leaves both runs' results in place.
 
     Output filenames -- and so the layer names they are published under -- derive
@@ -418,11 +418,11 @@ def test_unique_run_does_not_overwrite_the_previous_runs_outputs(dashboard_url):
     over the first. With the flag, each run adds its own token and both sets of
     layers survive.
     """
-    template_pk = _demo_template_pk(dashboard_url)
+    template_pk = _demo_template_pk(dashboard, dashboard_url)
     if template_pk is None:
         pytest.skip("needs the demo loaded (make demo): no InVEST Demo template")
 
-    session = requests.Session()
+    session = dashboard
     job_pk, destinations = _submit_template_job(
         session, dashboard_url, template_pk, "annual_water_yield",
         extra={"esws_unique_run": "on"})
@@ -463,16 +463,16 @@ def test_unique_run_does_not_overwrite_the_previous_runs_outputs(dashboard_url):
     assert len(second - before) == 2, (before, second)
 
 
-def test_change_detection_distinguishes_changed_from_unchanged(dashboard_url):
+def test_change_detection_distinguishes_changed_from_unchanged(dashboard, dashboard_url):
     """Fingerprint a table, rewrite it, and see only that one reported changed.
 
     Uses the writable results share, since the sample data is mounted read-only:
     a check has to be able to observe an actual change, not just run.
     """
-    if _demo_template_pk(dashboard_url) is None:
+    if _demo_template_pk(dashboard, dashboard_url) is None:
         pytest.skip("needs the demo loaded (make demo): no registered sources")
 
-    servers = requests.get(dashboard_url + "/server/CSV/", timeout=30).text
+    servers = dashboard.get(dashboard_url + "/server/CSV/", timeout=30).text
     pk = None
     for row in re.findall(r"<tr>(.*?)</tr>", servers, re.S):
         if "Local Pending" in row:
@@ -483,7 +483,7 @@ def test_change_detection_distinguishes_changed_from_unchanged(dashboard_url):
     assert pk, servers[:1000]
 
     def check():
-        page = requests.get("%s/server/CSV/%d/check/" % (dashboard_url, pk),
+        page = dashboard.get("%s/server/CSV/%d/check/" % (dashboard_url, pk),
                             timeout=900).text
         tally = dict(zip(("changed", "unchanged", "unreachable"),
                          (int(n) for n in re.findall(
@@ -507,7 +507,7 @@ def test_change_detection_distinguishes_changed_from_unchanged(dashboard_url):
     # test is about.
     probe = "results/change_probe_%s.csv" % uuid.uuid4().hex[:8]
     _write_shared_table(probe, "lucode,root_depth\n1,1000\n")
-    requests.get("%s/server/CSV/%d/register/%s/"
+    dashboard.get("%s/server/CSV/%d/register/%s/"
                  % (dashboard_url, pk, quote(probe, safe="")), timeout=60)
 
     first, _ = check()
@@ -524,7 +524,7 @@ def test_change_detection_distinguishes_changed_from_unchanged(dashboard_url):
     assert third["changed"] == 0, third
 
 
-def test_change_detection_reports_unreachable_rather_than_unchanged(dashboard_url):
+def test_change_detection_reports_unreachable_rather_than_unchanged(dashboard, dashboard_url):
     """Data that cannot be fetched must not be counted as data that has not changed.
 
     Driven by registering an element that points at nothing, rather than by
@@ -532,11 +532,11 @@ def test_change_detection_reports_unreachable_rather_than_unchanged(dashboard_ur
     that CRS identification handles unnamed datums and the MODIS grid, so the
     distinction has to be provoked deliberately to stay tested.
     """
-    if _demo_template_pk(dashboard_url) is None:
+    if _demo_template_pk(dashboard, dashboard_url) is None:
         pytest.skip("needs the demo loaded (make demo): no registered sources")
 
-    session = requests.Session()
-    servers = requests.get(dashboard_url + "/server/CSV/", timeout=30).text
+    session = dashboard
+    servers = dashboard.get(dashboard_url + "/server/CSV/", timeout=30).text
     pk = None
     for row in re.findall(r"<tr>(.*?)</tr>", servers, re.S):
         if "Local Pending" in row:
@@ -561,24 +561,24 @@ def test_change_detection_reports_unreachable_rather_than_unchanged(dashboard_ur
     assert unchanged > 0, "the reachable tables should still report unchanged"
 
 
-def test_a_reactive_job_reruns_when_its_input_changes(dashboard_url):
+def test_a_reactive_job_reruns_when_its_input_changes(dashboard, dashboard_url):
     """The whole point of #3: change the data a finished job used, and it runs again.
 
     The job is pointed at a copy of one of its own sample tables, placed on the
     writable share, because the sample data is mounted read-only and a job whose
     inputs cannot change cannot demonstrate reacting to a change.
     """
-    template_pk = _demo_template_pk(dashboard_url)
+    template_pk = _demo_template_pk(dashboard, dashboard_url)
     if template_pk is None:
         pytest.skip("needs the demo loaded (make demo): no InVEST Demo template")
 
-    session = requests.Session()
+    session = dashboard
 
     # A copy of the model's own biophysical table, so the run is still valid.
     # Fetched over HTTP rather than read from disk: the samples are mounted at
     # different paths in the wps and fileserver containers.
     fileserver = os.environ.get("FILESERVER_URL", "http://localhost:8001")
-    source = requests.get(
+    source = dashboard.get(
         fileserver + "/invest/Annual_Water_Yield/biophysical_table_gura.csv",
         timeout=60)
     assert source.status_code == 200, source.status_code
@@ -586,7 +586,7 @@ def test_a_reactive_job_reruns_when_its_input_changes(dashboard_url):
     probe = "results/reactive_biophysical.csv"
     _write_shared_table(probe, original)
 
-    csv_servers = requests.get(dashboard_url + "/server/CSV/", timeout=30).text
+    csv_servers = dashboard.get(dashboard_url + "/server/CSV/", timeout=30).text
     csv_pk = None
     for row in re.findall(r"<tr>(.*?)</tr>", csv_servers, re.S):
         if "Local Pending" in row:
@@ -655,32 +655,32 @@ def test_a_reactive_job_reruns_when_its_input_changes(dashboard_url):
     assert "unchanged" in everything, everything[:1500]
 
 
-def test_the_job_graph_page_and_its_bpmn_export(dashboard_url):
+def test_the_job_graph_page_and_its_bpmn_export(dashboard, dashboard_url):
     """The pipeline view renders, and its BPMN export is well-formed BPMN.
 
     Schema validation lives in the unit tests; here the point is that the view
     reaches the builder at all and hands back the right content type.
     """
-    page = requests.get(dashboard_url + "/job/graph/", timeout=180)
+    page = dashboard.get(dashboard_url + "/job/graph/", timeout=180)
     assert page.status_code == 200, page.text[:1000]
     assert "flowchart LR" in page.text, page.text[:1500]
     assert "job" in page.text
 
-    export = requests.get(dashboard_url + "/job/graph.bpmn", timeout=180)
+    export = dashboard.get(dashboard_url + "/job/graph.bpmn", timeout=180)
     assert export.status_code == 200, export.status_code
     assert export.headers["Content-Type"].startswith("application/xml")
     assert "esws-pipeline.bpmn" in export.headers.get("Content-Disposition", "")
     assert "bpmn" in export.text[:400].lower(), export.text[:400]
 
 
-def test_a_published_output_records_which_job_made_it(dashboard_url):
+def test_a_published_output_records_which_job_made_it(dashboard, dashboard_url):
     """The edge in the pipeline graph comes from this: without provenance a
     registered element is just a layer nobody claims."""
-    template_pk = _demo_template_pk(dashboard_url)
+    template_pk = _demo_template_pk(dashboard, dashboard_url)
     if template_pk is None:
         pytest.skip("needs the demo loaded (make demo): no InVEST Demo template")
 
-    session = requests.Session()
+    session = dashboard
     job_pk, _destinations = _submit_template_job(session, dashboard_url,
                                                  template_pk, "annual_water_yield")
     session.get("%s/job/%d/run/" % (dashboard_url, job_pk), timeout=180)
@@ -692,7 +692,7 @@ def test_a_published_output_records_which_job_made_it(dashboard_url):
     assert "job%d" % job_pk in graph, graph[:1500]
 
 
-def test_the_template_form_fills_every_required_field(dashboard_url):
+def test_the_template_form_fills_every_required_field(dashboard, dashboard_url):
     """A Templates job must be submittable without typing anything.
 
     sdr is the case worth pinning: its ic_0_param is the only field in the demo
@@ -700,11 +700,11 @@ def test_the_template_form_fills_every_required_field(dashboard_url):
     silently -- the form then re-renders complaining that a required value is
     missing, which reads like the prefill is broken when it is not.
     """
-    template_pk = _demo_template_pk(dashboard_url)
+    template_pk = _demo_template_pk(dashboard, dashboard_url)
     if template_pk is None:
         pytest.skip("needs the demo loaded (make demo): no InVEST Demo template")
 
-    page = requests.get("%s/server/%d/execute/sdr/" % (dashboard_url, template_pk),
+    page = dashboard.get("%s/server/%d/execute/sdr/" % (dashboard_url, template_pk),
                         timeout=180).text
 
     numeric = re.search(r'<input[^>]*name="ic_0_param"[^>]*>', page)

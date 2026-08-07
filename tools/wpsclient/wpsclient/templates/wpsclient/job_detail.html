@@ -2,13 +2,25 @@
 
 {% block content %}
     <div class="server">
-	{% if user.is_authenticated %}
-        <a class="btn btn-default" href="{% url 'process_edit' process_pk=job.pk %}"><span class="glyphicon glyphicon-pencil"></span></a>
+	{% if may_modify %}
+        {# 'process_edit' until logins existed: this branch was unreachable, since
+           user.is_authenticated was always false, so the stale URL name never
+           raised. It is job_edit, and it is shown to whoever may actually edit. #}
+        <a class="btn btn-default" href="{% url 'job_edit' job_pk=job.pk %}"><span class="glyphicon glyphicon-pencil"></span></a>
 	{% endif %}
         <p><b>Server: </b><a href="{% url 'server_element_list' server_type='WPS' server_pk=job.server.pk %}">{{ job.server.title }}</a></p>
         <p><b>Process: </b><a href="{% url 'server_element_detail' server_type='WPS' server_pk=job.server.pk element_id=job.identifier %}">{{ job.identifier }}</a></p>        
         <p><b>Job Id: </b>{{job.pk}}<p/>
         <p><b>Status: </b>{{job.status}}</p>
+        <p><b>Visibility: </b>{% if is_public %}Public{% else %}Private{% endif %}
+        {% if may_modify %}
+          <form action="{% url 'job_visibility' job_pk=job.pk %}" method="post" style="display:inline">
+            {% csrf_token %}
+            <button type="submit">Make {% if is_public %}private{% else %}public{% endif %}</button>
+          </form>
+          &mdash; a public job also publishes every output it produced
+        {% endif %}
+        </p>
         <p><b><a href="{% url 'job_edit' job_pk=job.pk %}">Edit Job</a></b></p>
         {% if reactive %}
         <p><b><a href="{% url 'job_react' job_pk=job.pk %}">Check inputs and re-run if changed</a></b></p>

@@ -7,9 +7,6 @@
 # Shared by the `wps` and `fileserver` compose services.
 FROM mambaorg/micromamba:2.8.1
 
-# Install requirements file early for better layer caching.
-COPY --chown=$MAMBA_USER:$MAMBA_USER requirements/server.txt /tmp/server.txt
-
 # Python + GDAL 3.x + compilers/cython so `pip install natcap.invest` can build
 # its extensions from sdist if no wheel is available for this platform.
 #
@@ -42,6 +39,13 @@ RUN micromamba install -y -n base -c conda-forge \
 # the micromamba entrypoint).
 ARG MAMBA_DOCKERFILE_ACTIVATE=1
 
+# Copied *after* micromamba, not before. The conda step does not read this file,
+# so copying it earlier only meant that editing a pip pin invalidated the whole
+# GDAL/compiler install too -- 56s of solving re-run to change one line that step
+# never looks at. Copying it here is what "early for better layer caching"
+# was reaching for: early relative to pip, late relative to conda.
+COPY --chown=$MAMBA_USER:$MAMBA_USER requirements/server.txt /tmp/server.txt
+
 # InVEST publishes no Linux wheels, so it builds from sdist here. Its build
 # requirements include pygeoprocessing, and in pip's *isolated* build
 # environment that resolves the newest GDAL bindings off PyPI -- which then
@@ -50,8 +54,16 @@ ARG MAMBA_DOCKERFILE_ACTIVATE=1
 # build requirements for exactly this reason, so build it against the
 # conda-forge stack above instead of an isolated one. Everything else installs
 # normally; natcap.invest is already satisfied by then.
-RUN pip install --no-cache-dir --no-build-isolation natcap.invest==3.20.0 && \
-    pip install --no-cache-dir -r /tmp/server.txt
+#
+# --mount=type=cache rather than --no-cache-dir: the reason for --no-cache-dir
+# was image size, and a cache mount is not part of the layer, so it keeps the
+# image just as small while letting a rebuild reuse the downloads and the wheel
+# pip built from InVEST's sdist. uid/gid are mambauser's (57439); the default
+# mount is root-owned and this image does not run as root, so pip would fall
+# back to an unwritable cache and silently gain nothing.
+RUN --mount=type=cache,target=/home/mambauser/.cache/pip,uid=57439,gid=57439 \
+    pip install --no-build-isolation natcap.invest==3.20.0 && \
+    pip install -r /tmp/server.txt
 
 # pywps writes stored ExecuteResponse documents and referenced outputs here
 # (outputpath in tools/wpsserver/pywps.cfg). Create it as the image user so the

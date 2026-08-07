@@ -17,8 +17,10 @@ tops up rather than duplicating.
   make demo
 """
 import argparse
+import http.cookiejar
 import json
 import os
+import re
 import sys
 import urllib.parse
 import urllib.request
@@ -47,9 +49,51 @@ def log(msg):
     print(msg, flush=True)
 
 
+DASHBOARD_USER = os.environ.get("DASHBOARD_ADMIN_USER", "admin")
+DASHBOARD_PASS = os.environ.get("DASHBOARD_ADMIN_PASS", "esws-admin")
+
+# Cookies for the dashboard session. The dashboard is multi-user now: an
+# unauthenticated request is redirected to the login page, and urllib follows
+# that redirect, so every registration below would come back HTTP 200 from the
+# login form having registered nothing at all. Signing in first is what makes
+# the 200s mean what this script checks them for.
+_opener = urllib.request.build_opener(
+    urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+
+
 def http_get(url, timeout=120):
-    with urllib.request.urlopen(url, timeout=timeout) as r:
+    with _opener.open(url, timeout=timeout) as r:
         return r.status, r.read().decode("utf-8", "replace")
+
+
+def dashboard_login(timeout=120):
+    """Sign the shared opener in as the dashboard administrator.
+
+    The demo registers sources on everyone's behalf, so it runs as an admin --
+    whose view is the whole catalogue, which is what the demo is meant to set up.
+    Django's login form is CSRF-protected: the token comes from the form and has
+    to go back with the credentials, the cookie and a matching Referer.
+    """
+    login_url = DASHBOARD + "/accounts/login/"
+    status, body = http_get(login_url, timeout=timeout)
+    if status != 200:
+        raise RuntimeError("dashboard login page -> HTTP %s" % status)
+
+    found = re.search(r'name="csrfmiddlewaretoken" value="([^"]+)"', body)
+    if not found:
+        raise RuntimeError("no CSRF token on the dashboard login page")
+
+    data = urllib.parse.urlencode({
+        "username": DASHBOARD_USER, "password": DASHBOARD_PASS,
+        "csrfmiddlewaretoken": found.group(1), "next": "/"}).encode()
+    request = urllib.request.Request(login_url, data=data,
+                                     headers={"Referer": login_url})
+    with _opener.open(request, timeout=timeout) as response:
+        landed = response.geturl()
+    if landed.rstrip("/").endswith("/accounts/login"):
+        raise RuntimeError(
+            "could not sign in to the dashboard as %r -- check "
+            "DASHBOARD_ADMIN_USER/DASHBOARD_ADMIN_PASS" % DASHBOARD_USER)
 
 
 # --------------------------------------------------------------------------- #
@@ -164,7 +208,6 @@ def register_server(server_type, title, url):
         raise RuntimeError("register %s -> HTTP %s" % (server_type, status))
 
     status, body = http_get("%s/server/%s/" % (DASHBOARD, server_type))
-    import re
     pks = [int(p) for p in re.findall(r"/server/%s/(\d+)/" % server_type, body)]
     if not pks:
         raise RuntimeError("no %s server registered" % server_type)
@@ -204,6 +247,9 @@ def main():
         published = publish(cat, files)
     else:
         published["table"] = [p for p, k in files.items() if k == "table"]
+
+    log(">> Signing in to the dashboard as %s" % DASHBOARD_USER)
+    dashboard_login()
 
     log(">> Registering sources in the dashboard")
     csv_pk = register_server("CSV", "Local HTTP", FILESERVER)

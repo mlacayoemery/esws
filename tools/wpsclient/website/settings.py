@@ -47,6 +47,12 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    # Every view requires a login unless it says otherwise with
+    # @login_not_required. Default-deny rather than 60-odd @login_required
+    # decorators: the failure mode of a forgotten decorator is a view that
+    # quietly serves another user's data, and the failure mode of a forgotten
+    # exemption is a login prompt somebody reports on the first day.
+    'django.contrib.auth.middleware.LoginRequiredMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -60,6 +66,7 @@ TEMPLATES = [
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
+                'wpsclient.context_processors.roles',
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
@@ -130,3 +137,10 @@ STATIC_URL = '/static/'
 
 # Django 3.2+ requires an explicit default primary key type.
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Login. django.contrib.auth.urls supplies the views; only the destinations are
+# ours. LOGOUT_REDIRECT_URL points back at the login page rather than the
+# dashboard, which LoginRequiredMiddleware would only bounce straight back.
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'dashboard'
+LOGOUT_REDIRECT_URL = 'login'

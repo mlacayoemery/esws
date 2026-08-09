@@ -46,8 +46,47 @@ def wps_url():
 
 @pytest.fixture(scope="session")
 def dashboard_url():
-    _wait(DASHBOARD_URL + "/", predicate=lambda r: r.status_code == 200)
+    # The login page rather than "/": every dashboard view requires a login now,
+    # so "/" redirects here anyway, and waiting on it would only prove the
+    # redirect works.
+    _wait(DASHBOARD_URL + "/accounts/login/",
+          predicate=lambda r: r.status_code == 200)
     return DASHBOARD_URL
+
+
+@pytest.fixture(scope="session")
+def dashboard(dashboard_url):
+    """A requests.Session signed in as the dashboard administrator.
+
+    The dashboard is multi-user: an anonymous request is redirected to the login
+    page, and a signed-in non-admin sees only their own rows. These tests assert
+    on what the stack as a whole produces, so they run as the admin -- the view
+    that matches how the dashboard behaved before there were accounts.
+
+    Django's login form is CSRF-protected, so the token has to be read from the
+    login page and sent back with the credentials and the cookie.
+    """
+    import requests
+
+    user = os.environ.get("DASHBOARD_ADMIN_USER", "admin")
+    password = os.environ.get("DASHBOARD_ADMIN_PASS", "esws-admin")
+
+    session = requests.Session()
+    login_url = dashboard_url + "/accounts/login/"
+    page = session.get(login_url, timeout=30)
+    token = session.cookies.get("csrftoken")
+    assert token, "no csrftoken cookie from %s: %s" % (login_url, page.text[:300])
+
+    posted = session.post(login_url,
+                          data={"username": user, "password": password,
+                                "csrfmiddlewaretoken": token, "next": "/"},
+                          headers={"Referer": login_url},
+                          timeout=30, allow_redirects=True)
+    assert posted.status_code == 200, posted.text[:500]
+    assert "sessionid" in session.cookies, (
+        "signing in as %s did not set a session cookie -- is DJANGO_SUPERUSER_* "
+        "set on the dashboard service? %s" % (user, posted.text[:500]))
+    return session
 
 
 @pytest.fixture(scope="session")

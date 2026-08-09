@@ -20,15 +20,27 @@
 <tr>
 <td>Action</td>
 <td>Id</td>
+<td>Visibility</td>
 {% if checkable %}<td>Last checked</td><td>Last changed</td>{% endif %}
 </tr>
-{% for element, state in registered_rows %}
+{% for row in registered_rows %}
 <tr>
-<td><a href="{% url 'server_element_unregister' server_type=server.server_type server_pk=server.pk element_id=element %}">Unbookmark</a></td>
-<td><a href="{% url 'server_element_detail' server_type=server.server_type server_pk=server.pk element_id=element %}">{{element}}</td>
+<td><a href="{% url 'server_element_unregister' server_type=server.server_type server_pk=server.pk element_id=row.identifier %}">Unbookmark</a></td>
+<td><a href="{% url 'server_element_detail' server_type=server.server_type server_pk=server.pk element_id=row.identifier %}">{{row.identifier}}</td>
+<td>
+  {% if row.may_toggle %}
+    <form action="{% url 'element_visibility' server_type=server.server_type server_pk=server.pk element_id=row.identifier %}" method="post" style="display:inline">
+      {% csrf_token %}
+      {# POST, not a link: this changes what other people can see. #}
+      <button type="submit">{% if row.is_public %}Public &mdash; make private{% else %}Private &mdash; make public{% endif %}</button>
+    </form>
+  {% else %}
+    {% if row.is_public %}Public{% else %}Private{% endif %}
+  {% endif %}
+</td>
 {% if checkable %}
-<td>{% if state %}{{ state.checked_at|date:"Y-m-d H:i" }}{% if state.unreachable %} (unreachable){% endif %}{% else %}never{% endif %}</td>
-<td>{% if state.changed_at %}{{ state.changed_at|date:"Y-m-d H:i" }}{% else %}&mdash;{% endif %}</td>
+<td>{% if row.fingerprint %}{{ row.fingerprint.checked_at|date:"Y-m-d H:i" }}{% if row.fingerprint.unreachable %} (unreachable){% endif %}{% else %}never{% endif %}</td>
+<td>{% if row.fingerprint.changed_at %}{{ row.fingerprint.changed_at|date:"Y-m-d H:i" }}{% else %}&mdash;{% endif %}</td>
 {% endif %}
 </tr>
 {% endfor %}

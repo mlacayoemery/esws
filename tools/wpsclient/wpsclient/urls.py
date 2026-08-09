@@ -30,6 +30,14 @@ urlpatterns = [
     
     url(r'^server/(?P<server_type>'+server_type+')/(?P<server_pk>\d+)/check/$', views.server_check, name='server_check'),
 
+    # Before the element_id patterns above would otherwise be fine -- these end
+    # in a fixed segment, so they cannot be swallowed -- but keep them together
+    # with the other element routes for readability.
+    url(r'^server/(?P<server_type>'+server_type+r')/(?P<server_pk>\d+)/visibility/(?P<element_id>'+element_id+r')/$', views.element_visibility, name='element_visibility'),
+    # Before the element form above only by convention: element_id cannot be
+    # empty, so the two cannot collide.
+    url(r'^server/(?P<server_type>'+server_type+r')/(?P<server_pk>\d+)/visibility/$', views.server_visibility, name='server_visibility'),
+
     ##job specific urls
     url(r'^job/$', views.job_list, name='job_list'),
     #add server specific job list
@@ -55,5 +63,6 @@ urlpatterns = [
     url(r'^job/(?P<job_pk>[a-zA-Z0-9_:]+)/run/$', views.job_run, name='job_run'),
     url(r'^job/(?P<job_pk>[a-zA-Z0-9_:]+)/rerun/$', views.job_rerun, name='job_rerun'),
     url(r'^job/(?P<job_pk>[a-zA-Z0-9_:]+)/react/$', views.job_react, name='job_react'),
-    url(r'^job/(?P<job_pk>[a-zA-Z0-9_:]+)/status/$', views.job_status, name='job_status'),    
+    url(r'^job/(?P<job_pk>[a-zA-Z0-9_:]+)/status/$', views.job_status, name='job_status'),
+    url(r'^job/(?P<job_pk>[a-zA-Z0-9_:]+)/visibility/$', views.job_visibility, name='job_visibility'),
 ]

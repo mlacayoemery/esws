@@ -22,6 +22,8 @@ from .models import Job
 from .models import ElementFingerprint
 from .models import ElementProvenance
 
+from . import scope
+
 from .forms import ServerFormCSV
 from .forms import ServerFormWCS
 from .forms import ServerFormWFS
@@ -77,15 +79,18 @@ else:
  
 # Create your views here.
 def dashboard(request):
-    servers_csv = ServerCSV.objects.order_by('title')
-    servers_wcs = ServerWCS.objects.order_by('title')
-    servers_wfs = ServerWFS.objects.order_by('title')
-    # A template is also a ServerWPS, so keep it out of the WPS list.
-    servers_wps = ServerWPS.objects.filter(servertemplate__isnull=True).order_by('title')
-    servers_tpl = ServerTemplate.objects.order_by('title')
+    def mine(queryset):
+        return scope.visible_servers(request.user, queryset).order_by('title')
 
-    process_jobs = Job.objects.order_by('pk')
-    
+    servers_csv = mine(ServerCSV.objects.all())
+    servers_wcs = mine(ServerWCS.objects.all())
+    servers_wfs = mine(ServerWFS.objects.all())
+    # A template is also a ServerWPS, so keep it out of the WPS list.
+    servers_wps = mine(ServerWPS.objects.filter(servertemplate__isnull=True))
+    servers_tpl = mine(ServerTemplate.objects.all())
+
+    process_jobs = scope.visible_jobs(request.user).order_by('pk')
+
     return render(request, 'wpsclient/dashboard.html', {'servers_csv' : servers_csv,
                                                         'servers_wcs' : servers_wcs,
                                                         'servers_wfs' : servers_wfs,
@@ -103,7 +108,8 @@ def server_list(request, server_type):
         }
 
     ServerClass = server_dict[server_type]
-    servers = ServerClass.objects.order_by('title')
+    servers = scope.visible_servers(request.user,
+                                    ServerClass.objects.all()).order_by('title')
     if server_type == "WPS":
         servers = servers.filter(servertemplate__isnull=True)
     return render(request, 'wpsclient/server_list.html',
@@ -119,13 +125,22 @@ def server_detail(request, server_pk, server_type):
         }
 
     ServerClass = server_dict[server_type]
-    
-    server = get_object_or_404(ServerClass, pk=server_pk)
 
-    process_jobs = Job.objects.filter(server__pk=server_pk).order_by('pk')
+    # 404 rather than 403 for a server this user may not see: a 403 would confirm
+    # that the row exists, which is the one thing scoping is meant to hide.
+    server = get_object_or_404(
+        scope.visible_servers(request.user, ServerClass.objects.all()),
+        pk=server_pk)
 
-    return render(request, 'wpsclient/server_detail.html', {'server': server,
-                                                            'process_list' : process_jobs})
+    process_jobs = scope.visible_jobs(
+        request.user, Job.objects.filter(server__pk=server_pk)).order_by('pk')
+
+    ownership = getattr(server, "ownership", None)
+    return render(request, 'wpsclient/server_detail.html',
+                  {'server': server,
+                   'process_list' : process_jobs,
+                   'is_public': bool(ownership and ownership.is_public),
+                   'may_modify': scope.may_modify(request.user, server)})
 
 ##def server_new(request, ows):
 ##    print(request.method, ows)
@@ -167,6 +182,11 @@ def server_register(request, server_type, title, url):
         server = ServerClass(title=title, url=url)
         server.save()
 
+    # Claimed after save, not before: the ownership row points at the server, so
+    # it needs a primary key. get_or_create in claim() keeps re-registration a
+    # no-op rather than transferring an existing owner.
+    scope.claim(server, request.user)
+
     return server_detail(request, server.pk, server_type)
 
 
@@ -185,7 +205,7 @@ def server_new(request, server_type):
         form = FormClass(request.POST)
         if form.is_valid():
             server = form.save()
-            #server.save()
+            scope.claim(server, request.user)
             return redirect('server_detail', server_pk=server.pk, server_type=server.server_type)
             
     else: #elif request.method == "GET"
@@ -233,8 +253,12 @@ def server_edit(request, server_pk, server_type):
         }
 
     ServerClass, FormClass = server_dict[server_type]
-    
-    server = get_object_or_404(ServerClass, pk=server_pk)
+
+    server = get_object_or_404(
+        scope.visible_servers(request.user, ServerClass.objects.all()),
+        pk=server_pk)
+    if not scope.may_modify(request.user, server):
+        raise Http404("no such server")
     if request.method == "POST":
         form = FormClass(request.POST, instance=server)
         if form.is_valid():
@@ -305,8 +329,16 @@ def get_wps_identifiers(server_url):
 
     return identifiers
 
-def get_server_element_register_list(server_pk):
-    return [element.identifier for element in ServerElement.objects.filter(server__pk=server_pk)]
+def get_server_element_register_list(server_pk, user=None):
+    """Identifiers of the elements registered against a server.
+
+    `user` scopes the list; omitting it returns every registered element, which
+    is what the internal callers (job argument choices) still want.
+    """
+    elements = ServerElement.objects.filter(server__pk=server_pk)
+    if user is not None:
+        elements = scope.visible_elements(user, elements)
+    return [element.identifier for element in elements]
     
 
 def server_element_list(request, server_type, server_pk):
@@ -320,11 +352,15 @@ def server_element_list(request, server_type, server_pk):
         }
 
     ServerClass, get_list = server_dict[server_type]
-    
-    server = get_object_or_404(ServerClass, pk=server_pk)
-    server_elements = ServerElement.objects.filter(server__pk=server_pk)
 
-    registered_element_list = get_server_element_register_list(server_pk)
+    server = get_object_or_404(
+        scope.visible_servers(request.user, ServerClass.objects.all()),
+        pk=server_pk)
+    server_elements = scope.visible_elements(
+        request.user, ServerElement.objects.filter(server__pk=server_pk))
+
+    registered_element_list = get_server_element_register_list(server_pk,
+                                                               request.user)
     registered_element_list.sort()
     
     unregistered_element_list = []
@@ -345,8 +381,22 @@ def server_element_list(request, server_type, server_pk):
         recorded = {f.element.identifier: f for f in
                     ElementFingerprint.objects.filter(
                         element__server__pk=server_pk).select_related("element")}
-    registered_rows = [(identifier, recorded.get(identifier))
-                       for identifier in registered_element_list]
+
+    # Public/private state per row, for the toggle. An element with no ownership
+    # row predates logins: it has no owner to publish it, so it is shown as
+    # neither public nor toggleable rather than as private-belonging-to-nobody.
+    owned = {e.identifier: e for e in server_elements.select_related("ownership")}
+    registered_rows = []
+    for identifier in registered_element_list:
+        element = owned.get(identifier)
+        ownership = getattr(element, "ownership", None) if element else None
+        registered_rows.append({
+            "identifier": identifier,
+            "fingerprint": recorded.get(identifier),
+            "is_public": bool(ownership and ownership.is_public),
+            "may_toggle": bool(element is not None
+                               and scope.may_modify(request.user, element)),
+        })
 
     return render(request, 'wpsclient/server_element_list.html', {'server': server,
                                                                   'registered_element_list' : registered_element_list,
@@ -371,6 +421,7 @@ def server_element_register(request, server_type, server_pk, element_id):
     # be a no-op, not a duplicate row in every dropdown.
     element, _created = ElementClass.objects.get_or_create(
         server=server, identifier=element_id)
+    scope.claim(element, request.user)
 
     server.registrations = server.registrations + 1
     server.save()
@@ -390,9 +441,20 @@ def server_element_unregister(request, server_type, server_pk, element_id):
     
     server = get_object_or_404(ServerClass, pk=server_pk)
 
-    element = ServerElement.objects.filter(server__pk=server_pk).filter(identifier=element_id).delete()
+    # Only what this user may see, and only what they may modify: seeing a public
+    # element is not licence to unregister someone else's.
+    doomed = [element for element
+              in scope.visible_elements(
+                  request.user,
+                  ServerElement.objects.filter(server__pk=server_pk,
+                                               identifier=element_id))
+              if scope.may_modify(request.user, element)]
+    if not doomed:
+        raise Http404("no such element")
+    for element in doomed:
+        element.delete()
 
-    server.registrations = server.registrations - 1
+    server.registrations = server.registrations - len(doomed)
     server.save()
 
     return server_element_list(request, server_type, server_pk)
@@ -490,27 +552,44 @@ def server_wps_element_detail(request, server_pk, element_id):
                                                                       'xml': description})    
 
 def server_job_list(request, server_pk):
-    process_jobs = Job.objects.filter(server__pk=server_pk).order_by('pk')
+    process_jobs = scope.visible_jobs(
+        request.user, Job.objects.filter(server__pk=server_pk)).order_by('pk')
     return render(request, 'wpsclient/job_list.html', {'process_list' : process_jobs})
 
 
 def job_list(request):
-    process_jobs = Job.objects.order_by('pk')
+    process_jobs = scope.visible_jobs(request.user).order_by('pk')
     return render(request, 'wpsclient/job_list.html', {'process_list' : process_jobs})
+
+
+def _modifiable_job(request, job_pk):
+    """A job this user may act on, or 404.
+
+    Visible-but-not-owned is not enough: a public job can be read by everyone,
+    and running, editing or re-running it is not reading. 404 rather than 403 so
+    the two cases are indistinguishable from outside.
+    """
+    job = get_object_or_404(scope.visible_jobs(request.user), pk=job_pk)
+    if not scope.may_modify(request.user, job):
+        raise Http404("no such job")
+    return job
 
 
 def job_detail(request, job_pk):
     l = logging.getLogger('django.request')
     l.warning(inspect.stack()[0][3])    
     #detail of an existing process with parameters
-    job = get_object_or_404(Job, pk=job_pk)
+    job = get_object_or_404(scope.visible_jobs(request.user), pk=job_pk)
+    ownership = getattr(job, "ownership", None)
     return render(request, 'wpsclient/job_detail.html',
                   {'job': job,
                    # Only a finished job is worth resubmitting; while it is still
                    # running, job_run is the poll.
                    'can_rerun': job.status in _JOB_FINISHED,
                    'unique_run': wants_unique_run(job),
-                   'reactive': wants_reaction(job)})
+                   'reactive': wants_reaction(job),
+                   'is_public': bool(ownership and ownership.is_public),
+                   'may_modify': scope.may_modify(request.user, job)})
 
 ##def job_new(request, server_pk, process_id):
 ##    server = get_object_or_404(ServerWPS, pk=server_pk)
@@ -618,6 +697,7 @@ def job_new_dynamic(request, server_pk, process_id, args):
         job = Job(server=server,identifier=process_id,args=args)
         job.status = "Validate"
         job.save()
+        scope.claim(job, request.user)
 
         server.jobs = server.jobs + 1
         server.save()
@@ -630,7 +710,7 @@ def job_new_dynamic(request, server_pk, process_id, args):
 
 def job_validate(request, job_pk):
 
-    job = get_object_or_404(Job, pk=job_pk)
+    job = _modifiable_job(request, job_pk)
     job.status = "Pending"
     job.save()
 
@@ -702,6 +782,24 @@ def anticipated_for_job(job):
     return out
 
 
+def _claim_for_job(element, job):
+    """An output belongs to whoever owns the job that produced it.
+
+    Jobs are created by a request and so have an owner; outputs are created by
+    reconciliation, which has no request to read one from. Without this an
+    output would be unowned, and unowned means admin-only -- so a user would run
+    a model and not see what it produced.
+
+    is_public is not copied from the job: visible_elements derives that through
+    ElementProvenance, so there is one flag to change rather than two to keep in
+    step.
+    """
+    owner = getattr(job, "ownership", None)
+    if owner is None:
+        return None
+    return scope.claim(element, owner.user)
+
+
 def register_pending(job):
     """List a job's anticipated outputs under the Local Pending sources."""
     if not any(job.args.get(field) for field in
@@ -716,8 +814,9 @@ def register_pending(job):
         # Scoped by job: two runs of one model anticipate identical names, and a
         # failed run's entries stay listed under its own job id.
         identifier = "job%s:%s" % (job.pk, name)
-        _element, created = ElementClass.objects.get_or_create(
+        element, created = ElementClass.objects.get_or_create(
             server=server, identifier=identifier)
+        _claim_for_job(element, job)
         added += int(created)
     return added
 
@@ -770,9 +869,12 @@ def reconcile_uploads(job, xml):
 
         element, created = ElementClass.objects.get_or_create(
             server=server, identifier=identifier)
+        _claim_for_job(element, job)
         registered += int(created)
 
         # Remember what made it, so the pipeline the jobs form can be drawn.
+        # Also what makes a public job publish its outputs: visible_elements
+        # reads this edge rather than a copy of the flag on each element.
         ElementProvenance.objects.update_or_create(
             element=element.serverelement_ptr, defaults={"job": job})
 
@@ -912,6 +1014,7 @@ def job_new(request, server_pk, process_id):
                                    for k, v in args.items())
             job.status_url = status_url
             job.save()
+            scope.claim(job, request.user)
 
             server.jobs = server.jobs + 1
             server.save()
@@ -930,8 +1033,8 @@ def job_new(request, server_pk, process_id):
 def job_edit(request, job_pk):
     l = logging.getLogger('django.request')
     l.warning(inspect.stack()[0][3])
-    
-    job = get_object_or_404(Job, pk=job_pk)
+
+    job = _modifiable_job(request, job_pk)
 
     if request.method == "POST":
         form = testForm(request.POST)        
@@ -1045,9 +1148,12 @@ def server_check(request, server_type, server_pk):
     if ServerClass is None:
         raise Http404("%s elements are not data" % server_type)
 
-    server = get_object_or_404(ServerClass, pk=server_pk)
+    server = get_object_or_404(
+        scope.visible_servers(request.user, ServerClass.objects.all()),
+        pk=server_pk)
     tally = {"changed": [], "unchanged": [], "unreachable": []}
-    for element in ServerElement.objects.filter(server__pk=server_pk):
+    for element in scope.visible_elements(
+            request.user, ServerElement.objects.filter(server__pk=server_pk)):
         try:
             tally[check_element(element, server_type)].append(element.identifier)
         except Exception as exc:  # noqa: BLE001 - one bad element must not stop the sweep
@@ -1161,19 +1267,27 @@ def react_to_changes(job):
     return "rerun", changed
 
 
-def _pipeline():
+def _pipeline(user):
     """The job pipeline as (nodes, edges), derived from what jobs consume and
-    produce. Nothing declares it -- see tools/job_graph.py."""
+    produce. Nothing declares it -- see tools/job_graph.py.
+
+    Drawn from the jobs this user may see, so the diagram is their pipeline
+    rather than a picture of how many runs everyone else has.
+    """
     tools = "/app/tools"
     if tools not in sys.path:
         sys.path.insert(0, tools)
     import job_graph
 
+    jobs = list(scope.visible_jobs(user).order_by("pk"))
+
+    # Edges only between the jobs in the diagram: an edge to a job that was
+    # filtered out would draw a node for it and leak its identifier.
+    visible_ids = {job.pk for job in jobs}
     produced_by = {}
     for record in ElementProvenance.objects.select_related("element"):
-        produced_by[record.element.identifier] = record.job_id
-
-    jobs = list(Job.objects.order_by("pk"))
+        if record.job_id in visible_ids:
+            produced_by[record.element.identifier] = record.job_id
     inputs_of = {}
     for job in jobs:
         inputs_of[job.pk] = [element.identifier
@@ -1183,7 +1297,7 @@ def _pipeline():
 
 def job_graph_view(request):
     """The pipeline the jobs form, drawn."""
-    module, (nodes, edges) = _pipeline()
+    module, (nodes, edges) = _pipeline(request.user)
     return render(request, "wpsclient/job_graph.html",
                   {"diagram": module.to_mermaid(nodes, edges),
                    "job_count": len(nodes), "edge_count": len(edges)})
@@ -1191,7 +1305,7 @@ def job_graph_view(request):
 
 def job_graph_bpmn(request):
     """The same pipeline as BPMN 2.0, for a modeller such as bpmn.io."""
-    module, (nodes, edges) = _pipeline()
+    module, (nodes, edges) = _pipeline(request.user)
     response = HttpResponse(module.to_bpmn(nodes, edges),
                             content_type="application/xml")
     response["Content-Disposition"] = 'attachment; filename="esws-pipeline.bpmn"'
@@ -1200,7 +1314,7 @@ def job_graph_bpmn(request):
 
 def job_react(request, job_pk):
     """Check one job's inputs and re-run it if they changed."""
-    job = get_object_or_404(Job, pk=job_pk)
+    job = _modifiable_job(request, job_pk)
     action, changed = react_to_changes(job)
     if action == "rerun":
         return redirect("job_run", job_pk=job.pk)
@@ -1215,7 +1329,7 @@ def job_react_all(request):
     than one. Meant to be reachable from cron as well as from the page.
     """
     results = []
-    for job in Job.objects.order_by("pk"):
+    for job in scope.visible_jobs(request.user).order_by("pk"):
         if not wants_reaction(job):
             continue
         action, changed = react_to_changes(job)
@@ -1302,7 +1416,7 @@ def job_rerun(request, job_pk):
     option set, this run gets a fresh suffix and the previous run's outputs stay
     where they are instead of being overwritten.
     """
-    job = get_object_or_404(Job, pk=job_pk)
+    job = _modifiable_job(request, job_pk)
     job.status = "Run"
     job.status_location = ""
     rotate_run_token(job)
@@ -1318,7 +1432,7 @@ def job_status(request, job_pk):
     job's outcome becomes known -- and, once uploads are wired up, where
     anticipated outputs get reconciled against what was really produced.
     """
-    job = get_object_or_404(Job, pk=job_pk)
+    job = _modifiable_job(request, job_pk)
 
     xml = ""
     if job.status_location:
@@ -1352,7 +1466,7 @@ def job_status(request, job_pk):
 
 
 def job_run(request, job_pk):
-    job = get_object_or_404(Job, pk=job_pk)
+    job = _modifiable_job(request, job_pk)
 
     if job.status == "Validate":
         job.status = "Run"
@@ -1410,3 +1524,100 @@ def job_run(request, job_pk):
 
 
     
+
+
+def element_visibility(request, server_type, server_pk, element_id):
+    """Toggle whether a registered element is public.
+
+    POST only: it changes what other people can see, so it must not be reachable
+    by following a link or by a page prefetching one.
+
+    An element produced by a public job is public through that job (see
+    scope.visible_elements), and this toggle does not override it -- turning the
+    job private is what makes its outputs private again. Otherwise one element
+    could be marked private while remaining visible, and the page would show a
+    state that is not the truth.
+    """
+    if request.method != "POST":
+        raise Http404("not a page")
+
+    element = get_object_or_404(
+        scope.visible_elements(
+            request.user,
+            ServerElement.objects.filter(server__pk=server_pk,
+                                         identifier=element_id)))
+    if not scope.may_modify(request.user, element):
+        raise Http404("no such element")
+
+    ownership = getattr(element, "ownership", None)
+    if ownership is None:
+        # Unowned and modifiable means an admin is looking at a row that
+        # predates logins. Publishing it would leave it owned by nobody and
+        # unpublishable again, so claim it for them first.
+        ownership = scope.claim(element, request.user)
+        if ownership is None:
+            raise Http404("no such element")
+
+    ownership.is_public = not ownership.is_public
+    ownership.save(update_fields=["is_public"])
+
+    return redirect("server_element_list", server_type=server_type,
+                    server_pk=server_pk)
+
+
+def job_visibility(request, job_pk):
+    """Toggle whether a job -- and with it every output it produced -- is public."""
+    if request.method != "POST":
+        raise Http404("not a page")
+
+    job = _modifiable_job(request, job_pk)
+    ownership = getattr(job, "ownership", None)
+    if ownership is None:
+        ownership = scope.claim(job, request.user)
+        if ownership is None:
+            raise Http404("no such job")
+
+    ownership.is_public = not ownership.is_public
+    ownership.save(update_fields=["is_public"])
+
+    return redirect("job_detail", job_pk=job.pk)
+
+
+def server_visibility(request, server_type, server_pk):
+    """Toggle whether a source is public.
+
+    Not in the original brief, which asked for a toggle per registered element,
+    but without it the scoping has no way to become usable: sources are scoped
+    like everything else, so a new account sees no servers, and a user who
+    cannot see the shared WPS source cannot open its process list or run
+    anything at all. Publishing the source is what an administrator does once;
+    the per-element toggle then governs the data.
+
+    Making a source public does not publish the elements registered on it --
+    those carry their own flag, and a shared endpoint is not the same claim as
+    shared data.
+    """
+    if request.method != "POST":
+        raise Http404("not a page")
+
+    server_dict = {"CSV": ServerCSV, "WCS": ServerWCS, "WFS": ServerWFS,
+                   "WPS": ServerWPS, "TPL": ServerTemplate}
+    ServerClass = server_dict[server_type]
+
+    server = get_object_or_404(
+        scope.visible_servers(request.user, ServerClass.objects.all()),
+        pk=server_pk)
+    if not scope.may_modify(request.user, server):
+        raise Http404("no such server")
+
+    ownership = getattr(server, "ownership", None)
+    if ownership is None:
+        ownership = scope.claim(server, request.user)
+        if ownership is None:
+            raise Http404("no such server")
+
+    ownership.is_public = not ownership.is_public
+    ownership.save(update_fields=["is_public"])
+
+    return redirect("server_detail", server_type=server_type,
+                    server_pk=server_pk)

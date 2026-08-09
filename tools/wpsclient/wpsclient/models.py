@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 # Create your models here.
@@ -182,6 +183,74 @@ class ElementProvenance(models.Model):
 
     def __str__(self):
         return "%s <- job %s" % (self.element.identifier, self.job_id)
+
+
+class Ownership(models.Model):
+    """Who created a row, and whether everyone else may see it.
+
+    Its own table per owned type rather than columns on Server/ServerElement/Job,
+    for the same reason as ElementFingerprint and ElementProvenance: this app has
+    migrations disabled (MIGRATION_MODULES) and its tables come from
+    `migrate --run-syncdb`, which creates a missing table but cannot add a column
+    to one that already exists.
+
+    That constraint applies to these tables too, once they exist. A field added
+    here later would need yet another table, so the ones below are the fields the
+    scoping rules need, decided in one pass:
+
+      user       -- the owner. Deleting the user deletes the claim, which leaves
+                    the row unowned, and an unowned row is admin-only.
+      is_public  -- opt-in visibility for everyone else. Default False: a row is
+                    private unless someone says otherwise, so a new kind of
+                    object cannot leak by forgetting to set this.
+      created_at -- when it was claimed, not when the row was made.
+
+    Abstract, so each owned type gets its own table with all of these columns
+    rather than one shared table keyed by content type: a OneToOneField gives the
+    database the uniqueness constraint that "one owner per row" needs, and
+    generic relations cannot be filtered across a join the way scoping needs.
+    """
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    is_public = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        abstract = True
+
+    def __str__(self):
+        return "%s (%s)" % (self.user, "public" if self.is_public else "private")
+
+
+class ServerOwner(Ownership):
+    """OneToOne against Server, the multi-table parent, so a claim on a
+    ServerCSV/WCS/WFS/WPS/Template is the same row -- the subclasses share the
+    parent's primary key, and scoping filters traverse the parent relation."""
+
+    server = models.OneToOneField(Server, on_delete=models.CASCADE,
+                                  related_name="ownership")
+
+
+class ElementOwner(Ownership):
+    """OneToOne against ServerElement, the multi-table parent. See ServerOwner.
+
+    An element also inherits visibility from the job that produced it -- see
+    ElementProvenance and wpsclient.scope.visible_elements -- so a public job
+    exposes its outputs without each one being toggled individually.
+    """
+
+    element = models.OneToOneField(ServerElement, on_delete=models.CASCADE,
+                                   related_name="ownership")
+
+
+class JobOwner(Ownership):
+    """OneToOne against Job. Setting is_public here also publishes the job's
+    outputs, via the ElementProvenance edge rather than by copying the flag onto
+    each element: the outputs of a run are not independently owned, and a
+    duplicated flag would drift the first time one side was updated alone."""
+
+    job = models.OneToOneField(Job, on_delete=models.CASCADE,
+                               related_name="ownership")
 
 ##class WCS_Instance(models.Model):
 ##    server = models.ForeignKey(WCS_Server, on_delete=models.CASCADE)   

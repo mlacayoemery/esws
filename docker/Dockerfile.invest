@@ -5,7 +5,7 @@
 # then pip-install the rest of the stack against that GDAL.
 #
 # Shared by the `wps` and `fileserver` compose services.
-FROM mambaorg/micromamba:2.8.1
+FROM mambaorg/micromamba:2.9.0
 
 # Python + GDAL 3.x + compilers/cython so `pip install natcap.invest` can build
 # its extensions from sdist if no wheel is available for this platform.

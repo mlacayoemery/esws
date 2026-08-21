@@ -14,7 +14,7 @@
 # No Linux wheels are published for natcap.invest, so this builds from sdist
 # against the conda-forge GDAL; 3.20.0 requires gdal==3.10.*, which is why the
 # Dockerfile pins that exact series.
-natcap.invest==3.20.0
+natcap.invest==3.20.1
 pygeoprocessing>=2.4.11
 # tools/crs_identify.py depends on this directly: it is what recognises a CRS
 # GeoServer cannot name. It was only ever present by way of geopandas, which

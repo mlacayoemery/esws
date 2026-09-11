@@ -15,5 +15,5 @@
 # still reproduced the committed output byte for byte, so the churn below is
 # attributable to Sphinx and nothing else.
 sphinx==9.1.0
-sphinxcontrib-mermaid==2.1.0
+sphinxcontrib-mermaid==2.1.1
 alabaster==1.0.0

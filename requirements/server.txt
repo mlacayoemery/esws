@@ -27,7 +27,7 @@ pint
 Babel
 
 # --- WPS middleware ---
-pywps>=4.7.0,<4.8
+pywps>=4.8.0,<4.9
 Flask
 flask-cors
 
